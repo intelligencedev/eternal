@@ -428,9 +428,9 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	})
 
 	// Multi web page retrieval via serpapi
-	app.Get("/search", func(c *fiber.Ctx) error {
-		return web.SearchHandler(c)
-	})
+	// app.Get("/search", func(c *fiber.Ctx) error {
+	// 	return web.SearchHandler(c)
+	// })
 
 	// Multi web page retrieval via local ChromeDP
 	// app.Get("/dpsearch", func(c *fiber.Ctx) error {

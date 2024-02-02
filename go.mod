@@ -11,7 +11,6 @@ require (
 	github.com/gofiber/template/html/v2 v2.0.5
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47
-	github.com/gorilla/websocket v1.5.1
 	github.com/jaypipes/ghw v0.12.0
 	github.com/pterm/pterm v0.12.74
 	github.com/serpapi/google-search-results-golang v0.0.0-20230616000151-95707d993dc6

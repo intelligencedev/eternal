@@ -31,7 +31,7 @@ Eternal depends on the legendary [llama.cpp](https://github.com/ggerganov/llama.
 3. Navigate to the `./pkg/llm/local/gguf` path and build the llama.cpp library according to the instructions in its README for your arch. For MacOS, simply run `make`.
 4. Copy the resulting binaries into the `pkg/llm/local/bin` path. Include the `ggml-metal.metal` if on MacOS M-Series arch.
 5. Build Eternal with `go build`.
-6. Eternal will manage will bootstrap the dependend binaries and models depending on the selected workflow.
+6. Eternal will bootstrap the dependent binaries and models depending on the selected workflow.
 
 To run Eternal, ensure you have Go installed and the required dependencies are fetched. You can then build the application with `go build` and run the resulting binary. Make sure the `config.yml` file is present and properly set up before starting the server.
 

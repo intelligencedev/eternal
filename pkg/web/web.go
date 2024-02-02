@@ -1,17 +1,27 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/url"
+	"os"
+	"regexp"
 	"strings"
+	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
-	"github.com/gofiber/fiber/v2"
+	"github.com/chromedp/chromedp/kb"
+	"github.com/pterm/pterm"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 func WebGetHandler(url string) (string, error) {
-
 	// Set up chromedp
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -34,80 +44,250 @@ func WebGetHandler(url string) (string, error) {
 		return "", err
 	}
 
+	// Clean up consecutive newlines
 	docs = strings.ReplaceAll(docs, "\n\n", "\n")
-	fmt.Println("Document:", docs)
+	//fmt.Println("Document:", docs)
 
-	return docs, nil
-}
+	// Create a strings.Reader from docs to provide an io.Reader to ParseReaderView
+	reader := strings.NewReader(docs)
 
-// serpapi handler, not free
-func SearchHandler(c *fiber.Ctx) error {
-	query := c.Query("q")
-	apikey := c.Query("apikey")
-	res, err := GetSerpResults(query, apikey)
+	// Invoke web.ParseReaderView to get the reader view of the HTML
+	cleanedHTML, err := ParseReaderView(reader)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		log.Println("Error parsing reader view:", err)
+		return "", err
 	}
 
-	// Only return the first 3 results
-	// if len(*res) > 3 {
-	// 	*res = (*res)[:3]
-	// }
+	pterm.Info.Println("Document:", cleanedHTML)
 
-	// docs := ""
-
-	// for _, r := range *res {
-	// 	fmt.Printf("%s\n", r.Title)
-	// 	fmt.Printf("%s\n", r.Link)
-
-	// 	doc := web.Web2HTML(r.Link, true)
-
-	// 	docs = fmt.Sprintf("%s %s", docs, doc)
-	// }
-
-	doc := (*res)[0].Link
-	docs := Web2HTML(doc, true)
-
-	return c.SendString(docs)
+	return cleanedHTML, nil
 }
 
-// ChromeDP Search Handler - Free
-// func SearchChromeDPHandler(c *fiber.Ctx) error {
-// 	docs := ""
-// 	query := c.Query("q")
-// 	apikey := c.Query("apikey")
-// 	chromeDPAddress := fmt.Sprintf("ws://0.0.0.0:9222/devtools/browser/%s", apikey)
-// 	res := SearchDuckDuckGo(chromeDPAddress, query)
-// 	if len(res) == 0 {
-// 		return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving search results")
-// 	}
+var (
+	resultURLs []string
+)
 
-// 	// TODO: Build a list of domains we want to exclude from our web workflows and expose that list
-// 	// via a config file and/or frontend. Then filter out any results from those domains.
-// 	// Remove youtube results
-// 	for i := len(res) - 1; i >= 0; i-- {
-// 		if strings.Contains(res[i], "youtube.com") {
-// 			res = append(res[:i], res[i+1:]...)
-// 		}
-// 	}
+// ExtractURLs extracts and cleans URLs from the input string.
+func ExtractURLs(input string) []string {
+	// Regular expression to match URLs and port numbers
+	urlRegex := `http.*?://[^\s<>{}|\\^` + "`" + `"]+`
+	re := regexp.MustCompile(urlRegex)
 
-// 	// Only return the first 3 results
-// 	if len(res) > 3 {
-// 		res = res[len(res)-5:]
-// 	}
+	// Find all URLs in the input string
+	matches := re.FindAllString(input, -1)
 
-// 	for _, r := range res {
-// 		fmt.Printf("%s\n", r)
+	var cleanedURLs []string
+	for _, match := range matches {
+		cleanedURL := cleanURL(match) // Assuming cleanURL is a function you've defined elsewhere
+		cleanedURLs = append(cleanedURLs, cleanedURL)
+	}
 
-// 		doc, _ := RetrieveAndSanitizePage(chromeDPAddress, r)
+	return cleanedURLs
+}
 
-// 		log.Printf("Document: %s\n", doc)
+// cleanURL removes illegal trailing characters from the URL.
+func cleanURL(url string) string {
+	// Define illegal trailing characters. Adjust as needed.
+	illegalTrailingChars := []rune{'.', ',', ';', '!', '?', ')'}
 
-// 		docs = fmt.Sprintf("%s %s", docs, doc)
-// 	}
+	for _, char := range illegalTrailingChars {
+		if url[len(url)-1] == byte(char) {
+			url = url[:len(url)-1]
+		}
+	}
 
-// 	// Remove all empty lines
-// 	docs = strings.ReplaceAll(docs, "\n\n", "\n")
+	return url
+}
 
-// 	return c.SendString(docs)
-// }
+func ParseReaderView(r io.Reader) (string, error) {
+	doc, err := html.Parse(r)
+	if err != nil {
+		return "", err
+	}
+
+	var readerView bytes.Buffer
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		// Check if the node is an element node
+		if n.Type == html.ElementNode {
+			// Check if the node is a block element that typically contains content
+			if isContentElement(n) {
+				renderNode(&readerView, n)
+			}
+		}
+		// Traverse the child nodes
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+
+	return readerView.String(), nil
+}
+
+// isContentElement checks if the node is an element of interest for the reader view.
+func isContentElement(n *html.Node) bool {
+	switch n.DataAtom {
+	case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6, atom.Article, atom.P, atom.Li:
+		return true
+	case atom.A, atom.Strong, atom.Em, atom.B, atom.I:
+		return true
+	}
+	return false
+}
+
+// renderNode writes the content of the node to the buffer, including inline tags.
+func renderNode(buf *bytes.Buffer, n *html.Node) {
+	// Render the opening tag if it's not a text node
+	if n.Type == html.ElementNode {
+		buf.WriteString("<" + n.Data + ">")
+	}
+
+	// Render the contents
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.TextNode {
+			buf.WriteString(strings.TrimSpace(c.Data))
+		} else if c.Type == html.ElementNode && isInlineElement(c) {
+			// Render inline elements and their children
+			renderNode(buf, c)
+		}
+	}
+
+	// Render the closing tag if it's not a text node
+	if n.Type == html.ElementNode {
+		buf.WriteString("</" + n.Data + ">")
+	}
+}
+
+// isInlineElement checks if the node is an inline element that should be included in the output.
+func isInlineElement(n *html.Node) bool {
+	switch n.DataAtom {
+	case atom.A, atom.Strong, atom.Em, atom.B, atom.I, atom.Span, atom.Br, atom.Code:
+		return true
+	}
+	return false
+}
+
+// SearchDuckDuckGo performs a search on DuckDuckGo and retrieves the HTML of the first page of results.
+func SearchDuckDuckGo(chromeUrl, query string) []string {
+	instanceUrl := chromeUrl
+
+	// Create allocator context for using existing Chrome instance
+	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), instanceUrl)
+	defer cancel()
+
+	// Create context with logging for actions performed by chromedp
+	ctx, cancel := chromedp.NewContext(allocatorCtx, chromedp.WithLogf(log.Printf))
+	defer cancel()
+
+	// Set a timeout for the entire operation
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Run tasks to perform the search and get HTML content
+	var nodes []*cdp.Node
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(`https://duckduckgo.com/`),
+		chromedp.WaitVisible(`input[name="q"]`, chromedp.ByQuery),
+		chromedp.SendKeys(`input[name="q"]`, query+kb.Enter, chromedp.ByQuery),
+
+		// Wait for JavaScript to load the search results
+		chromedp.Sleep(5*time.Second),
+
+		// Wait for search results to be visible
+		chromedp.WaitVisible(`button[id="more-results"]`, chromedp.ByQuery),
+
+		chromedp.Nodes(`a`, &nodes, chromedp.ByQueryAll),
+
+		chromedp.ActionFunc(func(c context.Context) error {
+			// depth -1 for the entire subtree
+			// do your best to limit the size of the subtree
+			dom.RequestChildNodes(nodes[0].NodeID).WithDepth(-1).Do(c)
+
+			// Compile the regex outside of the loop for efficiency
+			re, err := regexp.Compile(`^http[s]?://`)
+			if err != nil {
+				return err
+			}
+
+			uniqueUrls := make(map[string]bool)
+
+			// loop through the nodes and print the href attributes of a elements
+			for _, n := range nodes {
+				for _, attr := range n.Attributes {
+					if re.MatchString(attr) {
+						// Check if URL contains 'duckduckgo'
+						if !strings.Contains(attr, "duckduckgo") {
+							uniqueUrls[attr] = true
+						}
+					}
+				}
+			}
+
+			// Convert map keys to slice
+			resultURLs = make([]string, 0, len(uniqueUrls))
+			for url := range uniqueUrls {
+				resultURLs = append(resultURLs, url)
+			}
+
+			for _, l := range resultURLs {
+				fmt.Println(l)
+			}
+
+			return nil
+		}),
+	)
+	if err != nil {
+		return resultURLs
+	}
+
+	return resultURLs
+}
+
+// GetPageScreenshot navigates to the given address and takes a full page screenshot.
+func GetPageScreen(chromeUrl string, pageAddress string) string {
+
+	instanceUrl := chromeUrl
+
+	// Create allocator context for using existing Chrome instance
+	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), instanceUrl)
+	defer cancel()
+
+	// Create context with logging for actions performed by chromedp
+	ctx, cancel := chromedp.NewContext(allocatorCtx, chromedp.WithLogf(log.Printf))
+	defer cancel()
+
+	// Set a timeout for the entire operation
+	ctx, cancel = context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	// Run tasks
+	var buf []byte // Buffer to store screenshot data
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(pageAddress),
+		chromedp.FullScreenshot(&buf, 90),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Parse the URL to get the domain name
+	u, err := url.Parse(pageAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get the date and time
+	t := time.Now()
+
+	// Create a filename
+	filename := u.Hostname() + "-" + t.Format("20060102150405") + ".png"
+
+	// Save the screenshot to a file
+	err = os.WriteFile(filename, buf, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return filename
+}
