@@ -1,0 +1,13 @@
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
+    <div id="live-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" hx-get="/path/to/alert/content" hx-trigger="load">
+      <div class="toast-header">
+        <img src="..." class="rounded me-2" alt="...">
+        <strong class="me-auto">Success!</strong>
+        <small class="toast-time">Just now</small>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close" hx-get="/dismiss/toast" hx-trigger="click"></button>
+      </div>
+      <div class="toast-body">
+        Your ticket has been saved successfully.
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,57 @@
+<div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
+  <div class="row">
+    <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
+      <div>
+        <span class="badge my-3 mx-1" style="background-color: var(--et-red);">{{.username}}</span>
+      </div>
+      <!-- Using a hidden form to send the message -->
+      <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
+        <!-- Get the selectedModels in localStorage and send over websocket -->
+        <input type="hidden" name="model" value="{{.model}}">
+        <input type="hidden" name="prompt" value="{{.prompt}}">
+        <input type="hidden" name="chat_message" value="{{.message}}">
+      </form>
+      <div>
+        <span class="message-content mx-1">{{.prompt}}</span>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div id="response-{{.turnID}}" class="response rounded-2 mt-3 pb-3 overflow-y-auto">
+      <div>
+        <span class="badge my-3 mx-1" style="background-color: var(--et-purple);">{{.assistant}}</span>
+      </div>
+      <!-- Messages received from WebSocket will be appended here -->
+      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
+        hx-on:load="highlight()">
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  htmx.on("htmx:wsOnClose", function (evt) {
+    highlight();
+  });
+
+  function scrollToBottom() {
+    setTimeout(function () {
+      window.scrollTo(0, document.body.scrollHeight);
+    }, 0); // Timeout ensures the DOM has been painted
+  }
+
+  // Call scrollToBottom in the htmx event handlers
+  htmx.on("htmx:wsAfterMessage", function (evt) {
+    setViewHeight("prompt-view");
+    highlight();
+    scrollToBottom();
+  });
+
+  // Highlight code blocks
+  function highlight() {
+    const container = document.getElementById("response-content-{{.turnID}}");
+    // Highlight all code blocks within the container
+    container.querySelectorAll('pre code').forEach((block) => {
+      hljs.highlightElement(block);
+    });
+  }
+</script>

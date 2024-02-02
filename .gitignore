@@ -1,0 +1,26 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+pkg/llm/local/bin
+
+# Test artifacts
+pkg/utils/public
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# Local Configurations
+config.yml
+
+# Logs
+*.log
+
+# Misc
+reference

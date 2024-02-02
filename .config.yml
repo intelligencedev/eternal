@@ -1,0 +1,157 @@
+# The desired user display name
+current_user: 'User'
+
+# Display name for LLM responses
+assistant_name: 'Eternal'
+
+# Host name and port of the frontend and management server
+control_host: 'localhost'
+control_port: 8080
+
+# datapath will be created by Eternal to host persistent data
+data_path: '/Users/$USER/.eternal-v1'
+
+# Service hosts for specific functionalities
+service_hosts:
+  # generate embeddings and local retrieval services
+  retrieval:
+    retrieval_host_1:
+      host: 'localhost'
+      port: 8081
+  # image generation and processing
+  image:
+    image_host_1:
+      host: 'localhost'
+      port: 8082
+  # text-to-speech and speech-to-text    
+  speech:
+    speech_host_1:
+      host: 'localhost'
+      port: 8083
+  # llm text generation services
+  llm:
+    llm_host_1:
+      host: 'localhost'
+      port: '8081'
+
+# Chrome Developer Protocol API Key for Web Tools
+chromedp_key: 'xxxxxxxx-...'
+
+# OpenAI API Key
+oai_key: 'sk-...'
+
+language_models:
+  - name: 'openai-gpt'
+    homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
+    prompt: 'Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.\n### Instruction:\n You are an advanced AI assistant.\n{prompt}\n### Response:'
+    ctx: 128000
+    roles:
+      - 'all'
+  - name: 'zephyr-7b-beta'
+    homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
+    gguf: 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/resolve/main/zephyr-7b-beta.Q8_0.gguf'
+    prompt: "<|system|>\n</s>\n<|user|>\n{prompt}</s>\n<|assistant|>"
+    ctx: 8192
+    roles:
+      - 'chat'
+    tags:
+      - '7B'
+  - name: 'codeninja-7b'
+    homepage: 'https://huggingface.co/beowolx/CodeNinja-1.0-OpenChat-7B'
+    gguf: 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF/resolve/main/codeninja-1.0-openchat-7b.Q8_0.gguf'
+    prompt: "GPT4 Correct User: {prompt}<|end_of_turn|>GPT4 Correct Assistant:"
+    ctx: 8192
+    roles:
+      - 'code'
+    tags:
+      - '7B'
+  - name: 'wizardmath-7b'
+    homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
+    gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
+    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
+    ctx: 32768
+    roles:
+      - 'math'
+      - 'logic'
+    tags:
+      - '7B'
+  - name: 'dragon-yi-6b-v0'
+    homepage: 'https://huggingface.co/llmware/dragon-yi-6b-v0'
+    gguf: 'https://huggingface.co/TheBloke/dragon-yi-6B-v0-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/dragon-yi-6B-v0-GGUF/resolve/main/dragon-yi-6b-v0.Q8_0.gguf'
+    prompt:  "<human>: {prompt}\n<bot>:"
+    ctx: 2048
+    roles:
+      - 'math'
+      - 'logic'
+    tags:
+      - '7B'
+  - name: 'mixtral-8x7b-instruct'
+    homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
+    gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q8_0.gguf'
+    ctx: 4096
+    roles:
+      - 'all'
+    tags:
+      - '8x7B'
+  - name: 'deepseek-coder-33b-instruct'
+    homepage: 'https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct'
+    gguf: 'https://huggingface.co/TheBloke/deepseek-coder-33B-instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/deepseek-coder-33B-instruct-GGUF/resolve/main/deepseek-coder-33b-instruct.Q8_0.gguf'
+    prompt: "You are an expert software developer and code mentor.\n### Instruction:\n{prompt}\n### Response:"
+    ctx: 4096
+    lora:
+      evol-feedback:
+        downloads:
+          - 'https://huggingface.co/epinnock/deepseek-coder-33B-evol-feedback-lora-v3/resolve/main/adapter_model.safetensors'
+    roles:
+      - 'code'
+      - 'logic'
+    tags:
+      - '33B'
+  - name: 'deepseek-67b-chat'
+    homepage: 'https://huggingface.co/rombodawg/Everyone-Coder-33b-Base'
+    gguf: 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF/resolve/main/deepseek-llm-67b-chat.Q8_0.gguf-split-a'
+      - 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF/resolve/main/deepseek-llm-67b-chat.Q8_0.gguf-split-b'
+    prompt: "User: {prompt}\n\nAssistant:"
+    ctx: 4096
+    roles:
+      - 'code'
+      - 'logic'
+    tags:
+      - '33B'
+  - name: 'tulu2-dpo-70b'
+    homepage: 'https://huggingface.co/allenai/tulu-2-dpo-70b'
+    gguf: 'https://huggingface.co/TheBloke/tulu-2-dpo-70B-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/tulu-2-dpo-70B-GGUF/resolve/main/tulu-2-dpo-70b.Q8_0.gguf-split-a'
+      - 'https://huggingface.co/TheBloke/tulu-2-dpo-70B-GGUF/resolve/main/tulu-2-dpo-70b.Q8_0.gguf-split-b'
+    prompt:  "<|user|>\n{prompt}\n<|assistant|>"
+    ctx: 4096
+    roles:
+      - 'all'
+    tags:
+      - '70B'
+  - name: 'miqu-1-70b'
+    homepage: 'https://huggingface.co/allenai/tulu-2-dpo-70b'
+    gguf: 'https://huggingface.co/miqudev/miqu-1-70b'
+    downloads:
+      - 'https://huggingface.co/miqudev/miqu-1-70b/resolve/main/miqu-1-70b.q5_K_M.gguf'
+    prompt:  "<s> [INST] {{prompt}} [/INST] ANSWER_1</s>"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '70B'

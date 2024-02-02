@@ -1,0 +1,229 @@
+@font-face {
+    font-family: 'MonaspaceArgon';
+    src: url('../fonts/monaspace/MonaspaceArgon-Regular.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'MonaspaceRadon';
+    src: url('../fonts/monaspace/MonaspaceRadon-Regular.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.fade-me-out.htmx-swapping {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+  }
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.fade-it {
+    view-transition-name: fade-it;
+    animation-duration: 300ms;
+}
+
+::view-transition-old(fade-it) {
+    animation: 600ms ease both fade-out;
+}
+
+::view-transition-new(fade-it) {
+    animation: 600ms ease both fade-in;
+}
+
+:root {
+    --et-purple: #773FE4;
+    --et-green: #ACE43F;
+    --et-blue: #3FE4C9;
+    --et-red: #E43F5A;
+
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #1A1A2E;
+}
+
+.model-container {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.message-content {
+    white-space: pre-wrap;
+    /* Preserves spaces and line breaks */
+    word-wrap: break-word;
+    /* Ensures long words do not break the layout */
+
+}
+
+.user-prompt {
+    background-color: #2c2f33;
+    border-left: 3px solid var(--et-red);
+    /* padding: 8px 12px;
+    margin-top: 20px;
+    margin-bottom: 10px; */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    max-height: min-content;
+}
+
+.response {
+    background-color: #2c2f33;
+    border-left: 3px solid var(--et-purple);
+    /* padding: 8px 12px;
+    margin-bottom: 10px;
+    border-radius: 4px; */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+}
+
+.card-selected {
+    border: 2px solid var(--et-blue);
+    /* or any other styling to depict selection */
+}
+
+/* .chat-container {
+    overflow-y: auto;
+} */
+
+.dark-blur {
+    /* Apply a blur effect to the background */
+    backdrop-filter: blur(50px) brightness(90%);
+    --webkit-backface-visibility: hidden;
+    --moz-backface-visibility: hidden;
+    --webkit-transform: translate3d(0, 0, 0);
+    --moz-transform: translate3d(0, 0, 0);
+}
+
+.hljs {
+    background: #1e1e1e;
+    font-family: 'MonaspaceArgon', monospace;
+}
+
+pre.hljs {
+    background: #1e1e1e;
+    padding: 0.5em;
+}
+
+/* Base background color for code blocks */
+code.hljs {
+    display: block;
+
+    padding: 0.5em;
+    background: #272822;
+    /* Monokai background color */
+    color: #f8f8f2;
+    /* Monokai main text color */
+}
+
+/* Color of the code itself */
+span.hljs {
+    color: #f8f8f2;
+    white-space: pre-wrap;
+}
+
+.preserve-format {
+    white-space: pre-wrap;
+}
+
+span.hljs-comment,
+span.hljs-quote {
+    color: #75715e;
+    font-family: 'MonaspaceRadon', monospace;
+}
+
+span.hljs-string {
+    color: #e6db74;
+}
+
+span.hljs-keyword,
+span.hljs-selector-tag,
+span.hljs-addition {
+    color: #f92672;
+}
+
+span.hljs-built_in,
+span.hljs-class .hljs-title {
+    color: #a6e22e;
+}
+
+span.hljs-function,
+span.hljs-tag .hljs-title,
+span.hljs-title {
+    color: #a6e22e;
+}
+
+span.hljs-number {
+    color: #ae81ff;
+}
+
+span.hljs-literal {
+    color: #ae81ff;
+}
+
+span.hljs-symbol,
+span.hljs-attribute,
+span.hljs-meta .hljs-keyword,
+span.hljs-selector-id,
+span.hljs-selector-attr,
+span.hljs-selector-pseudo,
+span.hljs-template-tag,
+span.hljs-template-variable {
+    color: #f92672;
+}
+
+/* Color of class names */
+span.hljs-type,
+span.hljs-builtin-name {
+    color: #66d9ef;
+}
+
+span.hljs-diff .hljs-change,
+span.hljs-diff .hljs-error,
+span.hljs-diff .hljs-deletion {
+    color: #ae81ff;
+}
+
+span.hljs-addition {
+    color: #e6db74;
+}
+
+span.hljs-operator {
+    color: #f92672;
+}
+
+span.hljs-punctuation {
+    color: #f8f8f2;
+}
+
+span.hljs-escape {
+    color: #ae81ff;
+}
+
+span.hljs-regexp {
+    color: #e6db74;
+}
+
+span.hljs-tag {
+    color: #f92672;
+}
