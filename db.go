@@ -144,7 +144,7 @@ func LoadModelDataToDB(db *SQLiteDB, models []ModelParams) error {
 			}
 		} else {
 			// If the model exists, update it
-			if err := db.db.Model(&existingModel).Updates(model).Error; err != nil {
+			if err := db.db.Model(&existingModel).Updates(&model).Error; err != nil {
 				return err
 			}
 		}
