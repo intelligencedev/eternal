@@ -1,5 +1,7 @@
 # Search Package
 
+NOTE: This is NOT implemented yet, just an example of how the search package could work.
+
 The `search` package implements full-text search using the Bleve search package.
 
 ## Features
