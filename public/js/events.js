@@ -114,3 +114,13 @@ function setViewHeight(viewId) {
   // Subtract the additionalSpacing from promptViewHeight
   document.body.style.paddingBottom = (promptViewHeight + additionalSpacing) + 'px';
 }
+
+  // Listen for the event with the name 'message' and update the div#sse-messages
+  document.body.addEventListener('htmx:sseAfterMessage', function(event) {
+    console.log('Received event:', event);
+    var sseData = JSON.parse(event.detail.data);
+    var sseMessages = document.getElementById('sse-messages');
+    var messageElement = document.createElement('div');
+    messageElement.textContent = sseData.message + ' (received at ' + sseData.timestamp + ')';
+    sseMessages.appendChild(messageElement);
+  });

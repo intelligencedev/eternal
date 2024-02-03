@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"embed"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -26,6 +28,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/afero"
+	"github.com/valyala/fasthttp"
 	"gorm.io/gorm"
 )
 
@@ -425,6 +428,43 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not delete chat"})
 		}
 		return c.SendStatus(fiber.StatusNoContent)
+	})
+
+	// SSE endpoint
+	app.Get("/sseupdates", func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("Transfer-Encoding", "chunked")
+
+		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			fmt.Println("WRITER")
+			var i int
+			for {
+				i++
+
+				// Get current time
+				t := time.Now().Format("2006-01-02 15:04:05")
+
+				// Write message
+				msg := fmt.Sprintf("data: <div>%s</div>", t)
+				fmt.Fprintf(w, "%s\n\n", msg)
+				fmt.Println(msg)
+
+				err := w.Flush()
+				if err != nil {
+					// Refreshing page in web browser will establish a new
+					// SSE connection, but only (the last) one is alive, so
+					// dead connections must be closed here.
+					fmt.Printf("Error while flushing: %v. Closing http connection.\n", err)
+
+					break
+				}
+				time.Sleep(2 * time.Second)
+			}
+		}))
+
+		return nil
 	})
 
 	// Multi web page retrieval via serpapi

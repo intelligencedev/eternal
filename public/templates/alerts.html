@@ -1,4 +1,4 @@
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
+<!-- <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
     <div id="live-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" hx-get="/path/to/alert/content" hx-trigger="load">
       <div class="toast-header">
         <img src="..." class="rounded me-2" alt="...">
@@ -10,4 +10,48 @@
         Your ticket has been saved successfully.
       </div>
     </div>
+  </div> -->
+
+<!-- WebSocket connection container -->
+<div id="download-progress" hx-ext="ws" ws-connect="/wsdownload-progress">
+  <!-- Progress will be displayed here -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
+    <div id="live-toast" class="toast" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+      <div class="toast-header">
+        <img src="..." class="rounded me-2" alt="...">
+        <strong class="me-auto">Download Progress</strong>
+        <small class="toast-time">Just now</small>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body">
+        <!-- Progress message will be updated here -->
+        <div id="progress-message">Starting download...</div>
+      </div>
+    </div>
   </div>
+</div>
+
+<script>
+  // Define function to update progress
+  function updateProgress(progress) {
+    var progressMessage = document.getElementById('progress-message');
+    progressMessage.textContent = 'Downloaded ' + progress.Current + '% of ' + progress.Total + '%';
+  }
+
+  // HTMX WebSocket event listeners
+  htmx.on("htmx:wsOnMessage", function (evt) {
+    var progress = JSON.parse(evt.detail.content);
+    updateProgress(progress);
+  });
+
+  htmx.on("htmx:wsOnOpen", function (evt) {
+    console.log("WebSocket connection opened");
+  });
+
+  htmx.on("htmx:wsOnClose", function (evt) {
+    console.log("WebSocket connection closed");
+  });
+
+  // Additional functions as needed for scrolling, highlighting, etc.
+  // ... (similar to previous <script> content) ...
+</script>

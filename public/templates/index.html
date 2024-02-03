@@ -40,6 +40,7 @@
   <!-- HTMX -->
   <script src="js/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+  <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
 
 </head>
 
@@ -141,6 +142,9 @@
         <div id="chat" class="row chat-container fs-5"></div>
       </div>
       <div id="info" class="col-2">
+        <div name="sse-messages" id="sse-messages" hx-ext="sse" sse-connect="/sseupdates" sse-swap="message">
+          Contents of this box will be updated in real time with every SSE message received from the server.
+        </div>
         <div class="toast-container position-relative top-0 end-0 p-3">
           <div id="download-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="card">
@@ -152,7 +156,8 @@
                     <div class="progress-bar placeholder-wave" style="width: 100%;"></div>
                   </div>
                   <div class="flex-shrink-0 ms-1">
-                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-0" style="width: 24px;" aria-label="Close">&times;</button>
+                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-0" style="width: 24px;"
+                      aria-label="Close">&times;</button>
                   </div>
                 </div>
               </div>
