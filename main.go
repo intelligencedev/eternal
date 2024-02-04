@@ -430,7 +430,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
-	// SSE endpoint
 	app.Get("/sseupdates", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -438,34 +437,66 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		c.Set("Transfer-Encoding", "chunked")
 
 		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			fmt.Println("WRITER")
-			var i int
 			for {
-				i++
+				// Get updated download progress
+				progress := llm.GetDownloadProgress("sse-progress")
 
-				// Get current time
-				t := time.Now().Format("2006-01-02 15:04:05")
+				// Format message for SSE
+				msg := fmt.Sprintf("data: <div class='progress specific-h-25' role='progressbar' aria-label='Labeled example' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar fs-6' style='width: %s;'>%s</div></div>\n\n", progress, progress, progress)
 
-				// Write message
-				msg := fmt.Sprintf("data: <div>%s</div>", t)
-				fmt.Fprintf(w, "%s\n\n", msg)
-				fmt.Println(msg)
-
-				err := w.Flush()
-				if err != nil {
-					// Refreshing page in web browser will establish a new
-					// SSE connection, but only (the last) one is alive, so
-					// dead connections must be closed here.
-					fmt.Printf("Error while flushing: %v. Closing http connection.\n", err)
-
+				// Write the message
+				if _, err := w.WriteString(msg); err != nil {
+					pterm.Printf("Error writing to stream: %v", err)
 					break
 				}
-				time.Sleep(2 * time.Second)
+				if err := w.Flush(); err != nil {
+					pterm.Printf("Error flushing writer: %v", err)
+					break
+				}
+
+				time.Sleep(2 * time.Second) // Adjust the sleep time as necessary
 			}
 		}))
 
 		return nil
 	})
+
+	// // SSE endpoint
+	// app.Get("/sseupdates", func(c *fiber.Ctx) error {
+	// 	c.Set("Content-Type", "text/event-stream")
+	// 	c.Set("Cache-Control", "no-cache")
+	// 	c.Set("Connection", "keep-alive")
+	// 	c.Set("Transfer-Encoding", "chunked")
+
+	// 	c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+	// 		fmt.Println("WRITER")
+	// 		var i int
+	// 		for {
+	// 			i++
+
+	// 			// Get current time
+	// 			t := time.Now().Format("2006-01-02 15:04:05")
+
+	// 			// Write message
+	// 			msg := fmt.Sprintf("data: <div>%s</div>", t)
+	// 			fmt.Fprintf(w, "%s\n\n", msg)
+	// 			fmt.Println(msg)
+
+	// 			err := w.Flush()
+	// 			if err != nil {
+	// 				// Refreshing page in web browser will establish a new
+	// 				// SSE connection, but only (the last) one is alive, so
+	// 				// dead connections must be closed here.
+	// 				fmt.Printf("Error while flushing: %v. Closing http connection.\n", err)
+
+	// 				break
+	// 			}
+	// 			time.Sleep(2 * time.Second)
+	// 		}
+	// 	}))
+
+	// 	return nil
+	// })
 
 	// Multi web page retrieval via serpapi
 	// app.Get("/search", func(c *fiber.Ctx) error {

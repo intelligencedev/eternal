@@ -57,9 +57,18 @@ type ProgressReader struct {
 func (pr *ProgressReader) Read(p []byte) (int, error) {
 	n, err := pr.Reader.Read(p)
 	pr.TotalRead += int64(n)
-	pr.ProgressBar.Total = (int(pr.ContentLength))
 
-	// Update the progress bar
+	// Calculate progress percentage
+	//progressPercentage := int64(100.0 * float64(pr.TotalRead) / float64(pr.ContentLength))
+
+	// Update the progress map safely
+	progressMutex.Lock()
+	downloadProgressMap["sse-progress"] = DownloadProgress{
+		Total:   pr.ContentLength,
+		Current: pr.TotalRead,
+	}
+	progressMutex.Unlock()
+
 	pr.ProgressBar.Add(n)
 
 	return n, err
@@ -147,17 +156,18 @@ func Download(url string, localPath string) error {
 	return nil
 }
 
-func GetDownloadProgress() map[string]DownloadProgress {
+func GetDownloadProgress(key string) string {
 	progressMutex.Lock()
 	defer progressMutex.Unlock()
 
-	// Create a copy to avoid race conditions
-	progressCopy := make(map[string]DownloadProgress)
-	for key, val := range downloadProgressMap {
-		progressCopy[key] = val
+	// Return the progress for a specific key
+	if progress, ok := downloadProgressMap[key]; ok {
+		// Calculate progress percentage
+		return fmt.Sprintf("%d%%", int64(100.0*float64(progress.Current)/float64(progress.Total)))
 	}
 
-	return progressCopy
+	// Fallback if no progress is found
+	return "0%"
 }
 
 func (m *Model) Delete() error {
