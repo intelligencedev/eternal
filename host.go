@@ -1,3 +1,4 @@
+// NOTE: Thiese functions are not implemented in the main app yet.
 package main
 
 import (
