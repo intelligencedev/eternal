@@ -12,8 +12,8 @@ func main() {
 	prompt := "Write a comprehensive plan to become an expert software systems architect in markdown format."
 	pythonCommand := "python3"
 	scriptPath := "generate.py"
-	modelPath := "/Users/arturoaquino/.eternal/data/models/Zephyr-7B-Beta/zephyr-7b-beta.Q8_0.gguf"
-	promptTemplate := fmt.Sprintf("<|system|>\n</s>\n<|user|>\n%s</s>\n<|assistant|>", prompt)
+	modelPath := "/Users/art/.eternal/data/models/Zephyr-7B-Beta/zephyr-7b-beta.Q8_0.gguf"
+	promptTemplate := fmt.Sprintf("<|system|></s><|user|>%s</s><|assistant|>", prompt)
 	maxTokens := "8092"
 
 	// Run the Python command and stream the response
@@ -59,12 +59,10 @@ func StreamPythonCommand(pythonCommand, scriptPath, modelPath, promptTemplate, m
 		}
 	}()
 
-	// Print the output as it's received
 	for line := range outputChan {
 		fmt.Println(line)
 	}
 
-	// Wait for the command to finish
 	err = cmd.Wait()
 	if err != nil {
 		return err
