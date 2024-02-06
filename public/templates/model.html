@@ -6,7 +6,7 @@
   <div class="row">
     {{range .models}}
     <div class="col-6 gy-3">
-      <div class="card h-100" data-model-name="{{.Name}}" onclick="selectModel(this, '{{.Name}}')">
+      <div class="card h-100" data-model-name="{{.Name}}">
         <!-- If .Downloaded is false, add button to call download link -->
         {{if not .Downloaded}}
         {{if not (eq .Name "openai-gpt")}}
@@ -24,7 +24,7 @@
           </button>
         </div>
         {{else}}
-        <div class="card-header">{{.Name}}</div>
+        <div class="card-header" onclick="selectModel(this, '{{.Name}}')">{{.Name}}</div>
         <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
           <!-- Tabs -->
           <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
@@ -55,7 +55,7 @@
         </div>
         {{end}}
         {{else}}
-        <div class="card-header">{{.Name}}</div>
+        <div class="card-header" onclick="selectModel(this, '{{.Name}}')">{{.Name}}</div>
         <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
           <!-- Tabs -->
           <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
@@ -92,8 +92,10 @@
 </div>
 
 <script>
-  // download model
   async function downloadModel(modelName) {
+
+    // Append 
+
     console.log("Downloading model: ", modelName);
     
     // Fetch the download route
@@ -113,6 +115,7 @@
         console.error('Error:', error);
       });
   }
+
   async function selectModel(cardElement, modelName) {
     console.log(modelName)
     cardElement.classList.toggle('card-selected');
