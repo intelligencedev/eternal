@@ -222,6 +222,29 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.JSON(model)
 	})
 
+	app.Put("/modeldata/:modelName/downloaded", func(c *fiber.Ctx) error {
+		modelName := c.Params("modelName")
+		var payload struct {
+			Downloaded bool `json:"downloaded"`
+		}
+
+		// Parse the JSON body to extract the 'downloaded' status
+		if err := c.BodyParser(&payload); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
+		}
+
+		// Update the 'Downloaded' status of the model in the database using its name
+		err := sqliteDB.UpdateDownloadedByName(modelName, payload.Downloaded)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to update model: %v", err)})
+		}
+
+		return c.JSON(fiber.Map{
+			"success": true,
+			"message": "Model 'Downloaded' status updated successfully",
+		})
+	})
+
 	app.Post("/modelcards", func(c *fiber.Ctx) error {
 		// Retrieve all models from the database
 		err := sqliteDB.Find(&modelParams)
