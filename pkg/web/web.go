@@ -46,7 +46,6 @@ func WebGetHandler(url string) (string, error) {
 
 	// Clean up consecutive newlines
 	docs = strings.ReplaceAll(docs, "\n\n", "\n")
-	//fmt.Println("Document:", docs)
 
 	// Create a strings.Reader from docs to provide an io.Reader to ParseReaderView
 	reader := strings.NewReader(docs)
@@ -78,7 +77,7 @@ func ExtractURLs(input string) []string {
 
 	var cleanedURLs []string
 	for _, match := range matches {
-		cleanedURL := cleanURL(match) // Assuming cleanURL is a function you've defined elsewhere
+		cleanedURL := cleanURL(match)
 		cleanedURLs = append(cleanedURLs, cleanedURL)
 	}
 
@@ -87,7 +86,7 @@ func ExtractURLs(input string) []string {
 
 // cleanURL removes illegal trailing characters from the URL.
 func cleanURL(url string) string {
-	// Define illegal trailing characters. Adjust as needed.
+	// Define illegal trailing characters.
 	illegalTrailingChars := []rune{'.', ',', ';', '!', '?', ')'}
 
 	for _, char := range illegalTrailingChars {
@@ -115,7 +114,6 @@ func ParseReaderView(r io.Reader) (string, error) {
 				renderNode(&readerView, n)
 			}
 		}
-		// Traverse the child nodes
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			f(c)
 		}
