@@ -318,7 +318,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			}
 		}()
 
-		return c.SendStatus(fiber.StatusOK)
+		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
+
+		return c.SendString(progressErr)
+		// return c.SendStatus(fiber.StatusOK)
 	})
 
 	app.Post("/chattemplates", func(c *fiber.Ctx) error {
