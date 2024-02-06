@@ -119,8 +119,18 @@ func (sqldb *SQLiteDB) First(name string, out interface{}) error {
 	return sqldb.db.Where("name = ?", name).First(out).Error
 }
 
-func (sqldb *SQLiteDB) Update(id uint, updatedRecord interface{}) error {
-	return sqldb.db.Model(reflect.New(reflect.TypeOf(updatedRecord).Elem()).Interface()).Where("id = ?", id).Updates(updatedRecord).Error
+func (sqldb *SQLiteDB) FindByID(id uint, out interface{}) error {
+	return sqldb.db.First(out, id).Error
+}
+
+func (sqldb *SQLiteDB) UpdateByName(name string, updatedRecord interface{}) error {
+	// Assuming 'Name' is the field in your model that holds the model's name.
+	// The method first finds the record by name and then applies the updates.
+	return sqldb.db.Model(updatedRecord).Where("name = ?", name).Updates(updatedRecord).Error
+}
+
+func (sqldb *SQLiteDB) UpdateDownloadedByName(name string, downloaded bool) error {
+	return sqldb.db.Model(&ModelParams{}).Where("name = ?", name).Update("downloaded", downloaded).Error
 }
 
 func (sqldb *SQLiteDB) Delete(id uint, model interface{}) error {

@@ -1,4 +1,4 @@
-public/js/bootstrap/* linguist-vendored=true
-public/js/highlight/* linguist-vendored=true
-public/fonts/* linguist-vendored=true
-public/css/halfmoon/* linguist-vendored=true
+public/js/bootstrap/** linguist-vendored
+public/js/highlight/** linguist-vendored
+public/fonts/** linguist-vendored
+public/css/halfmoon/** linguist-vendored
