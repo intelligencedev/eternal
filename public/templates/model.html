@@ -22,9 +22,10 @@
                 d="M12.226 3.5c-2.75 0-4.964 2.2-4.964 4.897c0 .462.065.909.185 1.331c.497.144.963.36 1.383.64a.75.75 0 1 1-.827 1.25a3.54 3.54 0 0 0-1.967-.589c-1.961 0-3.536 1.57-3.536 3.486C2.5 16.43 4.075 18 6.036 18a.75.75 0 0 1 0 1.5C3.263 19.5 1 17.276 1 14.515c0-2.705 2.17-4.893 4.864-4.983a6.366 6.366 0 0 1-.102-1.135C5.762 4.856 8.664 2 12.226 2c3.158 0 5.796 2.244 6.355 5.221c2.3.977 3.919 3.238 3.919 5.882c0 3.074-2.188 5.631-5.093 6.253a.75.75 0 0 1-.314-1.467c2.24-.48 3.907-2.446 3.907-4.786c0-2.137-1.39-3.962-3.338-4.628a5.018 5.018 0 0 0-1.626-.27c-.583 0-1.14.1-1.658.28a.75.75 0 0 1-.494-1.416a6.517 6.517 0 0 1 3.024-.305A4.962 4.962 0 0 0 12.226 3.5" />
             </svg>
           </button>
+          <div name="progress-download" id="progress-download"></div>
         </div>
         {{else}}
-        <div class="card-header" onclick="selectModel(this, '{{.Name}}')">{{.Name}}</div>
+        <div id="card-header-{{.Name}}" class="card-header" onclick="selectModel('{{.Name}}')">{{.Name}}</div>
         <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
           <!-- Tabs -->
           <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
@@ -55,7 +56,7 @@
         </div>
         {{end}}
         {{else}}
-        <div class="card-header" onclick="selectModel(this, '{{.Name}}')">{{.Name}}</div>
+        <div class="card-header" onclick="selectModel('{{.Name}}')">{{.Name}}</div>
         <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
           <!-- Tabs -->
           <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
@@ -116,8 +117,11 @@
       });
   }
 
-  async function selectModel(cardElement, modelName) {
-    console.log(modelName)
+  async function selectModel(modelName) {
+    
+    // Get the card element using the data-model-name attribute
+    let cardElement = document.querySelector(`div[data-model-name="${modelName}"]`);
+    
     cardElement.classList.toggle('card-selected');
 
     // Determine the action based on selection state
