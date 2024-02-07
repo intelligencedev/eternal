@@ -1,3 +1,159 @@
+<style>
+  .loadership_JTACT {
+    display: flex;
+    position: relative;
+    width: 68px;
+    height: 68px;
+  }
+
+  .loadership_JTACT div {
+    animation: loadership_JTACT_roller 1.2s infinite;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+    transform-origin: 34px 34px;
+  }
+
+  .loadership_JTACT div:after {
+    content: " ";
+    display: block;
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+  }
+
+  .loadership_JTACT div:nth-child(1) {
+    animation-delay: 0.00s;
+  }
+
+  .loadership_JTACT div:nth-child(1):after {
+    top: 60px;
+    left: 30px;
+  }
+
+
+  .loadership_JTACT div:nth-child(2) {
+    animation-delay: -0.04s;
+  }
+
+  .loadership_JTACT div:nth-child(2):after {
+    top: 56px;
+    left: 45px;
+  }
+
+
+  .loadership_JTACT div:nth-child(3) {
+    animation-delay: -0.07s;
+  }
+
+  .loadership_JTACT div:nth-child(3):after {
+    top: 45px;
+    left: 56px;
+  }
+
+
+  .loadership_JTACT div:nth-child(4) {
+    animation-delay: -0.11s;
+  }
+
+  .loadership_JTACT div:nth-child(4):after {
+    top: 30px;
+    left: 60px;
+  }
+
+
+  .loadership_JTACT div:nth-child(5) {
+    animation-delay: -0.14s;
+  }
+
+  .loadership_JTACT div:nth-child(5):after {
+    top: 15px;
+    left: 56px;
+  }
+
+
+  .loadership_JTACT div:nth-child(6) {
+    animation-delay: -0.18s;
+  }
+
+  .loadership_JTACT div:nth-child(6):after {
+    top: 4px;
+    left: 45px;
+  }
+
+
+  .loadership_JTACT div:nth-child(7) {
+    animation-delay: -0.22s;
+  }
+
+  .loadership_JTACT div:nth-child(7):after {
+    top: 0px;
+    left: 30px;
+  }
+
+
+  .loadership_JTACT div:nth-child(8) {
+    animation-delay: -0.25s;
+  }
+
+  .loadership_JTACT div:nth-child(8):after {
+    top: 4px;
+    left: 15px;
+  }
+
+
+  .loadership_JTACT div:nth-child(9) {
+    animation-delay: -0.29s;
+  }
+
+  .loadership_JTACT div:nth-child(9):after {
+    top: 15px;
+    left: 4px;
+  }
+
+
+  .loadership_JTACT div:nth-child(10) {
+    animation-delay: -0.32s;
+  }
+
+  .loadership_JTACT div:nth-child(10):after {
+    top: 30px;
+    left: 0px;
+  }
+
+
+  .loadership_JTACT div:nth-child(11) {
+    animation-delay: -0.36s;
+  }
+
+  .loadership_JTACT div:nth-child(11):after {
+    top: 45px;
+    left: 4px;
+  }
+
+
+  .loadership_JTACT div:nth-child(12) {
+    animation-delay: -0.40s;
+  }
+
+  .loadership_JTACT div:nth-child(12):after {
+    top: 56px;
+    left: 15px;
+  }
+
+
+
+  @keyframes loadership_JTACT_roller {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
@@ -23,6 +179,20 @@
       <!-- Messages received from WebSocket will be appended here -->
       <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
         hx-on:load="highlight()">
+        <div class="loadership_JTACT">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
       </div>
     </div>
   </div>

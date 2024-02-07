@@ -491,8 +491,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
-		pterm.Info.Println("Chat message:", chatMessage)
-
 		var document string
 
 		url := web.ExtractURLs(chatMessage)
@@ -566,6 +564,16 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
+
+		var document string
+
+		url := web.ExtractURLs(chatMessage)
+
+		if len(url) > 0 {
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
 
 		// Process the message (existing logic)
 		cpt := llm.GetSystemTemplate(chatMessage)
