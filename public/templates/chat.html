@@ -8,11 +8,10 @@
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
         <!-- Get the selectedModels in localStorage and send over websocket -->
         <input type="hidden" name="model" value="{{.model}}">
-        <input type="hidden" name="prompt" value="{{.prompt}}">
         <input type="hidden" name="chat_message" value="{{.message}}">
       </form>
       <div>
-        <span class="message-content mx-1">{{.prompt}}</span>
+        <span class="message-content mx-1">{{.message}}</span>
       </div>
     </div>
   </div>
@@ -28,6 +27,7 @@
     </div>
   </div>
 </div>
+
 <script>
   htmx.on("htmx:wsOnClose", function (evt) {
     highlight();
