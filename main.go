@@ -345,24 +345,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 	app.Post("/chatsubmit", func(c *fiber.Ctx) error {
 
-		// Parse URL from c.FormValue("userprompt")
-
 		// userPrompt is the message displayed in the chat view
 		userPrompt := c.FormValue("userprompt")
-
-		// fullPromt will be the message sent to LLM after it is modified by workflows
-		var fullPrompt string
-		url := web.ExtractURLs(userPrompt)
-
-		var document string
-
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			fullPrompt = fmt.Sprintf("%s%s", document, userPrompt)
-		} else {
-			fullPrompt = userPrompt
-		}
 
 		var wsroute string
 
@@ -386,17 +370,12 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			return c.JSON(fiber.Map{"error": "No models selected"})
 		}
 
-		//fmt.Println(wsroute)
-		//pterm.Info.Println(userPrompt)
-		//pterm.Info.Println(fullPrompt)
-
 		// Generate unique ID
 		turnID := IncrementTurn()
 
 		return c.Render("public/templates/chat", fiber.Map{
 			"username":  config.CurrentUser,
-			"prompt":    userPrompt, // This is the message that will be displayed in the chat
-			"message":   fullPrompt, // This is the message that will be sent to the AI
+			"message":   userPrompt, // This is the message that will be displayed in the chat
 			"assistant": config.AssistantName,
 			"model":     selectedModels[0].ModelName,
 			"turnID":    turnID,
@@ -487,53 +466,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return nil
 	})
 
-	// // SSE endpoint
-	// app.Get("/sseupdates", func(c *fiber.Ctx) error {
-	// 	c.Set("Content-Type", "text/event-stream")
-	// 	c.Set("Cache-Control", "no-cache")
-	// 	c.Set("Connection", "keep-alive")
-	// 	c.Set("Transfer-Encoding", "chunked")
-
-	// 	c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-	// 		fmt.Println("WRITER")
-	// 		var i int
-	// 		for {
-	// 			i++
-
-	// 			// Get current time
-	// 			t := time.Now().Format("2006-01-02 15:04:05")
-
-	// 			// Write message
-	// 			msg := fmt.Sprintf("data: <div>%s</div>", t)
-	// 			fmt.Fprintf(w, "%s\n\n", msg)
-	// 			fmt.Println(msg)
-
-	// 			err := w.Flush()
-	// 			if err != nil {
-	// 				// Refreshing page in web browser will establish a new
-	// 				// SSE connection, but only (the last) one is alive, so
-	// 				// dead connections must be closed here.
-	// 				fmt.Printf("Error while flushing: %v. Closing http connection.\n", err)
-
-	// 				break
-	// 			}
-	// 			time.Sleep(2 * time.Second)
-	// 		}
-	// 	}))
-
-	// 	return nil
-	// })
-
-	// Multi web page retrieval via serpapi
-	// app.Get("/search", func(c *fiber.Ctx) error {
-	// 	return web.SearchHandler(c)
-	// })
-
-	// Multi web page retrieval via local ChromeDP
-	// app.Get("/dpsearch", func(c *fiber.Ctx) error {
-	// 	return web.SearchChromeDPHandler(c)
-	// })
-
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		if c == nil {
 			pterm.Error.Println("WebSocket connection is nil")
@@ -558,6 +490,18 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
+
+		pterm.Info.Println("Chat message:", chatMessage)
+
+		var document string
+
+		url := web.ExtractURLs(chatMessage)
+
+		if len(url) > 0 {
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
 
 		// // Process the message
 		cpt := llm.GetSystemTemplate(chatMessage)
