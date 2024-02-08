@@ -435,6 +435,23 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
+	// Multi web page retrieval via local ChromeDP
+	app.Get("/dpsearch", func(c *fiber.Ctx) error {
+
+		urls := []string{}
+		query := c.Query("q")
+		res := web.SearchDuckDuckGo(query)
+		if len(res) == 0 {
+			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving search results")
+		}
+
+		// Remove youtube results
+		urls = append(urls, res...)
+
+		// Send results as json object
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"urls": urls})
+	})
+
 	app.Get("/sseupdates", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
