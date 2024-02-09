@@ -49,6 +49,7 @@
   <div id="content" class="container-fluid overflow-x-hidden">
     <div class="row">
       <div class="col-2 p-4 fixed-top">
+        <!-- TODO: Convert the tool pane to a stack: https://www.gethalfmoon.com/docs/stacks/ -->
         <div class="row">
           <button class="btn fw-medium" data-bs-toggle="/">
             <span class="fs-4">Et<svg class="" width="16" height="16" viewBox="0 0 24 24"
@@ -62,7 +63,8 @@
         </div>
         <div class="row mt-5">
           <!-- MODELS -->
-          <button class="btn" hx-post="/modelcards" hx-target="#chat-view" hx-swap="afterbegin transition:true">
+          <button class="btn" hx-post="/modelcards" hx-target="#chat-view" hx-swap="afterbegin transition:true"
+            data-bs-toggle="tooltip" data-bs-title="Language Models">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <g fill="none">
                 <path stroke="#ffffff" stroke-linecap="round" stroke-width="1.5"
@@ -77,7 +79,7 @@
         </div>
         <!-- WEB PAGE RETRIEVAL -->
         <div class="row mt-5">
-          <button id="webget-btn" class="btn">
+          <button id="webget-btn" class="btn" data-bs-toggle="tooltip" data-bs-title="Web Retrieval">
             <svg id="webget" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <g fill="none" stroke="#ffffff" stroke-width="1.5">
                 <path
@@ -89,7 +91,8 @@
         </div>
         <!-- WEB SEARCH -->
         <div class="row mt-5">
-          <button class="btn">
+          <button id="websearchBtn" class="btn" hx-post="/tool/websearch" hx-swap="none" data-bs-toggle="tooltip"
+            data-bs-title="Web Search">
             <svg id="websearch" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path fill="#ffffff" fill-rule="evenodd"
                 d="M9.944 3.25h4.112c1.838 0 3.294 0 4.433.153c1.172.158 2.121.49 2.87 1.238c.748.749 1.08 1.698 1.238 2.87c.09.673.127 1.456.142 2.363a.755.755 0 0 1 .004.23c.007.566.007 1.178.007 1.84V13a.75.75 0 0 1-1.5 0v-1c0-.446 0-.862-.002-1.25H2.752c-.002.388-.002.804-.002 1.25c0 1.907.002 3.262.14 4.29c.135 1.005.389 1.585.812 2.008c.423.423 1.003.677 2.009.812c1.028.138 2.382.14 4.289.14h3a.75.75 0 0 1 0 1.5H9.944c-1.838 0-3.294 0-4.433-.153c-1.172-.158-2.121-.49-2.87-1.238c-.748-.749-1.08-1.698-1.238-2.87c-.153-1.14-.153-2.595-.153-4.433v-.112c0-.662 0-1.274.007-1.84a.757.757 0 0 1 .003-.23c.016-.907.053-1.69.143-2.363c.158-1.172.49-2.121 1.238-2.87c.749-.748 1.698-1.08 2.87-1.238c1.14-.153 2.595-.153 4.433-.153m-7.168 6h18.448a15.6 15.6 0 0 0-.114-1.54c-.135-1.005-.389-1.585-.812-2.008c-.423-.423-1.003-.677-2.009-.812c-1.027-.138-2.382-.14-4.289-.14h-4c-1.907 0-3.261.002-4.29.14c-1.005.135-1.585.389-2.008.812c-.423.423-.677 1.003-.812 2.009c-.06.445-.094.952-.114 1.539M18 14.75a2.25 2.25 0 1 0 0 4.5a2.25 2.25 0 0 0 0-4.5M14.25 17a3.75 3.75 0 1 1 6.879 2.068l.901.902a.75.75 0 1 1-1.06 1.06l-.902-.901A3.75 3.75 0 0 1 14.25 17m-9-1a.75.75 0 0 1 .75-.75h4a.75.75 0 0 1 0 1.5H6a.75.75 0 0 1-.75-.75"
@@ -99,7 +102,7 @@
         </div>
         <!-- CODE SANDBOX -->
         <div class="row mt-5">
-          <button class="btn">
+          <button class="btn" data-bs-toggle="tooltip" data-bs-title="Code Sandbox">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="1.5">
                 <path
@@ -110,9 +113,9 @@
             </svg>
           </button>
         </div>
-        <!-- SDXL -->
+        <!-- Image Generation -->
         <div id="txt2img" class="row mt-5">
-          <button class="btn" type="button" onclick="toastDisplay()">
+          <button class="btn" type="button" data-bs-toggle="tooltip" data-bs-title="Image Generation">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path fill="#FFFFFF"
                 d="M17.29 11.969a1.33 1.33 0 0 1-1.322 1.337a1.33 1.33 0 0 1-1.323-1.337a1.33 1.33 0 0 1 1.323-1.338c.73 0 1.323.599 1.323 1.338Z" />
@@ -126,7 +129,7 @@
         </div>
         <!-- SETTINGS -->
         <div class="row mt-5">
-          <button class="btn" data-bs-toggle="modal" data-bs-target="#modal-settings">
+          <button class="btn" data-bs-target="#modal-settings" data-bs-toggle="tooltip" data-bs-title="Settings">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <g fill="none" stroke="#ffffff" stroke-width="1.5">
                 <circle cx="12" cy="12" r="3" />
@@ -144,7 +147,7 @@
       <div id="info" class="col-2 mt-2 pt-1">
 
         <!-- TODO: MOVE DOWNLOAD PROGRESS TO MODEL CARD -->
-        <div class="toast-container position-relative top-0 end-0 p-3">
+        <!-- <div class="toast-container position-relative top-0 end-0 p-3">
           <div id="download-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true"
             data-bs-autohide="false">
             <div class="m-2">
@@ -157,8 +160,8 @@
               </div>
             </div>
           </div>
-        </div>
-        
+        </div> -->
+
       </div>
     </div>
     <div class="">
@@ -269,6 +272,14 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="js/events.js"></script>
   <script src="js/workflows.js"></script>
+  <script>
+    const tooltipTriggerList = document.querySelectorAll(
+      "[data-bs-toggle='tooltip']"
+    );
+    const tooltipList = [...tooltipTriggerList].map(
+      (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+    );
+  </script>
 </body>
 
 </html>

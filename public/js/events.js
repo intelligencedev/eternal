@@ -33,7 +33,7 @@ async function highlightSelectedModels() {
 
     // Apply 'card-selected' class to each selected model's card
     selectedModelNames.forEach(modelName => {
-      const modelCard = document.querySelector(`.card[data-model-name="${modelName}"]`);
+      const modelCard = document.querySelector(`[data-model-name="${modelName}"]`);
       if (modelCard) {
         modelCard.classList.add('card-selected');
       }
@@ -49,6 +49,7 @@ let selectedModels = [];
 
 // Call getSelectedModels when the DOM content is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+
   promptViewHeight = document.getElementById('prompt-view').offsetHeight;
   getSelectedModels();
   const observer = new MutationObserver(mutationCallback);

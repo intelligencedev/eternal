@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/url"
@@ -13,12 +12,33 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 	"github.com/pterm/pterm"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+)
+
+var (
+	unwantedURLs = []string{
+		"youtube.com",
+		"wired.com",
+		"techcrunch.com",
+		"wsj.com",
+		"cnn.com",
+		"nytimes.com",
+		"forbes.com",
+		"businessinsider.com",
+		"theverge.com",
+		"thehill.com",
+		"theatlantic.com",
+		"foxnews.com",
+		"theguardian.com",
+		"nbcnews.com",
+		"msn.com",
+		"sciencedaily.com",
+		// Add more URLs to block from search results
+	}
 )
 
 func WebGetHandler(url string) (string, error) {
@@ -167,76 +187,113 @@ func isInlineElement(n *html.Node) bool {
 }
 
 // SearchDuckDuckGo performs a search on DuckDuckGo and retrieves the HTML of the first page of results.
-func SearchDuckDuckGo(chromeUrl, query string) []string {
-	instanceUrl := chromeUrl
-
-	// Create allocator context for using existing Chrome instance
-	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), instanceUrl)
+func SearchDuckDuckGo(query string) []string {
+	// Initialize headless Chrome
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+	)
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer cancel()
-
-	// Create context with logging for actions performed by chromedp
-	ctx, cancel := chromedp.NewContext(allocatorCtx, chromedp.WithLogf(log.Printf))
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	// Set a timeout for the entire operation
 	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Run tasks to perform the search and get HTML content
 	var nodes []*cdp.Node
+	var resultURLs []string
+
+	// Perform the search on DuckDuckGo
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(`https://duckduckgo.com/`),
 		chromedp.WaitVisible(`input[name="q"]`, chromedp.ByQuery),
 		chromedp.SendKeys(`input[name="q"]`, query+kb.Enter, chromedp.ByQuery),
-
-		// Wait for JavaScript to load the search results
-		chromedp.Sleep(5*time.Second),
-
-		// Wait for search results to be visible
+		chromedp.Sleep(5*time.Second), // Wait for JavaScript to load the search results
 		chromedp.WaitVisible(`button[id="more-results"]`, chromedp.ByQuery),
-
 		chromedp.Nodes(`a`, &nodes, chromedp.ByQueryAll),
+	)
+	if err != nil {
+		log.Printf("Error during search: %v", err)
+		return nil
+	}
 
+	// Process the search results
+	err = chromedp.Run(ctx,
 		chromedp.ActionFunc(func(c context.Context) error {
-			// depth -1 for the entire subtree
-			// do your best to limit the size of the subtree
-			dom.RequestChildNodes(nodes[0].NodeID).WithDepth(-1).Do(c)
-
-			// Compile the regex outside of the loop for efficiency
 			re, err := regexp.Compile(`^http[s]?://`)
 			if err != nil {
 				return err
 			}
 
 			uniqueUrls := make(map[string]bool)
-
-			// loop through the nodes and print the href attributes of a elements
 			for _, n := range nodes {
 				for _, attr := range n.Attributes {
-					if re.MatchString(attr) {
-						// Check if URL contains 'duckduckgo'
-						if !strings.Contains(attr, "duckduckgo") {
-							uniqueUrls[attr] = true
-						}
+					if re.MatchString(attr) && !strings.Contains(attr, "duckduckgo") {
+						uniqueUrls[attr] = true
 					}
 				}
 			}
 
-			// Convert map keys to slice
-			resultURLs = make([]string, 0, len(uniqueUrls))
 			for url := range uniqueUrls {
 				resultURLs = append(resultURLs, url)
-			}
-
-			for _, l := range resultURLs {
-				fmt.Println(l)
 			}
 
 			return nil
 		}),
 	)
+
 	if err != nil {
-		return resultURLs
+		log.Printf("Error processing results: %v", err)
+		return nil
+	}
+
+	// Remove unwanted URLs
+	resultURLs = RemoveUnwantedURLs(resultURLs)
+
+	// Only return the top n results
+	resultURLs = resultURLs[:1]
+
+	return resultURLs
+}
+
+// GetSearchResults loops over a list of URLs and retrieves the HTML of each page.
+func GetSearchResults(urls []string) string {
+	var resultHTML string
+
+	for _, url := range urls {
+		res, err := WebGetHandler(url)
+		if err != nil {
+			pterm.Error.Printf("Error getting search result: %v", err)
+			continue
+		}
+
+		if res != "" {
+			resultHTML += res
+		}
+
+		// time.Sleep(5 * time.Second)
+	}
+
+	return resultHTML
+}
+
+// RemoveUnwantedURLs removes unwanted URLs from the list of URLs.
+func Contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+func RemoveUnwantedURLs(urls []string) []string {
+	var resultURLs []string
+	for _, url := range urls {
+		if !Contains(unwantedURLs, url) {
+			resultURLs = append(resultURLs, url)
+		}
 	}
 
 	return resultURLs
