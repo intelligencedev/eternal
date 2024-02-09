@@ -35,6 +35,8 @@ var (
 		"foxnews.com",
 		"theguardian.com",
 		"nbcnews.com",
+		"msn.com",
+		"sciencedaily.com",
 		// Add more URLs to block from search results
 	}
 )
@@ -249,8 +251,8 @@ func SearchDuckDuckGo(query string) []string {
 	// Remove unwanted URLs
 	resultURLs = RemoveUnwantedURLs(resultURLs)
 
-	// Only return the top 3 results
-	resultURLs = resultURLs[:3]
+	// Only return the top n results
+	resultURLs = resultURLs[:1]
 
 	return resultURLs
 }
