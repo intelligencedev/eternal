@@ -49,6 +49,7 @@ let selectedModels = [];
 
 // Call getSelectedModels when the DOM content is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+
   promptViewHeight = document.getElementById('prompt-view').offsetHeight;
   getSelectedModels();
   const observer = new MutationObserver(mutationCallback);

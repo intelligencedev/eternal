@@ -1,3 +1,9 @@
+// List of tool names enabled by default:
+var enabledTools = [
+  // "webget", // Retrieves a single page from a given url
+  // "websearch", // Searches a given query and returns n urls to pass to webget tool
+];
+
 const uploadButton = document.getElementById('upload');
 const fileInput = document.getElementById('file-input');
 

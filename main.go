@@ -41,12 +41,20 @@ var (
 
 	chatTurn = 1
 	sqliteDB *SQLiteDB
+
+	tools []Tool
 )
 
 type WebSocketMessage struct {
 	ChatMessage string                 `json:"chat_message"`
 	Model       string                 `json:"model"`
 	Headers     map[string]interface{} `json:"HEADERS"`
+}
+
+// Define a Tool struct
+type Tool struct {
+	Name    string
+	Enabled bool
 }
 
 func main() {
@@ -131,6 +139,10 @@ func main() {
 		log.Fatalf("Failed to load model data to database: %v", err)
 	}
 
+	// Populate tools
+	websearch := Tool{Name: "websearch", Enabled: false}
+	tools = append(tools, websearch)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -183,9 +195,37 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.JSON(config)
 	})
 
+	// route to enable or disable a tool
+	app.Post("/tool/:toolName", func(c *fiber.Ctx) error {
+		toolName := c.Params("toolName")
+
+		// Find the index of the tool and a flag indicating if it's found
+		var index int
+		found := false
+		for i, t := range tools {
+			if t.Name == toolName {
+				index = i
+				found = true
+				break
+			}
+		}
+
+		// If the tool is not found, return a 404 error
+		if !found {
+			return c.Status(404).SendString("Tool not found")
+		}
+
+		// Toggle the Enabled status of the tool
+		tools[index].Enabled = !tools[index].Enabled
+
+		// Return the updated tool as JSON
+		return c.JSON(tools[index])
+	})
+
 	app.Get("/openai/models", func(c *fiber.Ctx) error {
 		client := openai.NewClient(config.OAIKey)
 		modelsResponse, err := openai.GetModels(client)
+
 		if err != nil {
 			log.Errorf(err.Error())
 			return c.Status(500).SendString("Server Error")
@@ -195,6 +235,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// This needs to be changed to a different method later. Using the name
 		// is a future bug waiting to happen.
 		var gptModels []string
+
 		for _, model := range modelsResponse.Data {
 			if strings.HasPrefix(model.ID, "gpt") {
 				gptModels = append(gptModels, model.ID)
@@ -211,14 +252,15 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		var model ModelParams
 
 		modelName := c.Params("modelName")
-
 		err := sqliteDB.First(modelName, &model)
+
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return c.Status(fiber.StatusNotFound).SendString("Model not found")
 			}
 			return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
 		}
+
 		return c.JSON(model)
 	})
 
@@ -248,6 +290,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Post("/modelcards", func(c *fiber.Ctx) error {
 		// Retrieve all models from the database
 		err := sqliteDB.Find(&modelParams)
+
 		if err != nil {
 			log.Errorf("Database error: %v", err)
 			return c.Status(500).SendString("Server Error")
@@ -259,6 +302,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 	app.Post("/model/select", func(c *fiber.Ctx) error {
 		var selection SelectedModels
+
 		if err := c.BodyParser(&selection); err != nil {
 			return c.Status(fiber.StatusBadRequest).SendString("Bad request")
 		}
@@ -279,12 +323,14 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 	app.Get("/models/selected", func(c *fiber.Ctx) error {
 		selectedModels, err := GetSelectedModels(sqliteDB.db)
+
 		if err != nil {
 			log.Errorf("Error getting selected models: %v", err)
 			return c.Status(500).SendString("Server Error")
 		}
 
 		var selectedModelNames []string
+
 		for _, model := range selectedModels {
 			selectedModelNames = append(selectedModelNames, model.ModelName)
 		}
@@ -321,7 +367,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
 
 		return c.SendString(progressErr)
-		// return c.SendStatus(fiber.StatusOK)
 	})
 
 	app.Post("/chattemplates", func(c *fiber.Ctx) error {
@@ -335,6 +380,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		var chatTemplate []llm.ChatPromptTemplate
 		err = json.Unmarshal(chatTemplates, &chatTemplate)
+
 		if err != nil {
 			log.Errorf(err.Error())
 			return c.Status(500).SendString("Server Error")
@@ -365,6 +411,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			} else {
 				wsroute = "/ws"
 			}
+
 		} else {
 			// return error
 			return c.JSON(fiber.Map{"error": "No models selected"})
@@ -386,39 +433,49 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	// Retrieve all chats from sqlite database
 	app.Get("/chats", func(c *fiber.Ctx) error {
 		chats, err := GetChats(sqliteDB.db)
+
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get chats"})
 		}
+
 		return c.Status(fiber.StatusOK).JSON(chats)
 	})
 
 	// Retrieve a single chat from sqlite database by id
 	app.Get("/chats/:id", func(c *fiber.Ctx) error {
 		id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
 		}
+
 		chat, err := GetChatByID(sqliteDB.db, id)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get chat"})
 		}
+
 		return c.Status(fiber.StatusOK).JSON(chat)
 	})
 
 	// Update a single chat in sqlite database by id
 	app.Put("/chats/:id", func(c *fiber.Ctx) error {
 		id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
 		}
+
 		chat := new(Chat)
+
 		if err := c.BodyParser(chat); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse JSON"})
 		}
+
 		err = UpdateChat(sqliteDB.db, id, chat.Prompt, chat.Response, chat.ModelName)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not update chat"})
 		}
+
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
@@ -428,19 +485,21 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
 		}
+
 		err = DeleteChat(sqliteDB.db, id)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not delete chat"})
 		}
+
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
 	// Multi web page retrieval via local ChromeDP
 	app.Get("/dpsearch", func(c *fiber.Ctx) error {
-
 		urls := []string{}
 		query := c.Query("q")
 		res := web.SearchDuckDuckGo(query)
+
 		if len(res) == 0 {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving search results")
 		}
@@ -499,6 +558,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// Unmarshal the JSON message
 		var wsMessage WebSocketMessage
+
 		err = json.Unmarshal(message, &wsMessage)
 		if err != nil {
 			c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
@@ -508,14 +568,37 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
+		// Begin tool workflow. Tools will add context to the submitted message for
+		// the model to use. Document is the abstraction that will hold that context.
 		var document string
 
-		url := web.ExtractURLs(chatMessage)
+		// Retrieve the page content from prompt URLs and add it to the document
+		// url := web.ExtractURLs(chatMessage)
 
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
+		// if len(url) > 0 {
+		// 	pterm.Info.Println("Extracted URLs: ", url)
+		// 	document, _ = web.WebGetHandler(url[0])
+		// 	document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		// }
+
+		// If the websearch tool is enabled
+		for _, tool := range tools {
+			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "websearch" && tool.Enabled {
+				if tool.Enabled {
+					urls := web.SearchDuckDuckGo(chatMessage)
+
+					for _, url := range urls {
+						pterm.Info.Printf("Retrieving %s\n", url)
+						document, _ = web.WebGetHandler(url)
+						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+					}
+				}
+			}
+
 			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
 
 		// // Process the message
@@ -524,6 +607,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// // Get the details of the first model from database
 		var model ModelParams
+
 		err = sqliteDB.First(wsMessage.Model, &model)
 		if err != nil {
 			log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
@@ -573,6 +657,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// Unmarshal the JSON message
 		var wsMessage WebSocketMessage
+
 		err = json.Unmarshal(message, &wsMessage)
 		if err != nil {
 			pterm.PrintOnError(err)
@@ -582,14 +667,36 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
+		// Begin tool workflow. Tools will add context to the submitted message for
+		// the model to use. Document is the abstraction that will hold that context.
 		var document string
 
-		url := web.ExtractURLs(chatMessage)
+		// Retrieve the page content from prompt URLs and add it to the document
+		// url := web.ExtractURLs(chatMessage)
 
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
+		// if len(url) > 0 {
+		// 	document, _ = web.WebGetHandler(url[0])
+		// 	document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		// }
+
+		// If the websearch tool is enabled
+		for _, tool := range tools {
+			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "websearch" && tool.Enabled {
+				if tool.Enabled {
+					urls := web.SearchDuckDuckGo(chatMessage)
+
+					for _, url := range urls {
+						pterm.Info.Printf("Retrieving %s\n", url)
+						document, _ = web.WebGetHandler(url)
+						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+					}
+				}
+			}
+
 			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
 
 		// Process the message (existing logic)
