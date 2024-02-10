@@ -1,3 +1,6 @@
 [submodule "pkg/llm/local/gguf"]
 	path = pkg/llm/local/gguf
 	url = https://github.com/ggerganov/llama.cpp.git
+[submodule "pkg/sd/sdcpp"]
+	path = pkg/sd/sdcpp
+	url = https://github.com/leejet/stable-diffusion.cpp
