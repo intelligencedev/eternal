@@ -24,7 +24,7 @@ var (
 
 func InitServer(configPath string) (string, error) {
 
-	// Copy the public files to the data path web folder
+	// WEB FILES
 	webPath := filepath.Join(configPath, "web")
 	err := os.MkdirAll(webPath, 0755)
 	if err != nil {
@@ -35,6 +35,7 @@ func InitServer(configPath string) (string, error) {
 		return "", fmt.Errorf("failed to copy files: %v", err)
 	}
 
+	// GGUF FILES
 	ggufPath := filepath.Join(configPath, "gguf")
 	err = os.MkdirAll(ggufPath, 0755)
 	if err != nil {
@@ -45,7 +46,6 @@ func InitServer(configPath string) (string, error) {
 		return "", fmt.Errorf("failed to copy files: %v", err)
 	}
 
-	// Set all files in ggufPath executable
 	files, err := os.ReadDir(ggufPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read directory %s: %v", ggufPath, err)
@@ -54,6 +54,32 @@ func InitServer(configPath string) (string, error) {
 	for _, file := range files {
 		if !file.IsDir() {
 			err = os.Chmod(filepath.Join(ggufPath, file.Name()), 0755)
+			if err != nil {
+				return "", fmt.Errorf("failed to set executable permission on file %s: %v", file.Name(), err)
+			}
+		}
+	}
+
+	// IMG GEN
+	imgGenPath := filepath.Join(configPath, "sd")
+	err = os.MkdirAll(imgGenPath, 0755)
+	if err != nil {
+		return "", fmt.Errorf("failed to create directory %s: %v", imgGenPath, err)
+	}
+
+	err = CopyFiles(embedfs, "pkg/sd/sdcpp/build/bin", imgGenPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to copy files: %v", err)
+	}
+
+	files, err = os.ReadDir(imgGenPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read directory %s: %v", imgGenPath, err)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			err = os.Chmod(filepath.Join(imgGenPath, file.Name()), 0755)
 			if err != nil {
 				return "", fmt.Errorf("failed to set executable permission on file %s: %v", file.Name(), err)
 			}

@@ -1,97 +1,105 @@
 package sd
 
 import (
-	"encoding/json"
 	"fmt"
 	"image"
 	"math"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/anthonynsimon/bild/adjust"
 	"github.com/anthonynsimon/bild/imgio"
 	"github.com/anthonynsimon/bild/transform"
-	"github.com/gofiber/fiber/v2"
+	"github.com/pterm/pterm"
 )
 
-type SDParams struct {
-	Mode           string  `json:"mode" cli:"-M, --mode"`
-	Threads        int     `json:"threads" cli:"-t, --threads"`
-	Model          string  `json:"model" cli:"-m, --model"`
-	VAE            string  `json:"vae" cli:"--vae"`
-	TAESDPath      string  `json:"taesd" cli:"--taesd"`
-	WeightType     string  `json:"type" cli:"--type"`
-	LoraModelDir   string  `json:"lora_model_dir" cli:"--lora-model-dir"`
-	InitImage      string  `json:"init_img" cli:"-i, --init-img"`
-	Output         string  `json:"output" cli:"-o, --output"`
-	Prompt         string  `json:"prompt" cli:"-p, --prompt"`
-	NegativePrompt string  `json:"negative_prompt" cli:"-n, --negative-prompt"`
-	CFGScale       float64 `json:"cfg_scale" cli:"--cfg-scale"`
-	Strength       float64 `json:"strength" cli:"--strength"`
-	Height         int     `json:"height" cli:"-H, --height"`
-	Width          int     `json:"width" cli:"-W, --width"`
-	SamplingMethod string  `json:"sampling_method" cli:"--sampling-method"`
-	Steps          int     `json:"steps" cli:"--steps"`
-	RNG            string  `json:"rng" cli:"--rng"`
-	Seed           int     `json:"seed" cli:"-s, --seed"`
-	BatchCount     int     `json:"batch_count" cli:"-b, --batch-count"`
-	Schedule       string  `json:"schedule" cli:"--schedule"`
-	Verbose        bool    `json:"verbose" cli:"-v, --verbose"`
+type CommandOutput struct {
+	Output       string `json:"output"`
+	Finished     string `json:"finished"`
+	SocketNumber string `json:"socketNumber"`
+	ModelName    string `json:"modelName"`
 }
 
-func ConstructCLICommand(params SDParams) *exec.Cmd {
-	cmdPath := "/home/art/.eternal/sd"
+type SDParams struct {
+	Mode            string  `json:"mode" cli:"-M, --mode"`
+	Threads         int     `json:"threads" cli:"-t, --threads"`
+	Model           string  `json:"model" cli:"-m, --model"`
+	VAE             string  `json:"vae" cli:"--vae"`
+	TAESDPath       string  `json:"taesd" cli:"--taesd"`
+	ControlNet      string  `json:"control_net" cli:"--control-net"`
+	EmbdDir         string  `json:"embd_dir" cli:"--embd-dir"`
+	UpscaleModel    string  `json:"upscale_model" cli:"--upscale-model"`
+	WeightType      string  `json:"type" cli:"--type"`
+	LoraModelDir    string  `json:"lora_model_dir" cli:"--lora-model-dir"`
+	InitImage       string  `json:"init_img" cli:"-i, --init-img"`
+	ControlImage    string  `json:"control_image" cli:"--control-image"`
+	Output          string  `json:"output" cli:"-o, --output"`
+	Prompt          string  `json:"prompt" cli:"-p, --prompt"`
+	NegativePrompt  string  `json:"negative_prompt" cli:"-n, --negative-prompt"`
+	CFGScale        float64 `json:"cfg_scale" cli:"--cfg-scale"`
+	Strength        float64 `json:"strength" cli:"--strength"`
+	ControlStrength float64 `json:"control_strength" cli:"--control-strength"`
+	Height          int     `json:"height" cli:"-H, --height"`
+	Width           int     `json:"width" cli:"-W, --width"`
+	SamplingMethod  string  `json:"sampling_method" cli:"--sampling-method"`
+	Steps           int     `json:"steps" cli:"--steps"`
+	RNG             string  `json:"rng" cli:"--rng"`
+	Seed            int     `json:"seed" cli:"-s, --seed"`
+	BatchCount      int     `json:"batch_count" cli:"-b, --batch-count"`
+	Schedule        string  `json:"schedule" cli:"--schedule"`
+	ClipSkip        int     `json:"clip_skip" cli:"--clip-skip"`
+	VAETiling       bool    `json:"vae_tiling" cli:"--vae-tiling"`
+	ControlNetCPU   bool    `json:"control_net_cpu" cli:"--control-net-cpu"`
+	Canny           bool    `json:"canny" cli:"--canny"`
+	Verbose         bool    `json:"verbose" cli:"-v, --verbose"`
+}
+
+func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
+	//vaePath := filepath.Join(dataPath, "models/StableDiffusion/sd15/sdxl_vae.safetensors")
+	modelPath := filepath.Join(dataPath, "models/StableDiffusion/sd15/dreamshaper_8_q5_1.gguf")
+	outPath := filepath.Join(dataPath, "web/img/sd_out.png")
+	cmdPath := filepath.Join(dataPath, "sd/sd")
+
+	pterm.Println("Command:", cmdPath)
 
 	cmdArgs := []string{
-		"-m", params.Model,
 		"-p", params.Prompt,
-		"-o", "./public/img/sd_output.png",
-		"--cfg-scale", "7",
-		"--sampling-method", "dpm++2m", //"dpm++2m",
-		"--steps", "20",
+		"-n", "ugly, low quality, deformed",
+		"-m", modelPath,
+		//"--vae", vaePath, // NOT WORKING DO NOT USE
+		"-o", outPath,
+		"--rng", "std_default",
+		//"--cfg-scale", "7",
+		"--sampling-method", "dpm2",
+		//"--steps", "20",
 		"--seed", "-1",
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
-		"--clip-skip", "1",
+		"--clip-skip", "2",
 	}
 
-	// Conditional arguments
-	if params.InitImage != "" {
-		cmdArgs = append(cmdArgs, "-i", params.InitImage)
-	}
-	if params.VAE != "" {
-		cmdArgs = append(cmdArgs, "--vae", params.VAE)
-	}
+	// Print cmdArgs
+	pterm.Println("Command Args:", cmdArgs)
 
-	if params.Mode != "" {
-		cmdArgs = append(cmdArgs, "--mode", params.Mode)
-	}
-
+	// Run the command in a separate process
 	return exec.Command(cmdPath, cmdArgs...)
+
+	//return exec.Command(cmdPath, cmdArgs...)
 }
 
-func Text2Image(c *fiber.Ctx) error {
-	var params SDParams
-
-	err := json.Unmarshal(c.Body(), &params)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Cannot parse JSON",
-		})
-	}
-
-	cmd := ConstructCLICommand(params)
+func Text2Image(cmdPath string, params *SDParams) error {
+	cmd := BuildCommand(cmdPath, *params)
 
 	out, err := cmd.Output()
 	if err != nil {
 		fmt.Println(err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"output": string(out),
-	})
+	pterm.Warning.Println("Output:", string(out))
+
+	// return the output
+	return nil
 }
 
 // cropAndAdjustContrast crops the image to a 768x768 square while keeping the subject centered,
