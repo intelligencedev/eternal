@@ -115,7 +115,7 @@
         </div>
         <!-- Image Generation -->
         <div id="txt2img" class="row mt-5">
-          <button class="btn" type="button" data-bs-toggle="tooltip" data-bs-title="Image Generation">
+          <button id="imgGenBtn" class="btn" hx-post="/tool/imagegen" hx-swap="none" data-bs-toggle="tooltip">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path fill="#FFFFFF"
                 d="M17.29 11.969a1.33 1.33 0 0 1-1.322 1.337a1.33 1.33 0 0 1-1.323-1.337a1.33 1.33 0 0 1 1.323-1.338c.73 0 1.323.599 1.323 1.338Z" />
@@ -180,7 +180,7 @@
                 </button>
                 <input type="file" id="file-input" style="display: none;" />
                 <textarea id="message" name="userprompt" class="col form-control shadow-none"
-                  placeholder="Type your message..." rows="2" style="outline: none;"></textarea>
+                  placeholder="Type your message..." rows="2" style="outline: none;">photo of a supercar, 8k uhd, high quality, road, sunset, motion blur, depth blur, cinematic, filmic image 4k, 8k with [George Miller's Mad Max style]. The image should be [ultra-realistic], with [high-resolution] captured in [natural light]. The lighting should create [soft shadows] and showcase the [raw] and [vibrant colors], volumetric dtx, depth blur, blurry background, bokeh, (motion blur:1.001)</textarea>
 
                 <!-- Clear textarea after submit -->
                 <button id="send" class="btn btn-prompt-send btn-success " type="button" hx-post="/chatsubmit"

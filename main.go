@@ -8,6 +8,7 @@ import (
 	"errors"
 	"eternal/pkg/llm"
 	"eternal/pkg/llm/openai"
+	"eternal/pkg/sd"
 	"eternal/pkg/web"
 	"fmt"
 	"net/http"
@@ -33,7 +34,7 @@ import (
 )
 
 var (
-	//go:embed public/* pkg/llm/local/bin/*
+	//go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 	embedfs embed.FS
 
 	osFS  afero.Fs = afero.NewOsFs()
@@ -67,6 +68,9 @@ func main() {
 	//log.SetLevel(log.LevelDebug)
 
 	//zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	// TODO: Check if external dependencies are installed and if not, install them
+	// Such as Chromium, Docker, etc. For now, only Chromium is required for the web tool.
 
 	// CONFIG
 	currentPath, err := os.Getwd()
@@ -141,7 +145,10 @@ func main() {
 
 	// Populate tools
 	websearch := Tool{Name: "websearch", Enabled: false}
-	tools = append(tools, websearch)
+	imagegen := Tool{Name: "imagegen", Enabled: false}
+
+	// Append tools to the list
+	tools = append(tools, websearch, imagegen)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -158,9 +165,27 @@ func main() {
 
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
 
-	engine := html.NewFileSystem(http.FS(embedfs), ".html")
+	//engine := html.NewFileSystem(http.FS(embedfs), ".html")
 
-	httpFs := afero.NewHttpFs(memFS)
+	// Create a http fs
+	baseFs := afero.NewBasePathFs(osFS, "/Users/art/.eternal-v1/web")
+
+	// Print the files in the fs
+	files, err := afero.ReadDir(baseFs, ".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, file := range files {
+		fmt.Println(file.Name())
+	}
+
+	httpFs := afero.NewHttpFs(baseFs)
+
+	engine := html.NewFileSystem(httpFs, ".html")
+
+	// Create a local fs
+	// localFs := afero.NewBasePathFs(osFS, "/Users/art/Documents/eternal-v1/web")
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Eternal v0.1.0",
@@ -170,6 +195,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		PassLocalsToViews:     true,
 		Views:                 engine,
 		StrictRouting:         true,
+		StreamRequestBody:     true,
 	})
 
 	// CORS allow all origins for now while mvp dev mode
@@ -179,15 +205,16 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	}))
 
 	app.Use("/public", filesystem.New(filesystem.Config{
-		Root:  httpFs.Dir("./public"),
-		Index: "index.html",
+		Root:   httpFs,
+		Index:  "index.html",
+		Browse: true,
 	}))
 
-	app.Static("/", "./public")
+	app.Static("/", "public")
 
 	// main route
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("public/templates/index", fiber.Map{})
+		return c.Render("templates/index", fiber.Map{})
 	})
 
 	app.Get("/config", func(c *fiber.Ctx) error {
@@ -297,7 +324,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		}
 
 		// Render the template with the models data
-		return c.Render("public/templates/model", fiber.Map{"models": modelParams})
+		return c.Render("templates/model", fiber.Map{"models": modelParams})
 	})
 
 	app.Post("/model/select", func(c *fiber.Ctx) error {
@@ -386,7 +413,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			return c.Status(500).SendString("Server Error")
 		}
 
-		return c.Render("public/templates/chattemplates", fiber.Map{"templates": chatTemplate})
+		return c.Render("templates/chattemplates", fiber.Map{"templates": chatTemplate})
 	})
 
 	app.Post("/chatsubmit", func(c *fiber.Ctx) error {
@@ -420,7 +447,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Generate unique ID
 		turnID := IncrementTurn()
 
-		return c.Render("public/templates/chat", fiber.Map{
+		return c.Render("templates/chat", fiber.Map{
 			"username":  config.CurrentUser,
 			"message":   userPrompt, // This is the message that will be displayed in the chat
 			"assistant": config.AssistantName,
@@ -585,6 +612,34 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// If the websearch tool is enabled
 		for _, tool := range tools {
 			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "imagegen" && tool.Enabled {
+				if tool.Enabled {
+					// Generate image using sd tool
+					pterm.Info.Println("Generating image...")
+					sdParams := new(sd.SDParams)
+					sdParams.Prompt = chatMessage
+
+					// Call the sd tool
+					sd.Text2Image(config.DataPath, sdParams)
+
+					//res.Error()
+
+					// Return the image to the client
+					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+					//imgElement := "<img src='public/img/sd_out.png' />"
+					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+						pterm.PrintOnError(err)
+						return
+					}
+					//c.WriteMessage(websocket.TextMessage, []byte("<img src='img/sd_out.png' />"))
+
+					return
+
+				}
+			}
 
 			if tool.Name == "websearch" && tool.Enabled {
 				if tool.Enabled {
