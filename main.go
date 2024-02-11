@@ -195,7 +195,8 @@ func main() {
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
 
 	// Create a http fs
-	baseFs := afero.NewBasePathFs(osFS, "/Users/art/.eternal-v1/web")
+	basePath := filepath.Join(config.DataPath, "web")
+	baseFs := afero.NewBasePathFs(osFS, basePath)
 	httpFs := afero.NewHttpFs(baseFs)
 	engine := html.NewFileSystem(httpFs, ".html")
 
@@ -678,6 +679,9 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 						return
 					}
 
+					// Increment the chat turn counter
+					chatTurn = chatTurn + 1
+
 					return
 
 				}
@@ -715,8 +719,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		modelOpts.Model = model.Options.Model
 		modelOpts.Prompt = fullPrompt
-		modelOpts.ResponseDelimiter = "###RESPONSE"
-
+		modelOpts.CtxSize = model.Options.CtxSize
 		modelOpts.Temp = 0.7
 		modelOpts.RepeatPenalty = 1.1
 
@@ -732,14 +735,16 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
 				pterm.Error.Println("Error storing chat in database:", err)
+				chatTurn = chatTurn + 1
 				return
 			}
 
 			// Increment the chat turn counter
 			chatTurn = chatTurn + 1
-
 			return
 		}
+
+		chatTurn = chatTurn + 1
 	}))
 
 	app.Get("/wsoai", websocket.New(func(c *websocket.Conn) {
@@ -791,17 +796,17 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 					// Call the sd tool
 					sd.Text2Image(config.DataPath, sdParams)
 
-					//res.Error()
-
 					// Return the image to the client
 					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
 					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-					//imgElement := "<img src='public/img/sd_out.png' />"
 					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
 					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 						pterm.PrintOnError(err)
 						return
 					}
+
+					// Increment the chat turn counter
+					chatTurn = chatTurn + 1
 
 					return
 
@@ -840,12 +845,11 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				pterm.Error.Println("Error storing chat in database:", err)
 				return
 			}
-
-			// Increment the chat turn counter
-			chatTurn = chatTurn + 1
-
-			return
 		}
+
+		// Increment the chat turn counter
+		chatTurn = chatTurn + 1
+
 	}))
 
 	go func() {
