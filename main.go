@@ -195,7 +195,8 @@ func main() {
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
 
 	// Create a http fs
-	baseFs := afero.NewBasePathFs(osFS, "/Users/art/.eternal-v1/web")
+	basePath := filepath.Join(config.DataPath, "web")
+	baseFs := afero.NewBasePathFs(osFS, basePath)
 	httpFs := afero.NewHttpFs(baseFs)
 	engine := html.NewFileSystem(httpFs, ".html")
 
