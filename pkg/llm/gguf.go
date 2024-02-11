@@ -146,19 +146,18 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 
 	cmdArgs := []string{
 		"--no-display-prompt",
-		"-m", options.Model, //"/Users/art/.eternal/data/models/CodeNinja-7b/codeninja-1.0-openchat-7b.Q8_0.gguf",
+		"-m", options.Model,
 		"-n", "-1",
-		"-p", options.Prompt, //"Write a haiku.",
-		"-c", ctxSize, //"4096",
+		"-p", options.Prompt,
+		"-c", ctxSize,
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
-		//"--min-p", "0.05",
-		"-ngl", "50",
+		"--n-gpu-layers", "33",
 		//"--reverse-prompt", "</s>",
 		"--multiline-input",
-		"--temp", temp, //"0.7",
-		//"--mlock",
+		"--temp", temp,
+		"--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
@@ -171,10 +170,6 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 	}
-
-	//pterm.Println(cmdPath + " " + strings.Join(cmdArgs, " "))
-
-	//return nil
 
 	return exec.Command(cmdPath, cmdArgs...)
 }
