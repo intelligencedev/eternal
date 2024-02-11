@@ -52,8 +52,8 @@ type SDParams struct {
 	CFGScale        float64 `json:"cfg_scale" cli:"--cfg-scale"`
 	Strength        float64 `json:"strength" cli:"--strength"`
 	ControlStrength float64 `json:"control_strength" cli:"--control-strength"`
-	Height          int     `json:"height" cli:"-H, --height"`
-	Width           int     `json:"width" cli:"-W, --width"`
+	Height          int     `json:"height" cli:"--height"`
+	Width           int     `json:"width" cli:"--width"`
 	SamplingMethod  string  `json:"sampling_method" cli:"--sampling-method"`
 	Steps           int     `json:"steps" cli:"--steps"`
 	RNG             string  `json:"rng" cli:"--rng"`
@@ -78,7 +78,7 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 
 	cmdArgs := []string{
 		"-p", params.Prompt,
-		"-n", "ugly, low quality, deformed",
+		"-n", "ugly, low quality, deformed, malformed, floating limbs, bad hands, poorly drawn, bad anatomy, extra limb, blurry, disfigured, realistic, child",
 		"-m", modelPath,
 		//"--vae", vaePath, // NOT WORKING DO NOT USE
 		"-o", outPath,
@@ -90,6 +90,8 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
 		"--clip-skip", "2",
+		"--width", "512",
+		"--height", "768",
 	}
 
 	// Print cmdArgs
