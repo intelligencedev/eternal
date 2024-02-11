@@ -156,16 +156,8 @@ language_models:
     tags:
       - '70B'
 
-image_generation_models:
-  - name: 'stable-diffusion-2-1'
-    homepage: 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base'
+image_models:
+  - name: 'dreamshaper-8-sd15'
+    homepage: 'https://huggingface.co/Lykon/dreamshaper-8'
     downloads:
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/unet/config.json'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/unet/diffusion_pytorch_model.safetensors'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/text_encoder/config.json'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/text_encoder/model.safetensors'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/vae/config.json'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/vae/diffusion_pytorch_model.safetensors'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/scheduler/scheduler_config.json'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/tokenizer/vocab.json'
-      - 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/tokenizer/merges.txt'
+      - 'https://civitai.com/api/download/models/128713'

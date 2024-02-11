@@ -2,6 +2,7 @@ package main
 
 import (
 	"eternal/pkg/llm"
+	"eternal/pkg/sd"
 	"time"
 
 	"github.com/spf13/afero"
@@ -20,6 +21,7 @@ type AppConfig struct {
 	ChromedpKey    string                            `yaml:"chromedp_key"`
 	OAIKey         string                            `yaml:"oai_key"`
 	LanguageModels []llm.Model                       `yaml:"language_models"`
+	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
 }
 
 type BackendHost struct {
