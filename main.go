@@ -106,7 +106,7 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	err = sqliteDB.AutoMigrate(&ModelParams{}, &SelectedModels{}, &Chat{})
+	err = sqliteDB.AutoMigrate(&ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
 	if err != nil {
 		log.Fatalf("Failed to auto migrate database: %v", err)
 	}
@@ -143,6 +143,35 @@ func main() {
 		log.Fatalf("Failed to load model data to database: %v", err)
 	}
 
+	// Instantiate ImageModel then populate it with each model from the config
+	var imageModels []ImageModel
+	for _, model := range config.ImageModels {
+		if model.Downloads != nil {
+			fileName := strings.Split(model.Downloads[0], "/")
+			model.LocalPath = fmt.Sprintf("%s/models/%s/%s", config.DataPath, model.Name, fileName[len(fileName)-1])
+		}
+
+		var downloaded bool
+		if _, err := os.Stat(model.LocalPath); err == nil {
+			downloaded = true
+		}
+
+		imageModels = append(imageModels, ImageModel{
+			Name:       model.Name,
+			Homepage:   model.Homepage,
+			Prompt:     model.Prompt,
+			Downloaded: downloaded,
+			Options: &sd.SDParams{
+				Model:  model.LocalPath,
+				Prompt: model.Prompt,
+			},
+		})
+	}
+
+	if err := LoadImageModelDataToDB(sqliteDB, imageModels); err != nil {
+		log.Fatalf("Failed to load image model data to database: %v", err)
+	}
+
 	// Populate tools
 	websearch := Tool{Name: "websearch", Enabled: false}
 	imagegen := Tool{Name: "imagegen", Enabled: false}
@@ -165,27 +194,10 @@ func main() {
 
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
 
-	//engine := html.NewFileSystem(http.FS(embedfs), ".html")
-
 	// Create a http fs
 	baseFs := afero.NewBasePathFs(osFS, "/Users/art/.eternal-v1/web")
-
-	// Print the files in the fs
-	files, err := afero.ReadDir(baseFs, ".")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, file := range files {
-		fmt.Println(file.Name())
-	}
-
 	httpFs := afero.NewHttpFs(baseFs)
-
 	engine := html.NewFileSystem(httpFs, ".html")
-
-	// Create a local fs
-	// localFs := afero.NewBasePathFs(osFS, "/Users/art/Documents/eternal-v1/web")
 
 	app := fiber.New(fiber.Config{
 		AppName:               "Eternal v0.1.0",
@@ -387,6 +399,37 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Start the download in a goroutine
 		go func() {
 			if err := llm.Download(downloadURL, modelPath); err != nil {
+				log.Errorf("Error in download: %v", err)
+			}
+		}()
+
+		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
+
+		return c.SendString(progressErr)
+	})
+
+	app.Post("/imgmodel/download", func(c *fiber.Ctx) error {
+		modelName := c.Query("model")
+
+		var downloadURL string
+		for _, model := range config.ImageModels {
+			if model.Name == modelName {
+				downloadURL = model.Downloads[0]
+			}
+		}
+
+		modelFileName := strings.Split(downloadURL, "/")[len(strings.Split(downloadURL, "/"))-1]
+
+		if modelName == "" {
+			log.Errorf("Missing parameters for download")
+			return c.Status(fiber.StatusBadRequest).SendString("Missing parameters")
+		}
+
+		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
+
+		// Start the download in a goroutine
+		go func() {
+			if err := sd.Download(downloadURL, modelPath); err != nil {
 				log.Errorf("Error in download: %v", err)
 			}
 		}()
@@ -600,16 +643,16 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		var document string
 
 		// Retrieve the page content from prompt URLs and add it to the document
-		// url := web.ExtractURLs(chatMessage)
+		url := web.ExtractURLs(chatMessage)
 
-		// if len(url) > 0 {
-		// 	pterm.Info.Println("Extracted URLs: ", url)
-		// 	document, _ = web.WebGetHandler(url[0])
-		// 	document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		// }
+		if len(url) > 0 {
+			pterm.Info.Println("Extracted URLs: ", url)
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
 
-		// If the websearch tool is enabled
+		// TOOL WORKFLOW
 		for _, tool := range tools {
 			pterm.Info.Println("Processing tool: ", tool)
 
@@ -634,7 +677,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 						pterm.PrintOnError(err)
 						return
 					}
-					//c.WriteMessage(websocket.TextMessage, []byte("<img src='img/sd_out.png' />"))
 
 					return
 
@@ -727,17 +769,44 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		var document string
 
 		// Retrieve the page content from prompt URLs and add it to the document
-		// url := web.ExtractURLs(chatMessage)
+		url := web.ExtractURLs(chatMessage)
 
-		// if len(url) > 0 {
-		// 	document, _ = web.WebGetHandler(url[0])
-		// 	document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		// }
+		if len(url) > 0 {
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
 
-		// If the websearch tool is enabled
+		// TOOL WORKFLOW
 		for _, tool := range tools {
 			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "imagegen" && tool.Enabled {
+				if tool.Enabled {
+					// Generate image using sd tool
+					pterm.Info.Println("Generating image...")
+					sdParams := new(sd.SDParams)
+					sdParams.Prompt = chatMessage
+
+					// Call the sd tool
+					sd.Text2Image(config.DataPath, sdParams)
+
+					//res.Error()
+
+					// Return the image to the client
+					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+					//imgElement := "<img src='public/img/sd_out.png' />"
+					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+						pterm.PrintOnError(err)
+						return
+					}
+
+					return
+
+				}
+			}
 
 			if tool.Name == "websearch" && tool.Enabled {
 				if tool.Enabled {

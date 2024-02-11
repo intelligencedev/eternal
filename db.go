@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"eternal/pkg/llm"
+	"eternal/pkg/sd"
 	"fmt"
 	"reflect"
 	"time"
@@ -68,6 +69,16 @@ type ModelParams struct {
 	Downloads  string           `yaml:"downloads,omitempty"`
 	Downloaded bool             `yaml:"downloaded"`
 	Options    *llm.GGUFOptions `gorm:"embedded"`
+}
+
+type ImageModel struct {
+	ID         int          `gorm:"primaryKey;autoIncrement"`
+	Name       string       `yaml:"name"`
+	Homepage   string       `yaml:"homepage"`
+	Prompt     string       `yaml:"prompt"`
+	Downloads  string       `yaml:"downloads,omitempty"`
+	Downloaded bool         `yaml:"downloaded"`
+	Options    *sd.SDParams `gorm:"embedded"`
 }
 
 type SelectedModels struct {
@@ -140,6 +151,32 @@ func (sqldb *SQLiteDB) Delete(id uint, model interface{}) error {
 func LoadModelDataToDB(db *SQLiteDB, models []ModelParams) error {
 	for _, model := range models {
 		var existingModel ModelParams
+		result := db.db.Where("name = ?", model.Name).First(&existingModel)
+
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				// If the model is not found, create a new one
+				if err := db.Create(&model); err != nil {
+					return err
+				}
+			} else {
+				// Other errors
+				return result.Error
+			}
+		} else {
+			// If the model exists, update it
+			if err := db.db.Model(&existingModel).Updates(&model).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func LoadImageModelDataToDB(db *SQLiteDB, models []ImageModel) error {
+	for _, model := range models {
+		var existingModel ImageModel
 		result := db.db.Where("name = ?", model.Name).First(&existingModel)
 
 		if result.Error != nil {
