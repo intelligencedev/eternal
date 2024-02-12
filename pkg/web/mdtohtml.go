@@ -1,21 +1,35 @@
 package web
 
 import (
+	"bytes"
+
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 )
 
-func MarkdownToHTML(md []byte) []byte {
-	// create markdown parser with extensions
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
-	p := parser.NewWithExtensions(extensions)
-	doc := p.Parse(md)
+// PreprocessMarkdown scans the markdown content for unclosed code blocks and closes them.
+func PreprocessMarkdown(content []byte) []byte {
+	// Simple heuristic: if the count of ``` is odd, append one at the end
+	if bytes.Count(content, []byte("```"))%2 != 0 {
+		content = append(content, []byte("\n```")...) // Append closing code block
+	}
+	return content
+}
 
-	// create HTML renderer with extensions
-	htmlFlags := html.CommonFlags | html.HrefTargetBlank
-	opts := html.RendererOptions{Flags: htmlFlags}
-	renderer := html.NewRenderer(opts)
+// MarkdownToHTML converts preprocessed markdown content to HTML.
+func MarkdownToHTML(mdContent []byte) []byte {
+	// Preprocess to ensure code blocks are properly closed
+	preprocessedContent := PreprocessMarkdown(mdContent)
 
-	return markdown.Render(doc, renderer)
+	// Setup parser and renderer
+	extensions := parser.CommonExtensions
+	parser := parser.NewWithExtensions(extensions)
+	htmlFlags := html.CommonFlags
+	renderer := html.NewRenderer(html.RendererOptions{Flags: htmlFlags})
+
+	// Convert markdown to HTML
+	html := markdown.ToHTML(preprocessedContent, parser, renderer)
+
+	return html
 }

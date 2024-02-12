@@ -44,6 +44,22 @@ Eternal is an experimental platform for machine learning workflows.
 
 Rename the provided `.config.yml` file to `config.yml` and place it in the same path as the application binary. Modify the contents for your environment and use case.
 
+## Build
+
+Eternal currently supports building on Linux or Windows WSL using CUDA (nVidia GPU required) or MacOS/Metal (M-series Max required).
+
+To build the application:
+
+```
+$ git clone https://github.com/intelligencedev/eternal.git
+$ git submodule init
+$ git submodule update
+$ make
+$ make eternal
+```
+
+Please submit an issue if you encounter any issues with the build process.
+
 ## Disclaimer
 
 This README is a high-level overview of the Eternal application. Detailed setup instructions and a complete list of features, dependencies, and configurations should be consulted in the actual application documentation.
