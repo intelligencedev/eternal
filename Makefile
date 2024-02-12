@@ -31,9 +31,14 @@ COPY_SD_CMD = cp $(SD_BUILD_DIR)/bin/sd $(ARTIFACTS_DIR)
 # Copy all llama artifacts to the artifacts directory
 COPY_LLAMA_CMD = cp $(LLAMA_BINARIES_DIR)/* $(ARTIFACTS_DIR)
 
+# Initialize and update git submodules
+.PHONY: init-submodules
+init-submodules:
+	git submodule update --init --recursive
+
 # Build dependencies
 .PHONY: deps
-deps: llama sd
+deps: init-submodules llama sd
 
 # Build llama
 .PHONY: llama
