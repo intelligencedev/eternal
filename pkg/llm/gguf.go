@@ -162,6 +162,8 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
+		"--keep", "2048",
+		"--prompt-cache", "cache",
 		//"--verbose-prompt",
 		//"-r", "<|user|>",
 		//"--in-prefix", " ",

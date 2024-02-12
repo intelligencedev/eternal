@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"runtime"
 	"sort"
@@ -13,6 +14,18 @@ import (
 
 // Vector represents a vector of floats.
 type Vector []float64
+
+// Node is a struct that represents a node in a k-d tree. It has three fields:
+// Domain: A slice of float64 values representing the domain or feature space of the data point associated with this node.
+// Value: A float64 value representing the pivot value used to partition the data points into two subsets.
+// Left: A pointer to the left child node in the tree, or nil if there is no left child.
+// Right: A pointer to the right child node in the tree, or nil if there is no right child.
+type Node struct {
+	Domain []float64
+	Value  float64
+	Left   *Node
+	Right  *Node
+}
 
 // Embedding represents a word embedding.
 type Embedding struct {
@@ -95,29 +108,6 @@ func (db *EmbeddingDB) SaveEmbeddings(path string) error {
 	return nil
 }
 
-// SaveEmbeddings saves the Embeddings to a file.
-// func (db *EmbeddingDB) SaveEmbeddings(path string) error {
-// 	// Convert the Embeddings map into a JSON string
-// 	jsonData, err := json.Marshal(db.Embeddings)
-// 	if err != nil {
-// 		return fmt.Errorf("error marshaling embeddings: %v", err)
-// 	}
-
-// 	// Open the file in append mode, create it if it does not exist
-// 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-// 	if err != nil {
-// 		return fmt.Errorf("error opening file: %v", err)
-// 	}
-// 	defer f.Close()
-
-// 	// Write the JSON string to the file
-// 	if _, err := f.Write(jsonData); err != nil {
-// 		return fmt.Errorf("error writing to file: %v", err)
-// 	}
-
-// 	return nil
-// }
-
 // LoadEmbeddings loads the Embeddings from a file.
 func (db *EmbeddingDB) LoadEmbeddings(path string) (map[string]Embedding, error) {
 	content, err := os.ReadFile(path)
@@ -195,24 +185,6 @@ func CosineSimilarity(a, b []float64) float64 {
 	return dotProduct / (math.Sqrt(magnitudeA) * math.Sqrt(magnitudeB))
 }
 
-// OLD IMPLEMENTATION - LEAVING FOR REFERENCE
-// func CosineSimilarity(a, b []float64) float64 {
-// 	dotProduct := 0.0
-// 	aMagnitude := math.Hypot(a[0], a[1])
-// 	bMagnitude := math.Hypot(b[0], b[1])
-
-// 	// If either vector is a zero vector, return 0 to avoid division by zero.
-// 	if aMagnitude == 0 || bMagnitude == 0 {
-// 		return 0
-// 	}
-
-// 	for i := 0; i < len(a); i++ {
-// 		dotProduct += a[i] * b[i]
-// 	}
-
-// 	return dotProduct / (aMagnitude * bMagnitude)
-// }
-
 // MostSimilarWord returns the word with the highest similarity value.
 func (db *EmbeddingDB) MostSimilarWord(embeddings map[string]Embedding, targetWord string) (string, float64) {
 	// Check for an exact match
@@ -263,6 +235,87 @@ func (db *EmbeddingDB) MostSimilarWord(embeddings map[string]Embedding, targetWo
 func EfficientSearch(targetWord string) (string, float64) {
 	// Implement efficient search here
 	return "", 0.0
+}
+
+// dataPoints: A slice of slices of float64 values representing the data points to be inserted into the k-d tree. Each inner slice should have the same length, which represents the number of dimensions or features of the data point.
+// dimensions: An integer representing the number of dimensions or features of the data points.
+func BuildKdTree(dataPoints [][]float64, dimensions int) *Node {
+	if len(dataPoints) == 0 {
+		return nil
+	}
+
+	// Use a stack to store the nodes in the tree.
+	stack := make([]*Node, 0)
+
+	// Select the median value of a random dimension as the pivot.
+	pivotIndex := rand.Intn(len(dataPoints))
+	pivotValue := dataPoints[pivotIndex][rand.Intn(dimensions)]
+
+	// Partition the data points into two subsets based on the pivot value.
+	left := make([][]float64, 0)
+	right := make([][]float64, 0)
+	for _, point := range dataPoints {
+		if point[rand.Intn(dimensions)] < pivotValue {
+			left = append(left, point)
+		} else {
+			right = append(right, point)
+		}
+	}
+
+	// Build the left and right subtrees iteratively using a stack.
+	node := &Node{
+		Domain: dataPoints[pivotIndex],
+		Value:  pivotValue,
+	}
+	stack = append(stack, node)
+	for len(left) > 0 || len(right) > 0 {
+		if len(left) > 0 {
+			// Build the left subtree.
+			pivotIndex := rand.Intn(len(left))
+			pivotValue := left[pivotIndex][rand.Intn(dimensions)]
+			var partition [][]float64
+			for _, point := range left {
+				if point[rand.Intn(dimensions)] < pivotValue {
+					partition = append(partition, point)
+				}
+			}
+			node := &Node{
+				Domain: left[pivotIndex],
+				Value:  pivotValue,
+			}
+			stack[len(stack)-1].Left = node
+			if len(partition) > 0 {
+				stack = append(stack, node)
+				left = partition
+			} else {
+				left = nil
+			}
+		} else {
+			// Build the right subtree.
+			pivotIndex := rand.Intn(len(right))
+			pivotValue := right[pivotIndex][rand.Intn(dimensions)]
+			var partition [][]float64
+			for _, point := range right {
+				if point[rand.Intn(dimensions)] < pivotValue {
+					partition = append(partition, point)
+				}
+			}
+			node := &Node{
+				Domain: right[pivotIndex],
+				Value:  pivotValue,
+			}
+			stack[len(stack)-1].Right = node
+			if len(partition) > 0 {
+				stack = append(stack, node)
+				right = partition
+			} else {
+				right = nil
+			}
+		}
+	}
+
+	// Return the root node.
+	return stack[0]
 }
 
 // FindMostSimilarEmbedding finds the most similar embeddings in the database.
