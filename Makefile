@@ -29,7 +29,7 @@ endif
 COPY_SD_CMD = cp $(SD_BUILD_DIR)/bin/sd $(ARTIFACTS_DIR)
 
 # Copy all llama artifacts to the artifacts directory
-COPY_LLAMA_CMD = cp $(LLAMA_BINARIES_DIR)/* $(ARTIFACTS_DIR)
+COPY_LLAMA_CMD = cp -R $(LLAMA_BINARIES_DIR) $(ARTIFACTS_DIR)
 
 # Initialize and update git submodules
 .PHONY: init-submodules
@@ -64,7 +64,7 @@ eternal: #copy-artifacts
 
 # Default target
 .PHONY: all
-all: eternal
+all: init-submodules deps llama sd copy-artifacts eternal
 
 # Clean up build artifacts
 .PHONY: clean
