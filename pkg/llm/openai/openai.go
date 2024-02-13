@@ -66,27 +66,6 @@ type ErrorResponse struct {
 	Error ErrorData `json:"error"`
 }
 
-// EmbedRequest encapsulates the request data for the OpenAI Embeddings API.
-type EmbedRequest struct {
-	Model string `json:"model"`
-	Input string `json:"input"`
-}
-
-// EmbedResponse contains the response data from the Embeddings API.
-type EmbedResponse struct {
-	Object string       `json:"object"`
-	Data   []EmbedData  `json:"data"`
-	Model  string       `json:"model"`
-	Usage  UsageMetrics `json:"usage"`
-}
-
-// EmbedData represents a single embedding and its associated data.
-type EmbedData struct {
-	Object    string    `json:"object"`
-	Embedding []float64 `json:"embedding"`
-	Index     int       `json:"index"`
-}
-
 // UsageMetrics details the token usage of the Embeddings API request.
 type UsageMetrics struct {
 	PromptTokens int `json:"prompt_tokens"`
