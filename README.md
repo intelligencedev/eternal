@@ -52,10 +52,7 @@ To build the application:
 
 ```
 $ git clone https://github.com/intelligencedev/eternal.git
-$ git submodule init
-$ git submodule update
-$ make
-$ make eternal
+$ make all
 ```
 
 Please submit an issue if you encounter any issues with the build process.
