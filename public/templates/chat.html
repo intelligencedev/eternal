@@ -155,6 +155,7 @@
 </style>
 
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
+<!-- <div name="chat-{{.turnID}}" id="chat-{{.turnID}}"> -->
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
       <div>
@@ -162,6 +163,7 @@
       </div>
       <!-- Using a hidden form to send the message -->
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
+      <!-- <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load">   -->
         <!-- Get the selectedModels in localStorage and send over websocket -->
         <input type="hidden" name="model" value="{{.model}}">
         <input type="hidden" name="chat_message" value="{{.message}}">

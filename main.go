@@ -397,12 +397,14 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
 
-		// Start the download in a goroutine
-		go func() {
-			if err := llm.Download(downloadURL, modelPath); err != nil {
-				log.Errorf("Error in download: %v", err)
-			}
-		}()
+		// Check if the modelPath does not exist and download it if it doesn't
+		if _, err := os.Stat(modelPath); err != nil {
+			go func() {
+				if err := llm.Download(downloadURL, modelPath); err != nil {
+					log.Errorf("Error in download: %v", err)
+				}
+			}()
+		}
 
 		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
 
@@ -428,12 +430,15 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
 
-		// Start the download in a goroutine
-		go func() {
-			if err := sd.Download(downloadURL, modelPath); err != nil {
-				log.Errorf("Error in download: %v", err)
-			}
-		}()
+		// Check if the modelPath does not exist and download it if it doesn't
+		if _, err := os.Stat(modelPath); err != nil {
+			// Start the download in a goroutine
+			go func() {
+				if err := sd.Download(downloadURL, modelPath); err != nil {
+					log.Errorf("Error in download: %v", err)
+				}
+			}()
+		}
 
 		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
 
@@ -480,7 +485,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			if strings.HasPrefix(firstModelName, "openai-") {
 				wsroute = "/wsoai"
 			} else {
-				wsroute = "/ws"
+				wsroute = "ws://192.168.4.123:8080/ws"
 			}
 
 		} else {
@@ -498,6 +503,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			"model":     selectedModels[0].ModelName,
 			"turnID":    turnID,
 			"wsRoute":   wsroute,
+			"hosts":     config.ServiceHosts["llm"],
 		})
 	})
 
@@ -669,9 +675,15 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 					//res.Error()
 
+					// Get the image host and port
+					imgHost := config.ServiceHosts["image"]["image_host_1"]
+					imgHostURL := fmt.Sprintf("http://%s:%s", imgHost.Host, imgHost.Port)
+
+					pterm.Info.Println("Image host URL: ", imgHostURL)
+
 					// Return the image to the client
 					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+					imgElement := fmt.Sprintf("<img class='rounded-2' src='%s/public/img/sd_out.png?%d' />", imgHostURL, timestamp)
 					//imgElement := "<img src='public/img/sd_out.png' />"
 					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
 					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
