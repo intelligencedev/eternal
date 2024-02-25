@@ -406,7 +406,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			}()
 		}
 
-		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
+		progressErr := fmt.Sprintf("<div class='w-100' id='progress-download-%s' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>", modelName)
 
 		return c.SendString(progressErr)
 	})
