@@ -485,7 +485,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			if strings.HasPrefix(firstModelName, "openai-") {
 				wsroute = "/wsoai"
 			} else {
-				wsroute = "ws://192.168.4.123:8080/ws"
+
+				wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
 			}
 
 		} else {
