@@ -406,7 +406,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			}()
 		}
 
-		progressErr := fmt.Sprintf("<div class='w-100' id='progress-download-%s' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>", modelName)
+		progressErr := fmt.Sprintf("<div class='w-100' id='progress-download-%s' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div>", modelName)
 
 		return c.SendString(progressErr)
 	})
@@ -600,7 +600,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				progress := llm.GetDownloadProgress("sse-progress")
 
 				// Format message for SSE
-				msg := fmt.Sprintf("data: <div class='progress specific-h-25' role='progressbar' aria-label='download' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar' style='width: %s;'></div></div>\n\n", progress, progress)
+				msg := fmt.Sprintf("data: <div class='progress specific-h-25 m-4' role='progressbar' aria-label='download' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar progress-bar-striped progress-bar-animated' style='width: %s;'></div></div><div class='text-center fs-6'>Downloading...%s</div>\n\n", progress, progress, progress)
 
 				// Write the message
 				if _, err := w.WriteString(msg); err != nil {
