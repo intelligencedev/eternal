@@ -11,6 +11,7 @@ package embeddings
 import (
 	"eternal/pkg/documents"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -21,11 +22,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// var modelPath = "./data/models/HF/"
-// var modelName = "BAAI/bge-large-en-v1.5"
-var modelName = "dolphin-2_6-phi-2.Q8_0.gguf"
-
-//var modelName = "BAAI/llm-embedder"
+var modelName = "sfr-embedding-mistral/ggml-sfr-embedding-mistral-q4_k_m.gguf"
 
 //const limit = 10
 
@@ -66,7 +63,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string) {
+func GenerateEmbeddingForTask(dataPath string, task string) {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -76,7 +73,6 @@ func GenerateEmbeddingForTask(task string) {
 
 	// 1. Initialization
 	pterm.Info.Println("Initializing...")
-
 	db := estore.NewEmbeddingDB()
 
 	// 2. Code Splitting
@@ -89,7 +85,6 @@ func GenerateEmbeddingForTask(task string) {
 	}
 
 	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
-	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
 	splitter := documents.RecursiveCharacterTextSplitter{
 		Separators:       separators,
 		KeepSeparator:    true,
@@ -109,63 +104,46 @@ func GenerateEmbeddingForTask(task string) {
 		}
 	}
 
-	// modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
-	//modelsDir := fmt.Sprintf("%s/models/dolphin-phi2/", dataPath)
-
 	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
 	for _, chunk := range uniqueChunks {
-
 		fmt.Print(instruction.Query)
 		fmt.Println(chunk)
 
-		var vec []float64
-
-		encoder := func(text string) error {
-
-			// Run command and capture output
-			//./embedding -m ../models/dolphin-phi2/dolphin-2_6-phi-2.Q8_0.gguf --log-disable -p
-
-			// Run command using go exec
-			cmd := exec.Command("/Users/arturoaquino/.eternal-v1/gguf/embedding", "-c", "4096", "-m", "/Users/arturoaquino/.eternal-v1/models/dolphin-phi2/dolphin-2_6-phi-2.Q8_0.gguf", "--log-disable", "-p", chunk)
-			cmd.Stdin = strings.NewReader(text)
-			out, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Error running command:", err)
-				return err
-			}
-
-			// Parse output
-			lines := strings.Split(string(out), "\n")
-			for _, line := range lines {
-				if strings.HasPrefix(line, "Vector:") {
-					parts := strings.Split(line, " ")
-					vec = make([]float64, len(parts)-1)
-					for i, part := range parts[1:] {
-						val, err := strconv.ParseFloat(part, 64)
-						if err != nil {
-							fmt.Println("Error parsing float:", err)
-							return err
-						}
-						vec[i] = val
-					}
-				}
-			}
-
-			return nil
-		}
-
-		err = encoder(chunk) // Actually invoke the encoder function with the chunk
+		strVec, err := Encoder(dataPath, chunk) // Invoke the encoder function with the chunk
 		if err != nil {
-			pterm.Error.Println(err)
+			pterm.Error.Println("Error generating embedding for chunk:", err)
 			panic(err)
 		}
+
+		// Convert the string vector to a float64 vector
+		strVec = strings.TrimSpace(strVec)
+		parts := strings.Split(strVec, " ")
+		var vec []float64
+
+		for _, part := range parts {
+			if part == "" || !isNumeric(part) {
+				continue
+			}
+
+			val, err := strconv.ParseFloat(part, 64)
+			if err != nil {
+				fmt.Printf("Error parsing float for part '%s': %v\n", part, err)
+				return
+			}
+			vec = append(vec, val)
+		}
+
+		fmt.Println("Vector:")
+		fmt.Println(vec)
 
 		embedding := estore.Embedding{
 			Word:       chunk,
 			Vector:     vec,
 			Similarity: 0.0,
 		}
+
+		fmt.Println("Embedding:", embedding)
 
 		db.AddEmbedding(embedding)
 	}
@@ -175,7 +153,49 @@ func GenerateEmbeddingForTask(task string) {
 	db.SaveEmbeddings("./embeddings.db")
 }
 
+// # "/Users/arturoaquino/.eternal-v1/gguf/embedding"
+func Encoder(dataPath string, text string) (string, error) {
+	cmdPath := fmt.Sprintf("%s/embedding", dataPath)
+	cmd := exec.Command(cmdPath, "-c", "4096", "-m", "/Users/art/.eternal-v1/models/sfr-embedding-mistral/ggml-sfr-embedding-mistral-q4_k_m.gguf", "--log-disable", "-p", text)
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+	defer stdoutPipe.Close() // Close the pipe after starting the command
+
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+
+	var outputBuilder strings.Builder
+	buf := make([]byte, 1024)
+	for {
+		n, err := stdoutPipe.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", err
+		}
+		if n > 0 {
+			outputBuilder.Write(buf[:n])
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return "", err
+	}
+
+	return outputBuilder.String(), nil
+}
+
+func isNumeric(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
+}
+
 func Search(dataPath string, dbName string, prompt string, topN int) []estore.Embedding {
+	// Initialize DB and load embeddings
 	db := estore.NewEmbeddingDB()
 	dbPath := fmt.Sprintf("%s/%s", dataPath, dbName)
 	embeddings, err := db.LoadEmbeddings(dbPath)
@@ -184,34 +204,30 @@ func Search(dataPath string, dbName string, prompt string, topN int) []estore.Em
 		return nil
 	}
 
-	// Run command and capture output
-	//./embedding -m ../models/dolphin-phi2/dolphin-2_6-phi-2.Q8_0.gguf --log-disable -p
-
-	// Run command using go exec
-	cmd := exec.Command("/Users/arturoaquino/.eternal-v1/gguf/embedding", "-c", "4096", "-m", "/Users/arturoaquino/.eternal-v1/models/dolphin-phi2/dolphin-2_6-phi-2.Q8_0.gguf", "--log-disable", "-p", prompt)
-	cmd.Stdin = strings.NewReader(prompt)
-	out, err := cmd.CombinedOutput()
+	// Generate embedding for the prompt
+	cmdPath := fmt.Sprintf("%s/gguf", dataPath)
+	strVec, err := Encoder(cmdPath, prompt)
 	if err != nil {
-		fmt.Println("Error running command:", err)
+		fmt.Println("Error generating embedding for prompt:", err)
 		return nil
 	}
 
-	// Parse output
-	lines := strings.Split(string(out), "\n")
+	// Convert the string vector to a float64 vector
+	strVec = strings.TrimSpace(strVec)
+	parts := strings.Split(strVec, " ")
 	var vec []float64
-	for _, line := range lines {
-		if strings.HasPrefix(line, "Vector:") {
-			parts := strings.Split(line, " ")
-			vec = make([]float64, len(parts)-1)
-			for i, part := range parts[1:] {
-				val, err := strconv.ParseFloat(part, 64)
-				if err != nil {
-					fmt.Println("Error parsing float:", err)
-					return nil
-				}
-				vec[i] = val
-			}
+
+	for _, part := range parts {
+		if part == "" || !isNumeric(part) {
+			continue
 		}
+
+		val, err := strconv.ParseFloat(part, 64)
+		if err != nil {
+			fmt.Printf("Error parsing float for part '%s': %v\n", part, err)
+			return nil
+		}
+		vec = append(vec, val)
 	}
 
 	embeddingForPrompt := estore.Embedding{
@@ -221,11 +237,5 @@ func Search(dataPath string, dbName string, prompt string, topN int) []estore.Em
 	}
 
 	// Retrieve the top N similar embeddings
-	topEmbeddings := estore.FindTopNSimilarEmbeddings(embeddingForPrompt, embeddings, topN)
-	if len(topEmbeddings) == 0 {
-		fmt.Println("Error finding similar embeddings.")
-		return nil
-	}
-
-	return topEmbeddings
+	return estore.FindTopNSimilarEmbeddings(embeddingForPrompt, embeddings, topN)
 }
