@@ -84,7 +84,7 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 			turnIDStr := fmt.Sprint(chatID + llm.TurnCounter)
 
 			// TODO: Abstract this into a function that all backends use.
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet sandbox='python' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet url='http://localhost:1313/v1/exec' sandbox='go' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
 
 			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 				pterm.Error.Println("WebSocket write error:", err)
