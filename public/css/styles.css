@@ -37,6 +37,11 @@
     }
 }
 
+codapi-ref {
+    display: none;
+    white-space: nowrap
+  }
+
 .fade-it {
     view-transition-name: fade-it;
     animation-duration: 300ms;
