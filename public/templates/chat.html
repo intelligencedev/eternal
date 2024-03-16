@@ -199,8 +199,7 @@
     </div>
   </div>
 </div>
-<codapi-settings url="http://localhost:1313/v1">
-</codapi-settings>
+<!-- <codapi-settings url="http://localhost:1313/v1"></codapi-settings> -->
 <script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
   htmx.on("htmx:wsOnClose", function (evt) {
@@ -229,9 +228,9 @@
 
       // Append <codapi-snippet sandbox='python' editor='external'></codapi-snippet> below the code block
       const snippet = document.createElement('codapi-snippet');
-      snippet.setAttribute('url', 'http://localhost:1313/v1');
-      //snippet.setAttribute('engine', 'wasi');
-      snippet.setAttribute('sandbox', 'go');
+      //snippet.setAttribute('url', 'http://localhost:1313/v1');
+      snippet.setAttribute('engine', 'browser');
+      snippet.setAttribute('sandbox', 'javascript');
       snippet.setAttribute('editor', 'basic');
       snippet.setAttribute('selector', "#response-content-{{.turnID}} pre code");
       //snippet.innerHTML = block.textContent;
