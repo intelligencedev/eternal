@@ -1,0 +1,84 @@
+
+<div
+  x-data="loadterm()"
+>
+  <div x-disclosure>
+    <div
+      x-disclosure:button
+    >
+      <span class="shellButton">CloudBox WebShell</span>
+  </div>
+
+    <div x-disclosure:panel x-collapse>
+      <div id="terminal" style="width: 100%; overflow: hidden;"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  // Add an event listener to the shell id to load the terminal
+  document.getElementById("shell").addEventListener("click", loadterm);
+
+
+  function loadterm() {
+    console.log("loadterm");
+    var conn;
+    var term = new Terminal();
+    var fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById("terminal"));
+    fitAddon.fit();
+    term.writeln("Hello from \x1B[1;3;31mCloudBox!\x1B[0m");
+
+    function sendMessage(message) {
+      if (!conn) {
+        return;
+      }
+      if (!message) {
+        return;
+      }
+      termConn.send(message);
+    }
+
+    if (window["WebSocket"]) {
+      termConn = new WebSocket("wss://" + document.location.host + "/host/shell");
+      termConn.onopen = function (evt) {
+        term.writeln("Connected to CloudBox host terminal.");
+      };
+      termConn.onclose = function (evt) {
+        term.writeln("Connection closed.");
+      };
+      termConn.onmessage = function (evt) {
+        term.write("\r" + evt.data);
+        //term.write(evt.data);
+      };
+      termConn.onerror = function (evt) {
+        term.writeln("ERROR: " + evt.data);
+      };
+    } else {
+      term.writeln("Your browser does not support WebSockets.");
+    }
+
+    var inputBuffer = "";
+
+    term.onKey(function (keyEvent) {
+      const key = keyEvent.key;
+
+      if (key === "\r") {
+        // Enter key
+        term.write("\n"); // Add a newline and a prompt before the next command
+        sendMessage(inputBuffer);
+        inputBuffer = "";
+      } else if (key === "\u007F" || key === "\b") {
+        // Backspace or Delete key
+        if (inputBuffer.length > 0) {
+          inputBuffer = inputBuffer.slice(0, inputBuffer.length - 1);
+          term.write("\b \b"); // Move cursor back, write a space to erase, then move cursor back again
+        }
+      } else if (key.length === 1) {
+        inputBuffer += key;
+        term.write(key);
+      }
+    });
+  }
+</script>
