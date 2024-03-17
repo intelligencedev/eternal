@@ -11,15 +11,15 @@ Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="800px" srcset="./public/img/chat.png">
-    <img alt="logo" height="800px" src="./public/img/chat.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/chat.png">
+    <img alt="logo" height="400px" src="./public/img/chat.png">
   </picture>
 </div>
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="800px" srcset="./public/img/models.png">
-    <img alt="logo" height="800px" src="./public/img/models.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/models.png">
+    <img alt="logo" height="400px" src="./public/img/models.png">
   </picture>
 </div>
 
@@ -49,8 +49,8 @@ The search button can be enabled to fetch one result from a popular search engin
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="800px" srcset="./public/img/web.png">
-    <img alt="logo" height="800px" src="./public/img/web.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web.png">
+    <img alt="logo" height="400px" src="./public/img/web.png">
   </picture>
 </div>
 
@@ -60,8 +60,8 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="800px" srcset="./public/img/code.png">
-    <img alt="logo" height="800px" src="./public/img/code.png.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code.png">
+    <img alt="logo" height="400px" src="./public/img/code.png.png">
   </picture>
 </div>
 
@@ -70,8 +70,8 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 Embedded Stable Diffusion for easy high quality image generation.
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="800px" srcset="./public/img/sd.png">
-    <img alt="logo" height="800px" src="./public/img/sd.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
+    <img alt="logo" height="400px" src="./public/img/sd.png">
   </picture>
 </div>
 
