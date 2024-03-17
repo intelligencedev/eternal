@@ -60,8 +60,8 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code.png">
-    <img alt="logo" height="400px" src="./public/img/code.png.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code_fixed.png">
+    <img alt="logo" height="400px" src="./public/img/code_fixed.png">
   </picture>
 </div>
 
