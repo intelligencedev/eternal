@@ -4,17 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
-
-
-package main
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
+var db *gorm.DB
 
 func TestChatSession(t *testing.T) {
 
@@ -50,7 +43,6 @@ func TestChatSession(t *testing.T) {
 	err = db.First(&fetchedSession, session.ID).Error
 	assert.Error(t, err)
 }
-
 
 func TestChatTurn(t *testing.T) {
 

@@ -1,0 +1,4 @@
+Note: The comfyui bak files are staged but not currently used. We will implement a way to bootstrap a container for Comfy with all of the models and an advanced workflow with a substantial boost to image generation quality over `sdcpp` in a future commit.
+
+All credit to the ComfyUI contributors as this code is a direct port of their work.
+https://github.com/comfyanonymous/ComfyUI/tree/master/script_examples
