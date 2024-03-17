@@ -25,3 +25,5 @@ config.yml
 # Misc
 reference
 cache
+embeddings.db
+.aider*

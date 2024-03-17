@@ -1,0 +1,93 @@
+:root {
+    --panel-background: rgba(255, 255, 255, 0.1);
+    --panel-border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.box .panel {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: var(--panel-background);
+    border: var(--panel-border);
+}
+
+.box-container {
+    perspective: 1200px;
+    z-index: 2;
+}
+
+.box {
+    width: 30px;
+    height: 30px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+    transform-origin: center;
+}
+
+.box .panel {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.box .panel.front {
+    transform: translateZ(15px);
+}
+
+.box .panel.back {
+    transform: rotateY(180deg) translateZ(15px);
+}
+
+.box .panel.top {
+    transform: rotateX(90deg) translateZ(15px);
+}
+
+.box .panel.bottom {
+    transform: rotateX(-90deg) translateZ(15px);
+}
+
+.box .panel.left {
+    transform: rotateY(-90deg) translateZ(15px);
+}
+
+.box .panel.right {
+    transform: rotateY(90deg) translateZ(15px);
+}
+
+@keyframes spin {
+    from {
+        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+
+    to {
+        transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+    }
+}
+
+.box:hover {
+    animation: spin linear infinite;
+}
+
+.box-input {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    display: none;
+}
+
+.chat {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 0;
+    padding-top: 100px;
+    /* padding-left: 10px;
+        padding-right: 10px; */
+
+    /* Black rounded card */
+    background: #ff0000;
+    border-radius: 10px;
+}

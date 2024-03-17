@@ -1,4 +1,4 @@
-package store
+package vecstore
 
 import (
 	"encoding/json"
