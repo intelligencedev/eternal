@@ -11,8 +11,15 @@ Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/textcompletions.png">
-    <img alt="logo" height="400px" src="./public/img/textcompletions.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/chat.png">
+    <img alt="logo" height="400px" src="./public/img/chat.png">
+  </picture>
+</div>
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/models.png">
+    <img alt="logo" height="400px" src="./public/img/models.png">
   </picture>
 </div>
 
@@ -22,6 +29,8 @@ welcome contributors and constructive feedback. You are also welcome to use it a
 Eternal integrates various projects such as `llama.cpp`, `stable diffusion.cpp` and `codapi` among many other projects whose
 developers were kind enough to share with the world. All credit belongs to the respective contributors of all dependencies this
 repo relies on. Thank you for sharing your projects with the world.
+
+The Eternal frontend is rendered with the legendary `HTMX` framework.
 
 ## Features
 
@@ -33,17 +42,36 @@ repo relies on. Thank you for sharing your projects with the world.
 
 ## Showcase
 
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/modelcards.png">
-    <img alt="logo" height="400px" src="./public/img/modelcards.png">
-  </picture>
-</div>
+### Web Retrieval - Search
+
+Prompt for a URL and Eternal automatically fetches and sanitizes the page content for reference.
+The search button can be enabled to fetch one result from a popular search engine. (Limited to 1 while context management features are matured.)
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imagegen.png">
-    <img alt="logo" height="400px" src="./public/img/imagegen.png">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web.png">
+    <img alt="logo" height="400px" src="./public/img/web.png">
+  </picture>
+</div>
+
+### Code Execution
+
+Execute and edit LLM generated code in the chat view in a secure sandbox. For now, JavaScript is implemented via WASM. More languages coming soon!
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code.png">
+    <img alt="logo" height="400px" src="./public/img/code.png.png">
+  </picture>
+</div>
+
+### Image Generation
+
+Embedded Stable Diffusion for easy high quality image generation.
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
+    <img alt="logo" height="400px" src="./public/img/sd.png">
   </picture>
 </div>
 
