@@ -155,6 +155,7 @@
 </style>
 
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
+<!-- <div name="chat-{{.turnID}}" id="chat-{{.turnID}}"> -->
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
       <div>
@@ -162,6 +163,7 @@
       </div>
       <!-- Using a hidden form to send the message -->
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
+      <!-- <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load">   -->
         <!-- Get the selectedModels in localStorage and send over websocket -->
         <input type="hidden" name="model" value="{{.model}}">
         <input type="hidden" name="chat_message" value="{{.message}}">
@@ -197,7 +199,8 @@
     </div>
   </div>
 </div>
-
+<!-- <codapi-settings url="http://localhost:1313/v1"></codapi-settings> -->
+<script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
   htmx.on("htmx:wsOnClose", function (evt) {
     highlight();
@@ -222,6 +225,16 @@
     // Highlight all code blocks within the container
     container.querySelectorAll('pre code').forEach((block) => {
       hljs.highlightElement(block);
+
+      // Append <codapi-snippet sandbox='python' editor='external'></codapi-snippet> below the code block
+      const snippet = document.createElement('codapi-snippet');
+      //snippet.setAttribute('url', 'http://localhost:1313/v1');
+      snippet.setAttribute('engine', 'browser');
+      snippet.setAttribute('sandbox', 'javascript');
+      snippet.setAttribute('editor', 'basic');
+      snippet.setAttribute('selector', "#response-content-{{.turnID}} pre code");
+      //snippet.innerHTML = block.textContent;
+      container.appendChild(snippet);
     });
   }
 </script>

@@ -16,6 +16,13 @@ Eternal is an experimental platform for machine learning workflows.
   </picture>
 </div>
 
+NOTE: This app is a work in progress and not stable. Please consider this repo for your reference. We
+welcome contributors and constructive feedback. You are also welcome to use it as reference for your own projects.
+
+Eternal integrates various projects such as `llama.cpp`, `stable diffusion.cpp` and `codapi` among many other projects whose
+developers were kind enough to share with the world. All credit belongs to the respective contributors of all dependencies this
+repo relies on. Thank you for sharing your projects with the world.
+
 ## Features
 
 - Language model catalog for easy download and configuration.
@@ -52,10 +59,7 @@ To build the application:
 
 ```
 $ git clone https://github.com/intelligencedev/eternal.git
-$ git submodule init
-$ git submodule update
-$ make
-$ make eternal
+$ make all
 ```
 
 Please submit an issue if you encounter any issues with the build process.

@@ -147,28 +147,27 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 	cmdArgs := []string{
 		"--no-display-prompt",
 		"-m", options.Model,
-		"-n", "-1",
 		"-p", options.Prompt,
 		"-c", ctxSize,
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
-		"--n-gpu-layers", "33",
-		//"--reverse-prompt", "</s>",
-		"--multiline-input",
+		"--n-gpu-layers", "-1",
+		//"--reverse-prompt", "<|im_end|>",
+		//"--multiline-input",
 		"--temp", temp,
-		"--mlock",
+		// "--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
-		"--keep", "2048",
-		"--prompt-cache", "cache",
+		//"-cml",
+		//v"--keep", "2048",
+		//v"--prompt-cache", "cache",
 		//"--verbose-prompt",
-		//"-r", "<|user|>",
-		//"--in-prefix", " ",
-		//"--in-suffix", "<|assistant|>",
-		//"--keep", "4096",
+		//"--in-prefix", "<|im_start|>",
+		//"--in-prefix-bos",
+		//"--in-suffix", "assistant",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 	}
@@ -269,7 +268,8 @@ func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOption
 			turnIDStr := fmt.Sprint(chatID + TurnCounter)
 
 			// Send the accumulated content
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
+			// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet url='http://localhost:1313/v1/exec' sandbox='go' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg)
 			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 				pterm.Error.Println("WebSocket write error:", err)
 				return err

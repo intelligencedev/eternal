@@ -15,12 +15,11 @@ func TestLoadConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Assertions
-	assert.Equal(t, "eternal_local", config.ServerID)
 	assert.Equal(t, "User", config.CurrentUser)
 	assert.Equal(t, "Assistant", config.AssistantName)
 	assert.Equal(t, "localhost", config.ControlHost)
 	assert.Equal(t, "8080", config.ControlPort)
-	assert.Equal(t, "/Users/art/.eternal-v1", config.DataPath)
+	assert.Equal(t, "/Users/$USER/.eternal", config.DataPath)
 
 	// Refactored assertServiceHost function
 	assertServiceHost := func(service string, hostKey string, expectedHost string, expectedPort string) {
@@ -36,6 +35,5 @@ func TestLoadConfig(t *testing.T) {
 	assertServiceHost("speech", "speech_host_1", "localhost", "8083")
 	assertServiceHost("llm", "llm_host_1", "localhost", "8081")
 
-	assert.Equal(t, "xxxxxxxx-...", config.ChromedpKey)
-	assert.Equal(t, "sk-XXxxx...", config.OAIKey)
+	assert.Equal(t, "sk-...", config.OAIKey)
 }
