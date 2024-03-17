@@ -233,3 +233,57 @@ span.hljs-tag {
     color: #f92672;
 }
 
+.solar-system {
+    width: 40px;
+    height: 40px;
+    position: relative;
+  }
+
+  .star {
+    width: 20px;
+    height: 20px;
+    background-color: #9BB0FF;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 2px 1px #9BB0FF;
+  }
+
+  .orbit {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-style: preserve-3d;
+    transform-origin: center;
+  }
+
+  /* Adjust each orbit size and rotation */
+  .orbit:nth-child(2) {
+    width: 28px;
+    height: 14px;
+    margin-top: -7px;
+    /* Half the height */
+    margin-left: -14px;
+    /* Half the width */
+    transform: rotateX(70deg);
+  }
+
+  .orbit:nth-child(3) {
+    width: 34px;
+    height: 17px;
+    margin-top: -8px;
+    margin-left: -17px;
+    transform: rotateX(65deg);
+  }
+
+  .orbit:nth-child(4) {
+    width: 40px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -20px;
+    transform: rotateX(60deg);
+  }
