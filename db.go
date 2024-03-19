@@ -258,3 +258,19 @@ func DeleteChat(db *gorm.DB, id int64) error {
 	result := db.Delete(&Chat{}, id)
 	return result.Error
 }
+
+// UpdateModelDownloadedState updates the downloaded state of a model in the database.
+// func UpdateModelDownloadedState(db *gorm.DB, dataPath string, modelName string, downloaded bool) error {
+// 	db, err := NewSQLiteDB(dataPath)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to open database: %w", err)
+// 	}
+// 	defer db.Close()
+
+// 	err = db.UpdateDownloadedByName(modelName, downloaded)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update model downloaded state: %w", err)
+// 	}
+
+// 	return nil
+// }

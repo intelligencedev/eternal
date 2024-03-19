@@ -1,7 +1,7 @@
 <div id="models-container" class="fade-it">
   <div id="content" class="mt-3 mb-4 pb-3">
-    <button class="btn btn-danger btn-lg mb-2 w-100" style="background-color: var(--et-red);" hx-swap="delete"
-      hx-target="#models-container" hx-get="/">Back</button>
+    <button class="btn btn-danger btn-lg mb-2 w-100" style="background-color: var(--et-red);" hx-get="/"
+      hx-target="#chat-view" hx-swap="innerHTML transition:true">Back</button>
   </div>
   <div class="row">
     {{range .models}}
@@ -13,8 +13,8 @@
         <div class="card-header col">{{.Name}}</div>
         <div class="row h-100">
           <div name="progress-download" id="progress-download-{{.Name}}"></div>
-          <button id="btn-download-{{.Name}}" class="btn fw-medium" style="min-height: 228px;" data-model-name="{{.Name}}"
-            hx-post="/model/download?model={{.Name}}" hx-trigger="click">
+          <button id="btn-download-{{.Name}}" class="btn fw-medium" style="min-height: 228px;"
+            data-model-name="{{.Name}}" hx-post="/model/download?model={{.Name}}" hx-trigger="click">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path fill="currentColor" fill-rule="evenodd"
                 d="M12 15.25a.75.75 0 0 1 .75.75v4.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V16a.75.75 0 0 1 .75-.75"
@@ -98,7 +98,7 @@
     // Append 
 
     console.log("Downloading model: ", modelName);
-    
+
     // Fetch the download route
     fetch(`/model/download?model=${modelName}`, {
       method: 'POST',
@@ -118,10 +118,10 @@
   }
 
   async function selectModel(modelName) {
-    
+
     // Get the card element using the data-model-name attribute
     let cardElement = document.querySelector(`div[data-model-name="${modelName}"]`);
-    
+
     cardElement.classList.toggle('card-selected');
 
     // Determine the action based on selection state
