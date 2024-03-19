@@ -1,7 +1,3 @@
-# Tools
-
-This folder contains a set of common tools and utilities used by multiple workflows.
-
 ## compress.go
 
 Automates the process of compressing files and folders within a project. It is particularly useful for preparing static files for embedding into a Go binary, reducing the overall size of the compiled application.
