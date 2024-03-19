@@ -19,6 +19,7 @@
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/header.css">
   <!-- <link rel="stylesheet" href="https://unpkg.com/@antonz/codapi@0.17.0/dist/snippet.css" /> -->
 
   <!-- Code Highlight -->
@@ -39,9 +40,11 @@
   <script src="js/bootstrap/bootstrap.bundle.min.js"></script>
 
   <!-- HTMX -->
-  <script src="js/htmx.min.js"></script>
+  <!-- <script src="js/htmx.min.js"></script> -->
+  <script src="https://unpkg.com/htmx.org@2.0.0-beta1/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
-  <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.0.0/sse.js"></script>
+  <!-- <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script> -->
 
   <style>
 
@@ -49,11 +52,12 @@
 </head>
 
 <body>
-  <!-- {{template "templates/header".}} -->
+
+  {{template "templates/header".}}
   <div id="content" class="container-fluid overflow-x-hidden">
-    <div class="row">
+    <div class="row mt-5">
       <div class="col-2"></div>
-      <div id="chat-view" class="col-8 mt-2 pt-1">
+      <div id="chat-view" class="col-8">
         <div id="chat" class="row chat-container fs-5"></div>
       </div>
       <div id="info" class="col-2 mt-2 pt-1">
@@ -62,7 +66,7 @@
 
     <div class="row mt-1 pb-3 px-2 w-auto fixed-bottom dark-blur">
       <form>
-        <div class="py-2" id="prompt-view">
+        <div class="py-1" id="prompt-view">
           <div class="row">
             <button class="btn fw-medium" data-bs-toggle="/">
               <span class="fs-4">Et<svg class="" width="16" height="16" viewBox="0 0 24 24"
@@ -162,7 +166,7 @@
             <div class="row ms-auto w-25">
               <div class="col-auto">
                 <!-- MODELS -->
-                <button class="btn" hx-post="/modelcards" hx-target="#chat-view" hx-swap="afterbegin transition:true"
+                <button class="btn" hx-post="/modelcards" hx-target="#chat-view" hx-preserve="#chat-view" hx-swap="afterbegin transition:true"
                   data-bs-toggle="tooltip" data-bs-title="Language Models">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none">

@@ -74,6 +74,93 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// func Download(url string, localPath string) error {
+// 	dir := filepath.Dir(localPath)
+// 	// Ensure the directory exists
+// 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+// 		return fmt.Errorf("failed to create directory: %w", err)
+// 	}
+
+// 	// Open the local file for writing, create it if not exists
+// 	out, err := os.OpenFile(localPath, os.O_RDWR|os.O_CREATE, 0666)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to open file: %w", err)
+// 	}
+// 	defer out.Close()
+
+// 	// Find out how much has already been downloaded
+// 	fi, err := out.Stat()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to stat file: %w", err)
+// 	}
+// 	size := fi.Size()
+
+// 	// If already downloaded, no need to download again
+// 	if size > 0 {
+// 		fmt.Printf("Resuming download from byte %d...\n", size)
+// 	}
+
+// 	// Create a new HTTP request
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to create request: %w", err)
+// 	}
+
+// 	// Set the Range header to request the portion of the file we don't have yet
+// 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-", size))
+
+// 	// Make the HTTP request
+// 	resp, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to start file download: %w", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusOK {
+// 		return fmt.Errorf("bad status getting file: %s", resp.Status)
+// 	}
+
+// 	// Seek to the end of the file to start appending data
+// 	_, err = out.Seek(0, io.SeekEnd)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to seek file: %w", err)
+// 	}
+
+// 	pterm.Info.Printf("Downloading model:\nURL: %s\nFile: %s\n", url, localPath)
+
+// 	// Initialize the progress bar
+// 	progressBar, _ := pterm.DefaultProgressbar.WithTotal(int(resp.ContentLength)).WithTitle("Downloading").Start()
+
+// 	// Wrap the response body in a custom reader that updates the progress bar
+// 	progressReader := &ProgressReader{
+// 		Reader:        resp.Body,
+// 		ProgressBar:   progressBar,
+// 		TotalRead:     size,
+// 		ContentLength: resp.ContentLength + size,
+// 	}
+
+// 	// Copy the remaining data to the file, updating progress along the way
+// 	_, err = io.Copy(out, progressReader)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Ensure the progress bar reflects the complete download
+// 	progressBar.Total = (int(progressReader.TotalRead))
+
+// 	// Finish the progress bar
+// 	progressBar.Stop()
+
+// 	// Update the model's downloaded state in the database
+// 	// err = UpdateModelDownloadedState(modelName, true)
+// 	// if err != nil {
+// 	// 	log.Errorf("Failed to update model downloaded state: %v", err)
+// 	// }
+
+// 	return nil
+// }
+
+// Download downloads a file from a URL to a local path, resuming if possible.
 func Download(url string, localPath string) error {
 	dir := filepath.Dir(localPath)
 	// Ensure the directory exists
@@ -94,11 +181,6 @@ func Download(url string, localPath string) error {
 		return fmt.Errorf("failed to stat file: %w", err)
 	}
 	size := fi.Size()
-
-	// If already downloaded, no need to download again
-	if size > 0 {
-		fmt.Printf("Resuming download from byte %d...\n", size)
-	}
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("GET", url, nil)
@@ -129,7 +211,7 @@ func Download(url string, localPath string) error {
 	pterm.Info.Printf("Downloading model:\nURL: %s\nFile: %s\n", url, localPath)
 
 	// Initialize the progress bar
-	progressBar, _ := pterm.DefaultProgressbar.WithTotal(int(resp.ContentLength)).WithTitle("Downloading").Start()
+	progressBar, _ := pterm.DefaultProgressbar.WithTotal(int(resp.ContentLength + size)).WithTitle("Downloading").Start()
 
 	// Wrap the response body in a custom reader that updates the progress bar
 	progressReader := &ProgressReader{
@@ -151,7 +233,11 @@ func Download(url string, localPath string) error {
 	// Finish the progress bar
 	progressBar.Stop()
 
-	pterm.Success.Println("Download completed successfully.")
+	// Update the model's downloaded state in the database
+	// err = UpdateModelDownloadedState(modelName, true)
+	// if err != nil {
+	//     log.Errorf("Failed to update model downloaded state: %v", err)
+	// }
 
 	return nil
 }
@@ -168,6 +254,28 @@ func GetDownloadProgress(key string) string {
 
 	// Fallback if no progress is found
 	return "0%"
+}
+
+// GetExpectedFileSize returns the expected file size of a download.
+func GetExpectedFileSize(url string) (int64, error) {
+	// Create a new HTTP request
+	req, err := http.NewRequest("HEAD", url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Make the HTTP request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to start file download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("bad status getting file: %s", resp.Status)
+	}
+
+	return resp.ContentLength, nil
 }
 
 func (m *Model) Delete() error {
