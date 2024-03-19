@@ -235,6 +235,7 @@ func CompletionWebSocket(c *websocket.Conn, cmdPath string) {
 
 // MakeCompletionWebSocket creates a closure that captures model parameters and returns a WebSocket handler.
 func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath string) error {
+	defer c.Close()
 	var msgBuffer bytes.Buffer // Buffer to accumulate messages
 	for {
 		cmd := BuildCommand(dataPath, *modelOpts)

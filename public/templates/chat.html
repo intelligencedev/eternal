@@ -202,8 +202,24 @@
 <!-- <codapi-settings url="http://localhost:1313/v1"></codapi-settings> -->
 <script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
+  htmx.on("htmx:wsOpen", function (evt) {
+  console.log("WebSocket opened");
+  const box = document.querySelector(".box");
+  if (box) {
+    box.style.transition = "transform 0.5s ease";
+
+    // Restore original rotation
+    box.style.transform = "rotateX(45deg) rotateY(45deg) rotateZ(-180deg)";
+  }
+});
+
   htmx.on("htmx:wsOnClose", function (evt) {
+    console.log("WebSocket closed");
     highlight();
+    const box = document.querySelector(".box");
+    const newRotation = getRandomRotation();
+    box.style.transition = "transform 0.5s ease";
+    box.style.transform = newRotation;
   });
 
   function scrollToBottom() {
@@ -214,6 +230,10 @@
 
   // Call scrollToBottom in the htmx event handlers
   htmx.on("htmx:wsAfterMessage", function (evt) {
+    const box = document.querySelector(".box");
+    const newRotation = chatRotation();
+    box.style.transition = "transform 0.2s ease";
+    box.style.transform = newRotation;
     setViewHeight("prompt-view");
     highlight();
     scrollToBottom();

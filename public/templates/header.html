@@ -1,73 +1,4 @@
-<head>
-  <style>
-    .box-container {
-      perspective: 1200px;
-      position: absolute;
-      top: 25px;
-      left: 50%;
-      transform: translateY(-5%);
-      transform: translateX(-50%);
-      z-index: 2;
-    }
-
-    .box {
-      width: 40px;
-      height: 40px;
-      position: relative;
-      transform-style: preserve-3d;
-      transition: transform 0.5s ease;
-      transform-origin: center;
-    }
-
-    .box .panel {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-
-    .box .panel.front {
-      transform: translateZ(25px);
-    }
-
-    .box .panel.back {
-      transform: rotateY(180deg) translateZ(25px);
-    }
-
-    .box .panel.top {
-      transform: rotateX(90deg) translateZ(25px);
-    }
-
-    .box .panel.bottom {
-      transform: rotateX(-90deg) translateZ(25px);
-    }
-
-    .box .panel.left {
-      transform: rotateY(-90deg) translateZ(25px);
-    }
-
-    .box .panel.right {
-      transform: rotateY(90deg) translateZ(25px);
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
-      }
-
-      to {
-        transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
-      }
-    }
-
-    .box:hover {
-      animation: spin linear infinite;
-    }
-  </style>
-</head>
-
-<div id="row cb-header">
+<div id="cb-header" class="position-fixed fixed-top dark-blur">
   <div class="box-container">
     <div class="box">
       <div class="panel front"></div>
@@ -97,10 +28,10 @@
   }
 
   function chatRotation() {
-    r += -10;
+    r += 10;
     const rotationX = r;
     const rotationY = r;
-    const rotationZ = -90;
+    const rotationZ = 0;
     return `rotateX(${rotationX}deg) rotateY(${rotationY}deg) rotateZ(${rotationZ}deg)`;
   }
 
@@ -109,7 +40,7 @@
     const newRotation = getRandomRotation();
     box.style.transition = "transform 0.5s";
     box.style.transform = newRotation;
-    chatbox.classList.toggle("expand");
+    // chatbox.classList.toggle("expand"); // This line references an undefined "chatbox" which is not present in the provided code
   });
 
   box.addEventListener("mouseover", function () {

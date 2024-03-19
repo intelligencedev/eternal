@@ -1,0 +1,79 @@
+#cb-header {
+    position: relative;
+    height: 50px;
+    /* Adjust the height as needed */
+    /* background: linear-gradient(to bottom, rgba(28, 10, 51, 1) 75%, rgba(0, 0, 0, 0) 100%); */
+}
+
+.box-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.box {
+    width: 20px;
+    /* Half of the original size */
+    height: 20px;
+    /* Half of the original size */
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+    transform-origin: center;
+}
+
+.box .panel {
+    position: absolute;
+    width: 20px;
+    /* Half of the original size */
+    height: 20px;
+    /* Half of the original size */
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.box .panel.front {
+    transform: translateZ(12.5px);
+    /* Half of the original size */
+}
+
+.box .panel.back {
+    transform: rotateY(180deg) translateZ(12.5px);
+    /* Half of the original size */
+}
+
+.box .panel.top {
+    transform: rotateX(90deg) translateZ(12.5px);
+    /* Half of the original size */
+}
+
+.box .panel.bottom {
+    transform: rotateX(-90deg) translateZ(12.5px);
+    /* Half of the original size */
+}
+
+.box .panel.left {
+    transform: rotateY(-90deg) translateZ(12.5px);
+    /* Half of the original size */
+}
+
+.box .panel.right {
+    transform: rotateY(90deg) translateZ(12.5px);
+    /* Half of the original size */
+}
+
+@keyframes spin {
+    from {
+        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+
+    to {
+        transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+    }
+}
+
+.box:hover {
+    animation: spin linear infinite;
+}

@@ -381,30 +381,60 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Post("/model/download", func(c *fiber.Ctx) error {
 		modelName := c.Query("model")
 
-		var downloadURL string
-		for _, model := range config.LanguageModels {
-			if model.Name == modelName {
-				downloadURL = model.Downloads[0]
-			}
-		}
-
-		modelFileName := strings.Split(downloadURL, "/")[len(strings.Split(downloadURL, "/"))-1]
-
 		if modelName == "" {
 			log.Errorf("Missing parameters for download")
 			return c.Status(fiber.StatusBadRequest).SendString("Missing parameters")
 		}
 
-		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
-
-		// Check if the modelPath does not exist and download it if it doesn't
-		if _, err := os.Stat(modelPath); err != nil {
-			go func() {
-				if err := llm.Download(downloadURL, modelPath); err != nil {
-					log.Errorf("Error in download: %v", err)
-				}
-			}()
+		var downloadURL string
+		for _, model := range config.LanguageModels {
+			if model.Name == modelName {
+				downloadURL = model.Downloads[0]
+				break
+			}
 		}
+
+		modelFileName := filepath.Base(downloadURL)
+		modelPath := filepath.Join(config.DataPath, "models", modelName, modelFileName)
+
+		// Check if the file exists and partially downloaded
+		var partialDownload bool
+		if info, err := os.Stat(modelPath); err == nil {
+			// Check if the file size is less than the expected size (if available)
+			if info.Size() > 0 {
+				// Assuming here that we can check the expected file size somehow,
+				// e.g., from a database or a config file. If not available, we
+				// still try to resume assuming partial download.
+				expectedSize, err := llm.GetExpectedFileSize(downloadURL)
+				if err != nil {
+					log.Errorf("Error getting expected file size: %v", err)
+				}
+				partialDownload = info.Size() < expectedSize
+			}
+		}
+
+		// Download or resume the download
+		go func() {
+			var err error
+
+			if partialDownload {
+				pterm.Info.Printf("Resuming download for model: %s\n", modelName)
+				err = llm.Download(downloadURL, modelPath)
+			} else {
+				pterm.Info.Printf("Starting download for model: %s\n", modelName)
+				err = llm.Download(downloadURL, modelPath)
+			}
+
+			if err != nil {
+				log.Errorf("Error in download: %v", err)
+			} else {
+				// Update the model's downloaded state in the database
+				err = sqliteDB.UpdateDownloadedByName(modelName, true)
+				if err != nil {
+					log.Errorf("Failed to update model downloaded state: %v", err)
+				}
+			}
+		}()
 
 		progressErr := fmt.Sprintf("<div class='w-100' id='progress-download-%s' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div>", modelName)
 
@@ -754,10 +784,16 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			// Increment the chat turn counter
 			chatTurn = chatTurn + 1
+
+			// Close the connection
+			c.Close()
+
 			return
 		}
 
 		chatTurn = chatTurn + 1
+
+		c.Close()
 	}))
 
 	app.Get("/wsoai", websocket.New(func(c *websocket.Conn) {
@@ -858,11 +894,15 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				pterm.Error.Println("Error storing chat in database:", err)
 				return
 			}
+
+			// Close the socket
+			c.Close()
 		}
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
 
+		c.Close()
 	}))
 
 	go func() {
