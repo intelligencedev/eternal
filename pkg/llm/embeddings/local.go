@@ -156,7 +156,8 @@ func GenerateEmbeddingForTask(dataPath string, task string) {
 // # "/Users/arturoaquino/.eternal-v1/gguf/embedding"
 func Encoder(dataPath string, text string) (string, error) {
 	cmdPath := fmt.Sprintf("%s/embedding", dataPath)
-	cmd := exec.Command(cmdPath, "-c", "4096", "-m", "/Users/art/.eternal-v1/models/sfr-embedding-mistral/ggml-sfr-embedding-mistral-q4_k_m.gguf", "--log-disable", "-p", text)
+	modelPath := fmt.Sprintf("%s/models/%s", dataPath, modelName)
+	cmd := exec.Command(cmdPath, "-c", "4096", "-m", modelPath, "--log-disable", "-p", text)
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err
