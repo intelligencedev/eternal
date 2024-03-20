@@ -631,7 +631,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				progress := llm.GetDownloadProgress("sse-progress")
 
 				// Format message for SSE
-				msg := fmt.Sprintf("data: <div class='progress specific-h-25 m-4' role='progressbar' aria-label='download' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar progress-bar-striped progress-bar-animated' style='width: %s;'></div></div><div class='text-center fs-6'>Downloading...%s</div>\n\n", progress, progress, progress)
+				msg := fmt.Sprintf("data: <div class='progress specific-h-25 m-4' role='progressbar' aria-label='download' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar progress-bar-striped progress-bar-animated' style='width: %s;'></div></div><div class='text-center fs-6'>Please refresh this page when the download completes.</br> Downloading...%s</div>\n\n", progress, progress, progress)
 
 				// Write the message
 				if _, err := w.WriteString(msg); err != nil {
