@@ -44,6 +44,17 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
+  - name: 'dolphin-phi2'
+    homepage: 'https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2'
+    gguf: 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF/resolve/main/dolphin-2_6-phi-2.Q8_0.gguf'
+    prompt: "<|im_start|>system{system_message}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
+    ctx: 16384
+    roles:
+      - 'chat'
+    tags:
+      - '7B'
   - name: 'zephyr-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF'
