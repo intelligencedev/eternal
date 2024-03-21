@@ -1,48 +1,36 @@
 package main
 
 import (
-	emb "eternal/pkg/llm/embeddings"
 	"fmt"
+	"log"
 	"os"
-	"strconv"
-	"strings"
+	"os/user"
+
+	embeddings "eternal/pkg/embeddings"
 )
 
+var modelPath = "data/models/HF/"
+var modelName = "BAAI/bge-large-en-v1.5"
+
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: main.go <data path> <prompt>")
+
+	// Get user home directory
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(usr)
+
+	// Set the path to the model
+	model := fmt.Sprintf("%s/%s/%s", usr, modelPath, modelName)
+
+	// Get prompt as an argument
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: main.go <input file>")
 		return
 	}
 
-	dataPath := os.Args[1]
-	prompt := os.Args[2]
-	dbName := "embeddings.db"
-	topN := 3
+	embeddings.GenerateEmbeddingForTask("qa", model)
 
-	topEmbeddings := emb.Search(dataPath, dbName, prompt, topN)
-
-	// Display the results
-	for i, embedding := range topEmbeddings {
-		fmt.Printf("Rank %d: Word: %s, Similarity: %f\n", i+1, embedding.Word, embedding.Similarity)
-	}
-}
-
-// Encoder is a placeholder for a real encoder function that would generate an embedding for the given text.
-func Encoder(dataPath string, text string) (string, error) {
-	// Implement the actual encoding logic here
-	return "", nil
-}
-
-// stringToVector converts a space-separated string of numbers into a slice of float64.
-func stringToVector(strVec string) ([]float64, error) {
-	parts := strings.Fields(strVec)
-	vec := make([]float64, len(parts))
-	var err error
-	for i, part := range parts {
-		vec[i], err = strconv.ParseFloat(part, 64)
-		if err != nil {
-			return nil, fmt.Errorf("error converting string to float64: %v", err)
-		}
-	}
-	return vec, nil
 }

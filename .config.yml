@@ -44,6 +44,17 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
+  - name: 'dolphin-phi2'
+    homepage: 'https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2'
+    gguf: 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF/resolve/main/dolphin-2_6-phi-2.Q8_0.gguf'
+    prompt: "<|im_start|>system{system_message}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
+    ctx: 16384
+    roles:
+      - 'chat'
+    tags:
+      - '7B'
   - name: 'zephyr-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF'
@@ -89,76 +100,9 @@ language_models:
       - 'all'
     tags:
       - '8x7B'
-  - name: 'deepseek-coder-33b-instruct'
-    homepage: 'https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct'
-    gguf: 'https://huggingface.co/TheBloke/deepseek-coder-33B-instruct-GGUF'
+
+image_models:
+  - name: 'dreamshaper-8-sd15'
+    homepage: 'https://huggingface.co/Lykon/dreamshaper-8'
     downloads:
-      - 'https://huggingface.co/TheBloke/deepseek-coder-33B-instruct-GGUF/resolve/main/deepseek-coder-33b-instruct.Q4_0.gguf'
-    prompt: "You are an expert software developer and code mentor.\n### Instruction:\n{prompt}\n### Response:"
-    ctx: 4096
-    lora:
-      evol-feedback:
-        downloads:
-          - 'https://huggingface.co/epinnock/deepseek-coder-33B-evol-feedback-lora-v3/resolve/main/adapter_model.safetensors'
-    roles:
-      - 'code'
-      - 'logic'
-    tags:
-      - '33B'
-  - name: 'deepseek-67b-chat'
-    homepage: 'https://huggingface.co/rombodawg/Everyone-Coder-33b-Base'
-    gguf: 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF/resolve/main/deepseek-llm-67b-chat.Q4_0.gguf-split-a'
-      - 'https://huggingface.co/TheBloke/deepseek-llm-67b-chat-GGUF/resolve/main/deepseek-llm-67b-chat.Q4_0.gguf-split-b'
-    prompt: "User: {prompt}\n\nAssistant:"
-    ctx: 4096
-    roles:
-      - 'code'
-      - 'logic'
-    tags:
-      - '70B'
-  - name: 'miqu-1-70b'
-    homepage: 'https://huggingface.co/allenai/tulu-2-dpo-70b'
-    gguf: 'https://huggingface.co/miqudev/miqu-1-70b'
-    downloads:
-      - 'https://huggingface.co/miqudev/miqu-1-70b/resolve/main/miqu-1-70b.q5_K_M.gguf'
-    prompt:  "<s> [INST] {{prompt}} [/INST] ANSWER_1</s>"
-    ctx: 32768
-    roles:
-      - 'all'
-    tags:
-      - '70B'
-  - name: 'codellama-70b-instruct'
-    homepage: 'https://huggingface.co/codellama/CodeLlama-70b-Instruct-hf'
-    gguf: 'https://huggingface.co/TheBloke/CodeLlama-70B-Instruct-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/CodeLlama-70B-Instruct-GGUF/resolve/main/codellama-70b-instruct.Q4_0.gguf'
-    prompt:  "<s>Source: system\n\n$system_prompt\n<step> Source: user\n\n$user_message\n<step> Source: assistant\nDestination: user\n\n</s>"
-    ctx: 32764
-    roles:
-      - 'all'
-    tags:
-      - '70B'
-  - name: 'senku-70b'
-    homepage: 'https://huggingface.co/ShinojiResearch/Senku-70B-Full'
-    gguf: 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8'
-    downloads:
-      - 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8/resolve/main/ggml-senku-70b-q4_k_m.gguf'
-    prompt:  "<|im_start|>system\n{instructions}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n{response}"
-    ctx: 32764
-    roles:
-      - 'all'
-    tags:
-      - '70B'
-  - name: 'starchat2-15b'
-    homepage: 'https://huggingface.co/HuggingFaceH4/starchat2-15b-v0.1'
-    gguf: 'https://huggingface.co/bartowski/starchat2-15b-v0.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/bartowski/starchat2-15b-v0.1-GGUF/resolve/main/starchat2-15b-v0.1-Q4_0.gguf'
-    prompt:  "<|im_start|>system{instructions}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant{response}"
-    ctx: 16384
-    roles:
-      - 'all'
-    tags:
-      - '15B'
+      - 'https://civitai.com/api/download/models/128713'

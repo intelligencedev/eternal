@@ -91,6 +91,8 @@ To build the application:
 
 ```
 $ git clone https://github.com/intelligencedev/eternal.git
+$ cd eternal
+$ git submodule update --init --recursive
 $ make all
 ```
 
