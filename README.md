@@ -93,7 +93,6 @@ To build the application:
 $ git clone https://github.com/intelligencedev/eternal.git
 $ cd eternal
 $ git submodule update --init --recursive
-$ git submodule foreach git pull origin master
 $ make all
 ```
 
