@@ -36,7 +36,7 @@ func InitServer(configPath string) (string, error) {
 	}
 
 	// GGUF FILES
-	ggufPath := filepath.Join(configPath, "gguf")
+	ggufPath := configPath
 	err = os.MkdirAll(ggufPath, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %v", ggufPath, err)
@@ -61,7 +61,7 @@ func InitServer(configPath string) (string, error) {
 	}
 
 	// IMG GEN
-	imgGenPath := filepath.Join(configPath, "sd")
+	imgGenPath := configPath
 	err = os.MkdirAll(imgGenPath, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %v", imgGenPath, err)
