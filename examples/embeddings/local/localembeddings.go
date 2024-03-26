@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/user"
 
-	embeddings "eternal/pkg/embeddings"
+	embeddings "eternal/pkg/embeddings/local"
 )
 
 var modelPath = "data/models/HF/"

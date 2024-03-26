@@ -80,7 +80,7 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		return
 	}
 
-	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
+	separators, _ := documents.GetSeparatorsForLanguage(documents.GO)
 	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
 	splitter := documents.RecursiveCharacterTextSplitter{
 		Separators:       separators,

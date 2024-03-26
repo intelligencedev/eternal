@@ -1,0 +1,234 @@
+package documents
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// Example config
+// {
+//     "exclude_dir": ["scripts", "public", "pkg/llm/local/gguf"],
+//     "image_extensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg"],
+//     "video_extensions": [".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv"],
+//     "audio_extensions": [".mp3", ".wav", ".aac", ".flac", ".ogg"],
+//     "document_extensions": [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".jar", ".zip", ".tar", ".gzip"],
+//     "executable_extensions": [".exe", ".dll", ".bin", ".sh", ".bat"],
+//     "settings_extensions": [".ini", ".cfg", ".conf", ".json", ".yaml", ".yml"],
+//     "additional_ignore_types": [".lock"],
+//     "default_output_file": "output.txt"
+// }
+
+var (
+	excludeDir  = []string{"pkg/llm/local/bin", "pkg/llm/local/gguf", "pkg/sd/sdcpp"}
+	ignoreFiles = []string{"LICENSE", "eternal"}
+	ignoreTypes = []string{".log", ".tmp", ".bak", ".old", ".swp", ".lock", ".jpg", ".png", ".mod", ".sum", ".md", ".zip", ".txt"}
+)
+
+type Config struct {
+	ImageExtensions       []string `json:"image_extensions"`
+	VideoExtensions       []string `json:"video_extensions"`
+	AudioExtensions       []string `json:"audio_extensions"`
+	DocumentExtensions    []string `json:"document_extensions"`
+	ExecutableExtensions  []string `json:"executable_extensions"`
+	SettingsExtensions    []string `json:"settings_extensions"`
+	AdditionalIgnoreTypes []string `json:"additional_ignore_types"`
+	DefaultOutputFile     string   `json:"default_output_file"`
+}
+
+// DirectoryItem represents an item in the directory tree.
+type DirectoryItem struct {
+	Name     string          `json:"name"`
+	IsDir    bool            `json:"isDir"`
+	Children []DirectoryItem `json:"children,omitempty"`
+}
+
+// FileContent represents the content of a file.
+type FileContent struct {
+	FilePath string   `json:"filePath"`
+	Lines    []string `json:"lines"`
+}
+
+// DocumentationResponse represents the structured response containing both the directory tree and file contents.
+type DocumentationResponse struct {
+	Tree    DirectoryItem `json:"tree"`
+	Content []FileContent `json:"content"`
+}
+
+func shouldIgnore(item string, outputFilePath string, args Config) bool {
+	itemName := filepath.Base(item)
+	itemDir := filepath.Dir(item)
+	fileExt := strings.ToLower(filepath.Ext(itemName))
+
+	if filepath.Clean(item) == filepath.Clean(outputFilePath) {
+		return true
+	}
+
+	if strings.HasPrefix(itemName, ".") {
+		return true
+	}
+
+	// Check if the parent directory of the item is in the excludeDir list
+	for _, dir := range excludeDir {
+		if strings.Contains(itemDir, dir) {
+			return true
+		}
+	}
+
+	// if info, err := os.Stat(item); err == nil && info.IsDir() {
+	// 	if contains(excludeDir, itemName) {
+	// 		fmt.Println("Excluding directory:", itemName)
+	// 		return true
+	// 	}
+	// }
+
+	if includeDir != "" && !strings.HasPrefix(filepath.Clean(item), filepath.Clean(includeDir)) {
+		return true
+	}
+
+	if info, err := os.Stat(item); err == nil && !info.IsDir() {
+		if contains(ignoreFiles, itemName) || contains(ignoreTypes, fileExt) {
+			return true
+		}
+	}
+
+	if ignoreSpecial && contains(args.SettingsExtensions, fileExt) {
+		return true
+	}
+
+	return false
+}
+
+func buildTree(dirPath string, args Config, outputFilePath string, isRoot bool) (DirectoryItem, error) {
+	item := DirectoryItem{
+		Name:  filepath.Base(dirPath),
+		IsDir: true,
+	}
+
+	if isRoot {
+		item.Name += "/"
+	}
+
+	items, err := os.ReadDir(dirPath)
+	if err != nil {
+		return item, err
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name() < items[j].Name()
+	})
+
+	for _, dirItem := range items {
+		itemPath := filepath.Join(dirPath, dirItem.Name())
+		if shouldIgnore(itemPath, outputFilePath, args) {
+			continue
+		}
+
+		if dirItem.IsDir() {
+			child, err := buildTree(itemPath, args, outputFilePath, false)
+			if err != nil {
+				return item, err
+			}
+			item.Children = append(item.Children, child)
+		} else {
+			item.Children = append(item.Children, DirectoryItem{
+				Name:  filepath.Base(itemPath),
+				IsDir: false,
+			})
+		}
+	}
+
+	return item, nil
+}
+
+func collectFileContents(dirPath string, args Config, depth int) ([]FileContent, error) {
+	var contents []FileContent
+
+	items, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name() < items[j].Name()
+	})
+
+	for _, item := range items {
+		itemPath := filepath.Join(dirPath, item.Name())
+		relativePath, _ := filepath.Rel(repoPath, itemPath)
+
+		if shouldIgnore(itemPath, outputFile, args) {
+			continue
+		}
+
+		if item.IsDir() {
+			childContents, err := collectFileContents(itemPath, args, depth+1)
+			if err != nil {
+				return nil, err
+			}
+			contents = append(contents, childContents...)
+		} else {
+			fileContent, err := readFileContent(itemPath)
+			if err != nil {
+				return nil, err
+			}
+			contents = append(contents, FileContent{
+				FilePath: relativePath,
+				Lines:    fileContent,
+			})
+		}
+	}
+
+	return contents, nil
+}
+
+func readFileContent(filePath string) ([]string, error) {
+	var lines []string
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines, nil
+}
+
+func contains(slice []string, item string) bool {
+	for _, i := range slice {
+		if i == item {
+			return true
+		}
+	}
+	return false
+}
+
+// Replace the main function with a new function that will be called from a GoFiber route handler.
+func GenerateDocumentation(args Config, repoPath string, outputFile string) (DocumentationResponse, error) {
+	var response DocumentationResponse
+
+	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+		return response, fmt.Errorf("the specified directory does not exist or is not accessible: %s", repoPath)
+	}
+
+	tree, err := buildTree(repoPath, args, outputFile, true)
+	if err != nil {
+		return response, err
+	}
+	response.Tree = tree
+
+	content, err := collectFileContents(repoPath, args, 0)
+	if err != nil {
+		return response, err
+	}
+	response.Content = content
+
+	return response, nil
+}

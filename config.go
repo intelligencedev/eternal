@@ -20,6 +20,7 @@ type AppConfig struct {
 	ServiceHosts   map[string]map[string]BackendHost `yaml:"service_hosts"`
 	ChromedpKey    string                            `yaml:"chromedp_key"`
 	OAIKey         string                            `yaml:"oai_key"`
+	AnthropicKey   string                            `yaml:"anthropic_key"`
 	LanguageModels []llm.Model                       `yaml:"language_models"`
 	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
 }

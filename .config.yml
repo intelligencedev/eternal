@@ -17,17 +17,17 @@ service_hosts:
   retrieval:
     retrieval_host_1:
       host: 'localhost'
-      port: 8081
+      port: 8080
   # image generation and processing
   image:
     image_host_1:
       host: 'localhost'
-      port: 8082
+      port: 8080
   # text-to-speech and speech-to-text    
   speech:
     speech_host_1:
       host: 'localhost'
-      port: 8083
+      port: 8080
   # llm text generation services
   llm:
     llm_host_1:
@@ -36,6 +36,9 @@ service_hosts:
 
 # OpenAI API Key
 oai_key: 'sk-...'
+
+# Anthropic Key for Claude Completions
+anthropic_key: 'sk-ant-api...'
 
 language_models:
   - name: 'openai-gpt'

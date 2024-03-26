@@ -1,0 +1,53 @@
+agents:
+  - agent_id: graph_of_thoughts_agent
+    model:
+      type: llama
+      path: /path/to/model/weights
+      tokenizer: tokenizer_name
+      params:
+        n_ctx: 2048
+        n_parts: -1
+        seed: 42
+        f16_kv: false
+        logits_all: false
+        vocab_only: false
+        use_mmap: true
+        use_mlock: false
+        embedding: false
+        n_threads: 4
+    prompt:
+      template: |
+        You are an AI assistant named Eternal. Your task is to analyze the given problem using a graph of thoughts approach.
+
+        Problem: {{prompt}}
+
+        Instructions:
+        1. Break down the problem into smaller sub-problems or key points.
+        2. For each sub-problem or key point, generate a thought node.
+        3. Connect the thought nodes based on their relationships and dependencies.
+        4. Analyze each thought node, considering its implications, potential solutions, and any additional information needed.
+        5. Iteratively expand and refine the graph by adding more thought nodes and connections as necessary.
+        6. Once the graph is sufficiently developed, summarize the key insights and propose a solution or recommendation.
+
+        Constraints:
+        - Limit the initial graph to a maximum of 5 thought nodes.
+        - Each thought node should be concise, focusing on a single idea or aspect of the problem.
+        - Use clear and logical connections between the thought nodes.
+        - Avoid irrelevant or tangential thoughts.
+
+        Begin the graph of thoughts analysis now.
+      stop_sequences:
+        - "Solution:"
+        - "Recommendation:"
+      max_tokens: 500
+      temperature: 0.8
+      top_p: 0.95
+      top_k: 40
+      repeat_penalty: 1.0
+      n_results: 1
+    task:
+      type: graph_of_thoughts
+      domain: problem_solving
+      objective: Analyze a given problem using a graph of thoughts approach and propose a solution or recommendation.
+    output_format: text
+    api_endpoint: https://api.example.com/llm

@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"errors"
@@ -94,7 +94,7 @@ type Chat struct {
 	ModelName string
 }
 
-func NewSQLiteDB(dataPath string) (*SQLiteDB, error) {
+func NewDB(dataPath string) (*SQLiteDB, error) {
 
 	// Silence gorm logs during this step
 	newLogger := logger.Default.LogMode(logger.Silent)
@@ -109,43 +109,43 @@ func NewSQLiteDB(dataPath string) (*SQLiteDB, error) {
 	return &SQLiteDB{db: db}, nil
 }
 
-func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
+func (data *SQLiteDB) AutoMigrate(models ...interface{}) error {
 	for _, model := range models {
-		if err := sqldb.db.AutoMigrate(model); err != nil {
+		if err := data.db.AutoMigrate(model); err != nil {
 			return fmt.Errorf("error migrating schema for %v: %v", reflect.TypeOf(model), err)
 		}
 	}
 	return nil
 }
 
-func (sqldb *SQLiteDB) Create(record interface{}) error {
-	return sqldb.db.Create(record).Error
+func (data *SQLiteDB) Create(record interface{}) error {
+	return data.db.Create(record).Error
 }
 
-func (sqldb *SQLiteDB) Find(out interface{}) error {
-	return sqldb.db.Find(out).Error
+func (data *SQLiteDB) Find(out interface{}) error {
+	return data.db.Find(out).Error
 }
 
-func (sqldb *SQLiteDB) First(name string, out interface{}) error {
-	return sqldb.db.Where("name = ?", name).First(out).Error
+func (data *SQLiteDB) First(name string, out interface{}) error {
+	return data.db.Where("name = ?", name).First(out).Error
 }
 
-func (sqldb *SQLiteDB) FindByID(id uint, out interface{}) error {
-	return sqldb.db.First(out, id).Error
+func (data *SQLiteDB) FindByID(id uint, out interface{}) error {
+	return data.db.First(out, id).Error
 }
 
-func (sqldb *SQLiteDB) UpdateByName(name string, updatedRecord interface{}) error {
-	// Assuming 'Name' is the field in your model that holds the model's name.
+func (data *SQLiteDB) UpdateByName(name string, updatedRecord interface{}) error {
+	// Assudata'Name' is the field in your model that holds the model's name.
 	// The method first finds the record by name and then applies the updates.
-	return sqldb.db.Model(updatedRecord).Where("name = ?", name).Updates(updatedRecord).Error
+	return data.db.Model(updatedRecord).Where("name = ?", name).Updates(updatedRecord).Error
 }
 
-func (sqldb *SQLiteDB) UpdateDownloadedByName(name string, downloaded bool) error {
-	return sqldb.db.Model(&ModelParams{}).Where("name = ?", name).Update("downloaded", downloaded).Error
+func (data *SQLiteDB) UpdateDownloadedByName(name string, downloaded bool) error {
+	return data.db.Model(&ModelParams{}).Where("name = ?", name).Update("downloaded", downloaded).Error
 }
 
-func (sqldb *SQLiteDB) Delete(id uint, model interface{}) error {
-	return sqldb.db.Delete(model, id).Error
+func (data *SQLiteDB) Delete(id uint, model interface{}) error {
+	return data.db.Delete(model, id).Error
 }
 
 func LoadModelDataToDB(db *SQLiteDB, models []ModelParams) error {
@@ -200,62 +200,62 @@ func LoadImageModelDataToDB(db *SQLiteDB, models []ImageModel) error {
 	return nil
 }
 
-func AddSelectedModel(db *gorm.DB, modelName string) error {
+func AddSelectedModel(data *SQLiteDB, modelName string) error {
 	selectedModel := SelectedModels{
 		ModelName: modelName,
 	}
 
 	// Check if the model is already selected by the user
 	var count int64
-	db.Model(&SelectedModels{}).Where("model_name = ?", modelName).Count(&count)
+	data.db.Model(&SelectedModels{}).Where("model_name = ?", modelName).Count(&count)
 	if count == 0 {
 		// If not, add it to the database
-		return db.Create(&selectedModel).Error
+		return data.db.Create(&selectedModel).Error
 	}
 
 	return nil // Model is already selected, no action needed
 }
 
-func RemoveSelectedModel(db *gorm.DB, modelName string) error {
-	return db.Where("model_name = ?", modelName).Delete(&SelectedModels{}).Error
+func RemoveSelectedModel(data *SQLiteDB, modelName string) error {
+	return data.db.Where("model_name = ?", modelName).Delete(&SelectedModels{}).Error
 }
 
-func GetSelectedModels(db *gorm.DB) ([]SelectedModels, error) {
+func GetSelectedModels(data *SQLiteDB) ([]SelectedModels, error) {
 	var selectedModels []SelectedModels
-	err := db.Find(&selectedModels).Error
+	err := data.db.Find(&selectedModels).Error
 	return selectedModels, err
 }
 
 // CreateChat inserts a new chat into the database.
-func CreateChat(db *gorm.DB, prompt, response, model string) (Chat, error) {
+func CreateChat(data *SQLiteDB, prompt, response, model string) (Chat, error) {
 	chat := Chat{Prompt: prompt, Response: response, ModelName: model}
-	result := db.Create(&chat)
+	result := data.db.Create(&chat)
 	return chat, result.Error
 }
 
 // GetChats retrieves all chat entries from the database.
-func GetChats(db *gorm.DB) ([]Chat, error) {
+func GetChats(data *SQLiteDB) ([]Chat, error) {
 	var chats []Chat
-	result := db.Find(&chats)
+	result := data.db.Find(&chats)
 	return chats, result.Error
 }
 
 // GetChatByID retrieves a chat by its ID.
-func GetChatByID(db *gorm.DB, id int64) (Chat, error) {
+func GetChatByID(data *SQLiteDB, id int64) (Chat, error) {
 	var chat Chat
-	result := db.First(&chat, id)
+	result := data.db.First(&chat, id)
 	return chat, result.Error
 }
 
 // UpdateChat updates an existing chat entry in the database without changing its ID.
-func UpdateChat(db *gorm.DB, id int64, newPrompt, newResponse, newModel string) error {
-	result := db.Model(&Chat{}).Where("id = ?", id).Updates(Chat{Prompt: newPrompt, Response: newResponse, ModelName: newModel})
+func UpdateChat(data *SQLiteDB, id int64, newPrompt, newResponse, newModel string) error {
+	result := data.db.Model(&Chat{}).Where("id = ?", id).Updates(Chat{Prompt: newPrompt, Response: newResponse, ModelName: newModel})
 	return result.Error
 }
 
 // DeleteChat removes a chat entry from the database.
-func DeleteChat(db *gorm.DB, id int64) error {
-	result := db.Delete(&Chat{}, id)
+func DeleteChat(data *SQLiteDB, id int64) error {
+	result := data.db.Delete(&Chat{}, id)
 	return result.Error
 }
 
