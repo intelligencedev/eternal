@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"eternal/pkg/embeddings"
 	"eternal/pkg/llm"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
@@ -676,19 +677,37 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
-		// Begin tool workflow. Tools will add context to the submitted message for
-		// the model to use. Document is the abstraction that will hold that context.
-		var document string
+		// topN := 3 // retrieve top N results. Adjust based on context size.
+		// topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
 
-		// Retrieve the page content from prompt URLs and add it to the document
-		url := web.ExtractURLs(chatMessage)
+		// var documents []string
+		// var documentString string
+		// if len(topEmbeddings) > 0 {
+		// 	for _, topEmbedding := range topEmbeddings {
+		// 		documents = append(documents, topEmbedding.Word)
+		// 	}
+		// 	documentString = strings.Join(documents, " ")
+		// 	fmt.Println("Document:")
+		// 	fmt.Println(documentString)
+		// }
 
-		if len(url) > 0 {
-			pterm.Info.Println("Extracted URLs: ", url)
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		}
+		// chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+
+		// // Begin tool workflow. Tools will add context to the submitted message for
+		// // the model to use. Document is the abstraction that will hold that context.
+		// var document string
+
+		// // Retrieve the page content from prompt URLs and add it to the document
+		// url := web.ExtractURLs(chatMessage)
+
+		// if len(url) > 0 {
+		// 	pterm.Info.Println("Extracted URLs: ", url)
+		// 	document, _ = web.WebGetHandler(url[0])
+		// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		// }
+
+		document := ""
 
 		// TOOL WORKFLOW
 		for _, tool := range tools {
@@ -775,6 +794,11 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			chat.Response = err.Error()
 			chat.ModelName = wsMessage.Model
 
+			// Generate embeddings
+			// pterm.Warning.Println("Generating embeddings...")
+			// turnMemoryText := chat.Prompt + "\n" + chat.Response
+			// embeddings.GenerateEmbeddingChat(turnMemoryText, config.DataPath)
+
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
 				pterm.Error.Println("Error storing chat in database:", err)
@@ -817,6 +841,28 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
+
+		// Check if responses.db exists
+		if _, err := os.Stat(filepath.Join(config.DataPath, "responses.db")); os.IsNotExist(err) {
+			pterm.Warning.Println("responses.db does not exist. Generating embeddings...")
+			embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
+		}
+
+		topN := 10 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
+
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
 		// Begin tool workflow. Tools will add context to the submitted message for
 		// the model to use. Document is the abstraction that will hold that context.

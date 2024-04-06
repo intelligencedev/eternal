@@ -116,8 +116,7 @@ func main() {
 		var prompt map[string]interface{}
 		err = json.NewDecoder(file).Decode(&prompt)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to parse JSON
-			file")
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to parse JSON file")
 		}
 
 		// Check if the required keys exist and have the correct data type
@@ -127,9 +126,6 @@ func main() {
 			} else {
 				return c.Status(fiber.StatusInternalServerError).SendString("Invalid structure for key '6'")
 			}
-		}
-		else {
-			return c.Status(fiber.StatusInternalServerError).SendString("Missing or invalid key '6'")
 		}
 
 		if val, ok := prompt["3"].(map[string]interface{}); ok {
