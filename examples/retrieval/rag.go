@@ -14,7 +14,7 @@ import (
 )
 
 const modelName = "BAAI/bge-large-en-v1.5"
-const limit = 10
+const limit = 128
 
 func main() {
 	homeDir, err := os.UserHomeDir()
@@ -55,7 +55,7 @@ func main() {
 
 func Search(modelPath string, modelName string, prompt string, topN int) []store.Embedding {
 	db := store.NewEmbeddingDB()
-	embeddings, err := db.LoadEmbeddings("/Users/art/Documents/eternal-v1/examples/embeddings/local/embeddings.db")
+	embeddings, err := db.LoadEmbeddings("./embeddings.db")
 	if err != nil {
 		fmt.Println("Error loading embeddings:", err)
 		return nil
