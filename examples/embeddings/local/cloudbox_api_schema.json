@@ -6,11 +6,11 @@
     "info": {
         "description": "CloudBox is a self hosted platform for developing, testing and deploying apps and services.",
         "title": "CloudBox API",
-        "termsOfService": "https://compute.tech/terms/",
+        "termsOfService": "https://intelligence.dev/terms/",
         "contact": {
             "name": "Compute Tech",
-            "url": "https://compute.tech/support",
-            "email": "admin@compute.tech"
+            "url": "https://intelligence.dev/support",
+            "email": "admin@intelligence.dev"
         },
         "license": {
             "name": "Apache 2.0",

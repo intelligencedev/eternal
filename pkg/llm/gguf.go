@@ -158,7 +158,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--temp", temp,
 		// "--mlock",
 		"--seed", "-1",
-		//"--ignore-eos",
+		"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
 		//"-cml",
