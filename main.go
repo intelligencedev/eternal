@@ -677,37 +677,38 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
-		// topN := 3 // retrieve top N results. Adjust based on context size.
-		// topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
+		topN := 10 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
 
-		// var documents []string
-		// var documentString string
-		// if len(topEmbeddings) > 0 {
-		// 	for _, topEmbedding := range topEmbeddings {
-		// 		documents = append(documents, topEmbedding.Word)
-		// 	}
-		// 	documentString = strings.Join(documents, " ")
-		// 	fmt.Println("Document:")
-		// 	fmt.Println(documentString)
-		// }
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
 
-		// chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+		// Remove http(s) links from the documentString
+		documentString = web.RemoveURLs(documentString)
 
-		// // Begin tool workflow. Tools will add context to the submitted message for
-		// // the model to use. Document is the abstraction that will hold that context.
-		// var document string
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
-		// // Retrieve the page content from prompt URLs and add it to the document
-		// url := web.ExtractURLs(chatMessage)
+		// Begin tool workflow. Tools will add context to the submitted message for
+		// the model to use. Document is the abstraction that will hold that context.
+		var document string
 
-		// if len(url) > 0 {
-		// 	pterm.Info.Println("Extracted URLs: ", url)
-		// 	document, _ = web.WebGetHandler(url[0])
-		// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		// }
+		// Retrieve the page content from prompt URLs and add it to the document
+		url := web.ExtractURLs(chatMessage)
 
-		document := ""
+		if len(url) > 0 {
+			pterm.Info.Println("Extracted URLs: ", url)
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
 
 		// TOOL WORKFLOW
 		for _, tool := range tools {
@@ -751,6 +752,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			if tool.Name == "websearch" && tool.Enabled {
 				if tool.Enabled {
+					chatMessage = ""
 					urls := web.SearchDuckDuckGo(chatMessage)
 
 					for _, url := range urls {
@@ -795,9 +797,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			chat.ModelName = wsMessage.Model
 
 			// Generate embeddings
-			// pterm.Warning.Println("Generating embeddings...")
-			// turnMemoryText := chat.Prompt + "\n" + chat.Response
-			// embeddings.GenerateEmbeddingChat(turnMemoryText, config.DataPath)
+			pterm.Warning.Println("Generating embeddings...")
+			turnMemoryText := fullPrompt + "\n" + chat.Response
+			embeddings.GenerateEmbeddingChat(turnMemoryText, config.DataPath)
+			//embeddings.GenerateEmbeddingForTask(chat.Prompt, chat.Response, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {

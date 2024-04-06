@@ -26,6 +26,7 @@ const (
 	TS       Language = "TS"
 	MARKDOWN Language = "MARKDOWN"
 	JSON     Language = "JSON"
+	TXT      Language = "TXT"
 )
 
 // escapeString is a helper function that escapes special characters in a string.
@@ -54,6 +55,20 @@ func splitTextWithRegex(text string, separator string, keepSeparator bool) []str
 // SplitText splits the given text using the configured separators.
 func (r *RecursiveCharacterTextSplitter) SplitText(text string) []string {
 	return r.splitTextHelper(text, r.Separators)
+}
+
+// SplitTextByCount splits the given text into chunks of the given size.
+func SplitTextByCount(text string, size int) []string {
+	// slice the string into chunks of size
+	var chunks []string
+	for i := 0; i < len(text); i += size {
+		end := i + size
+		if end > len(text) {
+			end = len(text)
+		}
+		chunks = append(chunks, text[i:end])
+	}
+	return chunks
 }
 
 // splitTextHelper is a recursive helper function that splits text using the given separators.
@@ -247,6 +262,11 @@ func GetSeparatorsForLanguage(language Language) ([]string, error) {
 	case JSON:
 		return []string{
 			"}\n",
+		}, nil
+	case TXT:
+		return []string{
+			// Split by paragraphs
+			"",
 		}, nil
 	default:
 		return nil, errors.New("unsupported language")

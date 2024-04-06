@@ -58,7 +58,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, dataPath string) {
+func GenerateEmbeddingForTask(task string, doctype string, dataPath string) {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -80,7 +80,25 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		return
 	}
 
-	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
+	var separators []string
+	if doctype == "txt" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.TXT)
+	} else if doctype == "json" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.JSON)
+	} else if doctype == "python" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.PYTHON)
+	} else if doctype == "go" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.GO)
+	} else if doctype == "markdown" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.MARKDOWN)
+	} else if doctype == "html" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.HTML)
+	} else if doctype == "js" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.JS)
+	} else if doctype == "ts" {
+		separators, _ = documents.GetSeparatorsForLanguage(documents.TS)
+	}
+
 	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
 	splitter := documents.RecursiveCharacterTextSplitter{
 		Separators:       separators,
@@ -112,6 +130,10 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
 	for _, chunk := range uniqueChunks {
+		// Truncate the chunk to a maximum of 512 tokens
+		if len(chunk) > 512 {
+			chunk = chunk[:512]
+		}
 
 		fmt.Print(instruction.Query)
 		fmt.Println(chunk)
@@ -237,10 +259,24 @@ func GenerateEmbedding(dataPath string) {
 }
 
 func GenerateEmbeddingChat(prompt string, dataPath string) {
+	instruction := INSTRUCTIONS["chat"]
 
 	db := estore.NewEmbeddingDB()
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/", dataPath)
+	// split the prompt into chunks of 1000 characters
+	chunks := documents.SplitTextByCount(prompt, 1000)
+
+	// Remove duplicate chunks
+	seen := make(map[string]bool)
+	var uniqueChunks []string
+	for _, chunk := range chunks {
+		if _, ok := seen[chunk]; !ok {
+			uniqueChunks = append(uniqueChunks, chunk)
+			seen[chunk] = true
+		}
+	}
+
+	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
@@ -248,47 +284,48 @@ func GenerateEmbeddingChat(prompt string, dataPath string) {
 		panic(err)
 	}
 
+	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
-
-	var embeddings []estore.Embedding // Slice to store multiple embeddings
-
-	encoder := func(text string) error {
-		result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
-		if err != nil {
-			return err
+	for _, chunk := range uniqueChunks {
+		// Truncate the chunk to a maximum of 512 tokens
+		if len(chunk) > 512 {
+			chunk = chunk[:512]
 		}
 
-		vec := result.Vector.Data().F64()[:limit] // Ensure 'limit' is defined and valid
-		fmt.Println(vec)
+		fmt.Print(instruction.Query)
+		fmt.Println(chunk)
+
+		var vec []float64
+
+		encoder := func(text string) error {
+			result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
+			if err != nil {
+				return err
+			}
+
+			vec = result.Vector.Data().F64()[:limit]
+			fmt.Println(result.Vector.Data().F64()[:limit])
+			return nil
+		}
+
+		err = encoder(chunk) // Actually invoke the encoder function with the chunk
+		if err != nil {
+			pterm.Error.Println("Error encoding text...")
+			panic(err)
+		}
 
 		embedding := estore.Embedding{
-			Word:       text,
+			Word:       chunk,
 			Vector:     vec,
 			Similarity: 0.0,
 		}
 
-		embeddings = append(embeddings, embedding) // Append to slice
-		return nil
+		db.AddEmbedding(embedding)
 	}
 
-	err = encoder(prompt)
-	if err != nil {
-		pterm.Error.Println("Error encoding text...")
-		panic(err)
-	}
-
-	// Add generated embeddings to the database
-	db.AddEmbeddings(embeddings)
-
-	// Now save all embeddings
+	// Save the database to a file in the data directory
 	pterm.Info.Println("Saving embeddings...")
-	dbPath := fmt.Sprintf("%s/responses.db", dataPath)
-	pterm.Info.Println(dbPath)
-
-	if err := db.SaveEmbeddings(dbPath); err != nil {
-		pterm.Error.Println("Error saving embeddings:", err)
-		panic(err)
-	}
+	db.SaveEmbeddings(fmt.Sprintf("%s/responses.db", dataPath))
 }
 
 func Search(dataPath string, dbName string, prompt string, topN int) []estore.Embedding {

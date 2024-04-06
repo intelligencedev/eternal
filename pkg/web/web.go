@@ -146,9 +146,7 @@ func ParseReaderView(r io.Reader) (string, error) {
 // isContentElement checks if the node is an element of interest for the reader view.
 func isContentElement(n *html.Node) bool {
 	switch n.DataAtom {
-	case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6, atom.Article, atom.P, atom.Li, atom.Code, atom.Span, atom.Br:
-		return true
-	case atom.A, atom.Strong, atom.Em, atom.B, atom.I:
+	case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6, atom.Strong, atom.Em, atom.B, atom.I, atom.Article, atom.P, atom.Code:
 		return true
 	}
 	return false
@@ -157,9 +155,9 @@ func isContentElement(n *html.Node) bool {
 // renderNode writes the content of the node to the buffer, including inline tags.
 func renderNode(buf *bytes.Buffer, n *html.Node) {
 	// Render the opening tag if it's not a text node
-	if n.Type == html.ElementNode {
-		buf.WriteString("<" + n.Data + ">")
-	}
+	// if n.Type == html.ElementNode {
+	// 	buf.WriteString("<" + n.Data + ">")
+	// }
 
 	// Render the contents
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -172,9 +170,9 @@ func renderNode(buf *bytes.Buffer, n *html.Node) {
 	}
 
 	// Render the closing tag if it's not a text node
-	if n.Type == html.ElementNode {
-		buf.WriteString("</" + n.Data + ">")
-	}
+	// if n.Type == html.ElementNode {
+	// 	buf.WriteString("</" + n.Data + ">")
+	// }
 }
 
 // isInlineElement checks if the node is an inline element that should be included in the output.
@@ -345,4 +343,14 @@ func GetPageScreen(chromeUrl string, pageAddress string) string {
 	}
 
 	return filename
+}
+
+// RemoveURLs removes all URLs from a string
+func RemoveURLs(input string) string {
+	// Regular expression to match URLs and port numbers
+	urlRegex := `http.*?://[^\s<>{}|\\^` + "`" + `"]+`
+	re := regexp.MustCompile(urlRegex)
+
+	// Replace all URLs in the input string with an empty string
+	return re.ReplaceAllString(input, "")
 }
