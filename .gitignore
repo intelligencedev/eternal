@@ -23,10 +23,10 @@ config.yml
 *.log
 
 # Misc
+tmp
 reference
 cache
 embeddings.db
 examples/embeddings/cloudbox_api_schema.json
 examples/embeddings/embeddings.db
 examples/embeddings/*
-llama.log

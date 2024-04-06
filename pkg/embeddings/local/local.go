@@ -19,7 +19,7 @@ var modelName = "BAAI/bge-large-en-v1.5"
 
 //var modelName = "BAAI/llm-embedder"
 
-const limit = 10
+const limit = 128
 
 var INSTRUCTIONS = map[string]struct {
 	Query string

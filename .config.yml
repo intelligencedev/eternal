@@ -32,18 +32,34 @@ service_hosts:
   llm:
     llm_host_1:
       host: 'localhost'
-      port: '8081'
+      port: '8080'
+    llm_host_2:
+      host: 'localhost'
+      port: '8080'
 
 # OpenAI API Key
 oai_key: 'sk-...'
 
 # Anthropic Key for Claude Completions
-anthropic_key: 'sk-ant-api...'
+anthropic_key: 'sk-...'
 
 language_models:
   - name: 'openai-gpt'
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
     prompt: 'Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.\n### Instruction:\n You are an advanced AI assistant.\n{prompt}\n### Response:'
+    ctx: 128000
+    roles:
+      - 'all'
+  - name: 'claude-opus'
+    homepage: 'https://www.anthropic.com/product'
+    prompt: |
+      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
+
+      ### Instruction:
+      You are Claude, an advanced AI assistant created by Anthropic.
+      {prompt}
+
+      ### Response:
     ctx: 128000
     roles:
       - 'all'
@@ -57,13 +73,24 @@ language_models:
     roles:
       - 'chat'
     tags:
+      - '2.5B'
+  - name: 'quiet-mistral-7b'
+    homepage: 'https://huggingface.co/Crystalcareai/Quiet-Mistral'
+    gguf: 'https://huggingface.co/Crystalcareai/Quiet-Mistral'
+    downloads:
+      - 'http://localhost:8000/quiet-mistral-7b-Q8_0.gguf'
+    prompt: "{prompt}"
+    ctx: 32768
+    roles:
+      - 'chat'
+    tags:
       - '7B'
   - name: 'zephyr-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/resolve/main/zephyr-7b-beta.Q4_0.gguf'
-    prompt: "<|system|>\n</s>\n<|user|>\n{prompt}</s>\n<|assistant|>"
+      - 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/resolve/main/zephyr-7b-beta.Q8_0.gguf'
+    prompt: "<|system|></s><|user|>{prompt}</s><|assistant|>"
     ctx: 8192
     roles:
       - 'chat'
@@ -96,13 +123,80 @@ language_models:
     homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
     gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q4_0.gguf'
-    prompt:  "[INST] {prompt} [/INST]"
-    ctx: 4096
+      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q8_0.gguf'
+    prompt: "</s>[INST] You are a helpful AI assistant. {prompt} [/INST]"
+    ctx: 32768
     roles:
       - 'all'
     tags:
       - '8x7B'
+  - name: 'cerebrum-8x7b'
+    homepage: 'https://huggingface.co/AetherResearch/Cerebrum-1.0-8x7b'
+    gguf: 'https://huggingface.co/neopolita/cerebrum-1.0-8x7b-gguf'
+    downloads:
+      - 'https://huggingface.co/neopolita/cerebrum-1.0-8x7b-gguf/resolve/main/Cerebrum-1.0-8x7b_Q8_0.gguf'
+    prompt:  "<s>A chat between a user and a thinking artificial intelligence assistant. The assistant describes its thought process and gives helpful and detailed answers to the user's questions.\nUSER:\n{prompt}\nASSISTANT:\n{response}"
+    ctx: 32764
+    roles:
+      - 'all'
+    tags:
+      - '8x7B'
+  - name: 'yarn-mistral-7b-64k'
+    homepage: 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1'
+    gguf: 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1-GGUF/resolve/main/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1.Q6_K.gguf'
+    prompt: "<|prompter|>{prompt}</s><|assistant|>"
+    ctx: 64000
+    roles:
+      - 'all'
+    tags:
+      - '7b'
+  - name: 'everyone-coder-33b'
+    homepage: 'https://huggingface.co/rombodawg/Everyone-Coder-33b-Base'
+    gguf: 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF/resolve/main/everyone-coder-33b-base.Q8_0.gguf'
+    prompt: "{prompt}"
+    ctx: 16384
+    roles:
+      - 'code'
+    tags:
+      - '33B'
+  - name: 'nous-capybara-34b'
+    homepage: 'https://huggingface.co/NousResearch/Nous-Capybara-34B'
+    gguf: 'https://huggingface.co/TheBloke/Nous-Capybara-34B-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/Nous-Capybara-34B-GGUF/resolve/main/nous-capybara-34b.Q6_K.gguf'
+    prompt:  'SYSTEM: You are Nous-Capybara, an AI assistant and your purpose and drive is to assist the user with any request they have. USER: {prompt} </s>ASSISTANT:'
+    ctx: 40000
+    roles:
+      - 'summary'
+      - 'rag'
+    tags:
+      - '34B'
+  - name: 'miqu-1-70b'
+    homepage: 'https://huggingface.co/miqudev/miqu-1-70b'
+    gguf: 'https://huggingface.co/miqudev/miqu-1-70b'
+    downloads:
+      - 'https://huggingface.co/miqudev/miqu-1-70b/resolve/main/miqu-1-70b.q5_K_M.gguf'
+    prompt:  "<s> [INST] {{prompt}} [/INST] ANSWER_1</s>"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '70B'
+  - name: 'senku-70b'
+    homepage: 'https://huggingface.co/ShinojiResearch/Senku-70B-Full'
+    gguf: 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8'
+    downloads:
+      - 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8/resolve/main/ggml-senku-70b-q4_k_m.gguf'
+    prompt:  "<|im_start|>system\n{instructions}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n{response}"
+    ctx: 32764
+    roles:
+      - 'all'
+    tags:
+      - '70B'
 
 image_models:
   - name: 'dreamshaper-8-sd15'

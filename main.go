@@ -6,6 +6,11 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"eternal/pkg/embeddings"
+	"eternal/pkg/llm"
+	"eternal/pkg/llm/openai"
+	"eternal/pkg/sd"
+	"eternal/pkg/web"
 	"fmt"
 	"net/http"
 	"os"
@@ -690,16 +695,70 @@ func handleWebSocket(config *AppConfig, db *database.SQLiteDB) func(c *websocket
 
 		// Process chat message and tools
 		chatMessage := wsMessage.ChatMessage
-		document := processTools(chatMessage, config)
-		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 
-		// Get model details
-		var model database.ModelParams
-		result := db.First(wsMessage.Model, &model)
-		if result.Error != nil {
-			log.Errorf("Error getting model %s: %v", wsMessage.Model, result.Error)
-			return
-		}
+		// topN := 3 // retrieve top N results. Adjust based on context size.
+		// topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
+
+		// var documents []string
+		// var documentString string
+		// if len(topEmbeddings) > 0 {
+		// 	for _, topEmbedding := range topEmbeddings {
+		// 		documents = append(documents, topEmbedding.Word)
+		// 	}
+		// 	documentString = strings.Join(documents, " ")
+		// 	fmt.Println("Document:")
+		// 	fmt.Println(documentString)
+		// }
+
+		// chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+
+		// // Begin tool workflow. Tools will add context to the submitted message for
+		// // the model to use. Document is the abstraction that will hold that context.
+		// var document string
+
+		// // Retrieve the page content from prompt URLs and add it to the document
+		// url := web.ExtractURLs(chatMessage)
+
+		// if len(url) > 0 {
+		// 	pterm.Info.Println("Extracted URLs: ", url)
+		// 	document, _ = web.WebGetHandler(url[0])
+		// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+		// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		// }
+
+		document := ""
+
+		// TOOL WORKFLOW
+		for _, tool := range tools {
+			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "imagegen" && tool.Enabled {
+				if tool.Enabled {
+					// Generate image using sd tool
+					pterm.Info.Println("Generating image...")
+					sdParams := new(sd.SDParams)
+					sdParams.Prompt = chatMessage
+
+					// Call the sd tool
+					sd.Text2Image(config.DataPath, sdParams)
+
+					//res.Error()
+
+					// Get the image host and port
+					imgHost := config.ServiceHosts["image"]["image_host_1"]
+					imgHostURL := fmt.Sprintf("http://%s:%s", imgHost.Host, imgHost.Port)
+
+					pterm.Info.Println("Image host URL: ", imgHostURL)
+
+					// Return the image to the client
+					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+					imgElement := fmt.Sprintf("<img class='rounded-2' src='%s/public/img/sd_out.png?%d' />", imgHostURL, timestamp)
+					//imgElement := "<img src='public/img/sd_out.png' />"
+					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+						pterm.PrintOnError(err)
+						return
+					}
 
 		// Create LLM options
 		modelOpts := &llm.GGUFOptions{
@@ -737,26 +796,34 @@ func handleOpenAIWebSocket(config *AppConfig, db *database.SQLiteDB) func(c *web
 			return
 		}
 
-		// Unmarshal JSON message
-		var wsMessage WebSocketMessage
-		if err := json.Unmarshal(message, &wsMessage); err != nil {
-			c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
-			return
-		}
+		modelOpts := new(llm.GGUFOptions)
 
-		// Process chat message and tools
-		chatMessage := wsMessage.ChatMessage
-		document := processTools(chatMessage, config)
-		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		modelOpts.Model = model.Options.Model
+		modelOpts.Prompt = fullPrompt
+		modelOpts.CtxSize = model.Options.CtxSize
+		modelOpts.Temp = 0.7
+		modelOpts.RepeatPenalty = 1.1
 
-		// Create chat prompt template
-		cpt := llm.GetSystemTemplate(chatMessage)
+		if err := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath); err != nil {
+			pterm.PrintOnError(err)
+			// Store the chat in the database
+			chat := new(Chat)
+			chat.Prompt = cpt.Messages[0].Content
 
-		// Send completion to WebSocket
-		if err := openai.StreamCompletionToWebSocket(c, chatTurn, wsMessage.Model, cpt.Messages, 0.7, config.OAIKey); err != nil {
-			handleWebSocketError(c, chatTurn, wsMessage.Model, err, db)
-			return
-		}
+			chat.Response = err.Error()
+			chat.ModelName = wsMessage.Model
+
+			// Generate embeddings
+			// pterm.Warning.Println("Generating embeddings...")
+			// turnMemoryText := chat.Prompt + "\n" + chat.Response
+			// embeddings.GenerateEmbeddingChat(turnMemoryText, config.DataPath)
+
+			pterm.Warning.Print("Storing chat in database...")
+			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
+				pterm.Error.Println("Error storing chat in database:", err)
+				chatTurn = chatTurn + 1
+				return
+			}
 
 		chatTurn++
 		c.Close()
@@ -788,26 +855,32 @@ func handleClaudeWebSocket(config *AppConfig, db *database.SQLiteDB) func(c *web
 
 		// Process chat message and tools
 		chatMessage := wsMessage.ChatMessage
-		document := processTools(chatMessage, config)
-		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 
-		// Create chat prompt template
-		cpt := llm.GetSystemTemplate(chatMessage)
-
-		// Send completion to WebSocket
-		if err := claude.StreamCompletionToWebSocket(c, chatTurn, wsMessage.Model, cpt.Messages, config.AnthropicKey); err != nil {
-			handleWebSocketError(c, chatTurn, wsMessage.Model, err, db)
-			return
+		// Check if responses.db exists
+		if _, err := os.Stat(filepath.Join(config.DataPath, "responses.db")); os.IsNotExist(err) {
+			pterm.Warning.Println("responses.db does not exist. Generating embeddings...")
+			embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
 		}
 
-		chatTurn++
-		c.Close()
-	}
-}
+		topN := 10 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
 
-// processTools extracts URLs and applies tools to the chat message.
-func processTools(chatMessage string, config *AppConfig) string {
-	var document string
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
+
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+
+		// Begin tool workflow. Tools will add context to the submitted message for
+		// the model to use. Document is the abstraction that will hold that context.
+		var document string
 
 	// Retrieve page content from prompt URLs
 	url := web.ExtractURLs(chatMessage)
