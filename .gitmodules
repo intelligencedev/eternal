@@ -4,3 +4,6 @@
 [submodule "pkg/sd/sdcpp"]
 	path = pkg/sd/sdcpp
 	url = https://github.com/leejet/stable-diffusion.cpp
+[submodule "services/vendor"]
+	path = services/vendor
+	url = https://github.com/searxng/searxng-docker.git
