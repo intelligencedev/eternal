@@ -10,7 +10,9 @@ import (
 )
 
 var modelPath = "data/models/HF/"
-var modelName = "BAAI/bge-large-en-v1.5"
+
+// var modelName = "BAAI/bge-large-en-v1.5"
+var modelName = "avsolatorio/GIST-small-Embedding-v0"
 
 func main() {
 

@@ -5,6 +5,7 @@ import (
 	"eternal/pkg/documents"
 	"fmt"
 	"os"
+	"strings"
 
 	estore "eternal/pkg/vecstore"
 
@@ -14,10 +15,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// var modelPath = "./data/models/HF/"
-var modelName = "BAAI/bge-large-en-v1.5"
-
-//var modelName = "BAAI/llm-embedder"
+// var modelName = "BAAI/bge-large-en-v1.5"
+var modelName = "avsolatorio/GIST-small-Embedding-v0"
 
 const limit = 128
 
@@ -81,33 +80,46 @@ func GenerateEmbeddingForTask(task string, doctype string, dataPath string) {
 	}
 
 	var separators []string
-	if doctype == "txt" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.TXT)
-	} else if doctype == "json" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.JSON)
-	} else if doctype == "python" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.PYTHON)
-	} else if doctype == "go" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.GO)
-	} else if doctype == "markdown" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.MARKDOWN)
-	} else if doctype == "html" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.HTML)
-	} else if doctype == "js" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.JS)
-	} else if doctype == "ts" {
-		separators, _ = documents.GetSeparatorsForLanguage(documents.TS)
-	}
+	var chunks []string
 
-	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
-	splitter := documents.RecursiveCharacterTextSplitter{
-		Separators:       separators,
-		KeepSeparator:    true,
-		IsSeparatorRegex: false,
-		ChunkSize:        1000,
-		LengthFunction:   func(s string) int { return len(s) },
+	// if doctype == "txt" {
+	// 	chunks = documents.SplitTextByCount(string(content), 1000)
+	// } else if doctype == "json" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.JSON)
+	// } else if doctype == "python" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.PYTHON)
+	// } else if doctype == "go" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.GO)
+	// } else if doctype == "markdown" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.MARKDOWN)
+	// } else if doctype == "html" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.HTML)
+	// } else if doctype == "js" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.JS)
+	// } else if doctype == "yaml" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.YAML)
+	// } else if doctype == "ts" {
+	// 	separators, _ = documents.GetSeparatorsForLanguage(documents.TS)
+	// }
+
+	if doctype == "txt" {
+		chunks = documents.SplitTextByCount(string(content), 4000)
+	} else {
+		// Convert doctype to uppercase
+		doctype = strings.ToUpper(doctype)
+
+		separators, _ = documents.GetSeparatorsForLanguage(documents.Language(doctype))
+
+		// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
+		splitter := documents.RecursiveCharacterTextSplitter{
+			Separators:       separators,
+			KeepSeparator:    true,
+			IsSeparatorRegex: false,
+			ChunkSize:        1000,
+			LengthFunction:   func(s string) int { return len(s) },
+		}
+		chunks = splitter.SplitText(string(content))
 	}
-	chunks := splitter.SplitText(string(content))
 
 	// Remove duplicate chunks
 	seen := make(map[string]bool)
@@ -119,7 +131,7 @@ func GenerateEmbeddingForTask(task string, doctype string, dataPath string) {
 		}
 	}
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
+	modelsDir := fmt.Sprintf("%s/data/models/HF/%s", dataPath, modelName)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {

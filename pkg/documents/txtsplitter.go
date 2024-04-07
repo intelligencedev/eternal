@@ -26,6 +26,7 @@ const (
 	TS       Language = "TS"
 	MARKDOWN Language = "MARKDOWN"
 	JSON     Language = "JSON"
+	YAML     Language = "YAML"
 	TXT      Language = "TXT"
 )
 
@@ -262,6 +263,13 @@ func GetSeparatorsForLanguage(language Language) ([]string, error) {
 	case JSON:
 		return []string{
 			"}\n",
+		}, nil
+	case YAML:
+		return []string{
+			// Split based on top-level indents
+			"\n  ",
+			"\n- ",
+			"\n",
 		}, nil
 	case TXT:
 		return []string{

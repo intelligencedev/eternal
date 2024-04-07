@@ -6,8 +6,16 @@ var enabledTools = [
 
 const uploadButton = document.getElementById('upload');
 const fileInput = document.getElementById('file-input');
+const form = document.querySelector('form'); // Select the form element
+
+// Prevent the default form submit behavior
+form.addEventListener('submit', function(event) {
+  event.preventDefault(); // Prevent form from submitting traditionally
+  console.log('Form submission prevented');
+});
 
 uploadButton.addEventListener('click', function () {
+  console.log('Upload button clicked');
   fileInput.click(); // Trigger the file input dialog
 });
 
@@ -25,15 +33,8 @@ async function fileHandler(file) {
   // reset the file input
   fileInput.value = null;
   // append the file to the chat view
-  console.log("Appending image to chat...")
+  console.log("uploading...")
   console.log(file.name)
-  await insertImageIntoChat("./public/uploads/" + file.name);
-
-  // Scroll to the bottom of the chat
-  resetScroll(document.getElementById('chat-view'));
-
-  // Run inference over image
-  await fetchImageProcessingResult("./public/uploads/" + file.name);
 }
 
 async function uploadFile(file) {
