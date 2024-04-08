@@ -346,3 +346,20 @@ func GetPageScreen(chromeUrl string, pageAddress string) string {
 
 	return filename
 }
+
+// RemoveUrls removes URLs from the input string.
+func RemoveUrls(input string) string {
+	// Regular expression to match URLs and port numbers
+	urlRegex := `http.*?://[^\s<>{}|\\^` + "`" + `"]+`
+	re := regexp.MustCompile(urlRegex)
+
+	// Find all URLs in the input string
+	matches := re.FindAllString(input, -1)
+
+	// Remove URLs from the input string
+	for _, match := range matches {
+		input = strings.ReplaceAll(input, match, "")
+	}
+
+	return input
+}

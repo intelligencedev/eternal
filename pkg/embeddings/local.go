@@ -14,10 +14,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// var modelPath = "./data/models/HF/"
-var modelName = "BAAI/bge-large-en-v1.5"
-
-//var modelName = "BAAI/llm-embedder"
+// var modelName = "BAAI/bge-large-en-v1.5"
+var modelName = "avsolatorio/GIST-small-Embedding-v0"
 
 const limit = 128
 
@@ -101,7 +99,7 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		}
 	}
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
+	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
@@ -181,7 +179,7 @@ func GenerateEmbedding(dataPath string) {
 	}
 	chunks := splitter.SplitText(string(content))
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
+	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
