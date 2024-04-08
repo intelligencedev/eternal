@@ -980,7 +980,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Generate embeddings
 			pterm.Warning.Println("Generating embeddings...")
 			turnMemoryText := chatMessage + "\n" + chat.Response
-			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 1000, 200, config.DataPath)
+			embeddings.GenerateEmbeddingForTask("qa", turnMemoryText, "txt", 500, 254, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, chatMessage, chat.Response, chat.ModelName); err != nil {
