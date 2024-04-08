@@ -713,7 +713,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		chatMessage := wsMessage.ChatMessage
 
 		topN := 10 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
 		var documents []string
 		var documentString string
@@ -833,9 +833,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			// Generate embeddings
 			pterm.Warning.Println("Generating embeddings...")
-			turnMemoryText := fullPrompt + "\n" + chat.Response
-			embeddings.GenerateEmbeddingChat(turnMemoryText, config.DataPath)
-			//embeddings.GenerateEmbeddingForTask(chat.Prompt, chat.Response, config.DataPath)
+			turnMemoryText := chatMessage + "\n" + chat.Response
+			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 1000, 200, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
@@ -880,17 +879,18 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
-		// Check if responses.db exists
-		if _, err := os.Stat(filepath.Join(config.DataPath, "responses.db")); os.IsNotExist(err) {
-			pterm.Warning.Println("responses.db does not exist. Generating embeddings...")
+		// Check if embeddings.db exists
+		if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
+			pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
 			embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
 		}
 
-		topN := 10 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "responses.db", chatMessage, topN)
+		topN := 20 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
 		var documents []string
 		var documentString string
+
 		if len(topEmbeddings) > 0 {
 			for _, topEmbedding := range topEmbeddings {
 				documents = append(documents, topEmbedding.Word)
@@ -899,6 +899,9 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fmt.Println("Document:")
 			fmt.Println(documentString)
 		}
+
+		// Remove http(s) links from the documentString
+		documentString = web.RemoveUrls(documentString)
 
 		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
@@ -967,11 +970,17 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Sends the prompt to the AI assistant for a response
 		if err := openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-1106-preview", cpt.Messages, 0.7, apiKey); err != nil {
 			pterm.PrintOnError(err)
+
 			// Store the chat in the database
 			chat := new(Chat)
 			chat.Prompt = cpt.Messages[0].Content
 			chat.Response = err.Error()
 			chat.ModelName = wsMessage.Model
+
+			// Generate embeddings
+			pterm.Warning.Println("Generating embeddings...")
+			turnMemoryText := chatMessage + "\n" + chat.Response
+			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 1000, 200, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, chatMessage, chat.Response, chat.ModelName); err != nil {
