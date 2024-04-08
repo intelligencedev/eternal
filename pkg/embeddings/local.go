@@ -5,6 +5,7 @@ import (
 	"eternal/pkg/documents"
 	"fmt"
 	"os"
+	"strings"
 
 	estore "eternal/pkg/vecstore"
 
@@ -56,7 +57,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, dataPath string) {
+func GenerateEmbeddingForTask(task string, doctype string, chunkSize int, dataPath string) {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -78,16 +79,28 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		return
 	}
 
-	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
-	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
-	splitter := documents.RecursiveCharacterTextSplitter{
-		Separators:       separators,
-		KeepSeparator:    true,
-		IsSeparatorRegex: false,
-		ChunkSize:        1000,
-		LengthFunction:   func(s string) int { return len(s) },
+	var chunks []string
+	var separators []string
+
+	// NOTE: If using txt doctype, the size must equal the ChunkSize in RecursiveCharacterTextSplitter
+	if doctype == "txt" {
+		chunks = documents.SplitTextByCount(string(content), chunkSize)
+	} else {
+		// Convert doctype to uppercase
+		doctype = strings.ToUpper(doctype)
+
+		separators, _ = documents.GetSeparatorsForLanguage(documents.Language(doctype))
+
+		// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
+		splitter := documents.RecursiveCharacterTextSplitter{
+			Separators:       separators,
+			KeepSeparator:    true,
+			IsSeparatorRegex: false,
+			ChunkSize:        chunkSize,
+			LengthFunction:   func(s string) int { return len(s) },
+		}
+		chunks = splitter.SplitText(string(content))
 	}
-	chunks := splitter.SplitText(string(content))
 
 	// Remove duplicate chunks
 	seen := make(map[string]bool)
@@ -234,6 +247,7 @@ func GenerateEmbedding(dataPath string) {
 	}
 }
 
+// GenerateEmbeddingChat generates an embedding from a prompt for chatbot applications
 func GenerateEmbeddingChat(prompt string, dataPath string) {
 
 	db := estore.NewEmbeddingDB()

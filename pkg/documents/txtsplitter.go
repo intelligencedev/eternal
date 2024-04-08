@@ -51,6 +51,20 @@ func splitTextWithRegex(text string, separator string, keepSeparator bool) []str
 	return splits
 }
 
+// SplitTextByCount splits the given text into chunks of the given size.
+func SplitTextByCount(text string, size int) []string {
+	// slice the string into chunks of size
+	var chunks []string
+	for i := 0; i < len(text); i += size {
+		end := i + size
+		if end > len(text) {
+			end = len(text)
+		}
+		chunks = append(chunks, text[i:end])
+	}
+	return chunks
+}
+
 // SplitText splits the given text using the configured separators.
 func (r *RecursiveCharacterTextSplitter) SplitText(text string) []string {
 	return r.splitTextHelper(text, r.Separators)
