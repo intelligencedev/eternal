@@ -57,7 +57,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, doctype string, chunkSize int, dataPath string) {
+func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -65,38 +65,25 @@ func GenerateEmbeddingForTask(task string, doctype string, chunkSize int, dataPa
 		return
 	}
 
-	// 1. Initialization
-	pterm.Info.Println("Initializing...")
-
 	db := estore.NewEmbeddingDB()
-
-	// 2. Code Splitting
-	pterm.Info.Println("Splitting code...")
-	inputFilePath := os.Args[1]
-	content, err := os.ReadFile(inputFilePath)
-	if err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		return
-	}
 
 	var chunks []string
 	var separators []string
 
-	// NOTE: If using txt doctype, the size must equal the ChunkSize in RecursiveCharacterTextSplitter
 	if doctype == "txt" {
 		chunks = documents.SplitTextByCount(string(content), chunkSize)
 	} else {
-		// Convert doctype to uppercase
 		doctype = strings.ToUpper(doctype)
-
 		separators, _ = documents.GetSeparatorsForLanguage(documents.Language(doctype))
 
-		// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
+		overlapSize := chunkSize / 2 // Set the overlap size to half of the chunk size
+
 		splitter := documents.RecursiveCharacterTextSplitter{
 			Separators:       separators,
 			KeepSeparator:    true,
 			IsSeparatorRegex: false,
 			ChunkSize:        chunkSize,
+			OverlapSize:      overlapSize, // Add the OverlapSize field
 			LengthFunction:   func(s string) int { return len(s) },
 		}
 		chunks = splitter.SplitText(string(content))
