@@ -33,6 +33,6 @@ func main() {
 		return
 	}
 
-	embeddings.GenerateEmbeddingForTask("qa", model)
+	embeddings.GenerateEmbeddingForTask("qa", "txt", model)
 
 }
