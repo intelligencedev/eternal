@@ -13,8 +13,9 @@ import (
 	"github.com/pterm/pterm"
 )
 
-const modelName = "BAAI/bge-large-en-v1.5"
-const limit = 128
+// var modelName = "BAAI/bge-large-en-v1.5"
+var modelName = "avsolatorio/GIST-small-Embedding-v0"
+var limit = 128
 
 func main() {
 	homeDir, err := os.UserHomeDir()
