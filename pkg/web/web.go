@@ -157,9 +157,9 @@ func isContentElement(n *html.Node) bool {
 // renderNode writes the content of the node to the buffer, including inline tags.
 func renderNode(buf *bytes.Buffer, n *html.Node) {
 	// Render the opening tag if it's not a text node
-	if n.Type == html.ElementNode {
-		buf.WriteString("<" + n.Data + ">")
-	}
+	// if n.Type == html.ElementNode {
+	// 	buf.WriteString("<" + n.Data + ">")
+	// }
 
 	// Render the contents
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -172,9 +172,9 @@ func renderNode(buf *bytes.Buffer, n *html.Node) {
 	}
 
 	// Render the closing tag if it's not a text node
-	if n.Type == html.ElementNode {
-		buf.WriteString("</" + n.Data + ">")
-	}
+	// if n.Type == html.ElementNode {
+	// 	buf.WriteString("</" + n.Data + ">")
+	// }
 }
 
 // isInlineElement checks if the node is an inline element that should be included in the output.
