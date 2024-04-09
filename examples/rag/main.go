@@ -16,6 +16,8 @@ import (
 	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
 )
 
+// Chunk size should be less than the max tokens for the model used: https://huggingface.co/spaces/mteb/leaderboard
+
 var (
 	modelPathFlag = flag.String("model-path", ".eternal/models/HF/", "The path to the model directory")
 	modelNameFlag = flag.String("model-name", "avsolatorio/GIST-small-Embedding-v0", "The name of the model")
@@ -23,7 +25,7 @@ var (
 
 	generateCommand = flag.NewFlagSet("generate", flag.ExitOnError)
 	inputFileFlag   = generateCommand.String("input-file", "", "The input file to generate embeddings for")
-	chunkSize       = generateCommand.Int("chunk-size", 1000, "The size of the chunk to generate embeddings for. Lower the size if an error is returned.")
+	chunkSize       = generateCommand.Int("chunk-size", 500, "The size of the chunk to generate embeddings for. Lower the size if an error is returned.")
 	overlapSize     = generateCommand.Int("overlap-size", 200, "The size of the overlap between chunks")
 
 	retrieveCommand = flag.NewFlagSet("retrieve", flag.ExitOnError)

@@ -819,8 +819,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		modelOpts.Model = model.Options.Model
 		modelOpts.Prompt = fullPrompt
 		modelOpts.CtxSize = model.Options.CtxSize
-		modelOpts.Temp = 0.7
+		modelOpts.Temp = 0.1 // Prefer lower temperature for more controlled responses for now
 		modelOpts.RepeatPenalty = 1.1
+		modelOpts.TopP = 1.0 // Prefer greedy decoding for now
+		modelOpts.TopK = 1.0 // Prefer greedy decoding for now
 
 		if err := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath); err != nil {
 			pterm.PrintOnError(err)
@@ -834,7 +836,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Generate embeddings
 			pterm.Warning.Println("Generating embeddings...")
 			turnMemoryText := chatMessage + "\n" + chat.Response
-			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 1000, 200, config.DataPath)
+			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
@@ -980,7 +982,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Generate embeddings
 			pterm.Warning.Println("Generating embeddings...")
 			turnMemoryText := chatMessage + "\n" + chat.Response
-			embeddings.GenerateEmbeddingForTask("qa", turnMemoryText, "txt", 500, 254, config.DataPath)
+			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
 
 			pterm.Warning.Print("Storing chat in database...")
 			if _, err := CreateChat(sqliteDB.db, chatMessage, chat.Response, chat.ModelName); err != nil {
