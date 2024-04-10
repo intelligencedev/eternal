@@ -1,7 +1,7 @@
 <div id="models-container" class="fade-it">
   <div id="content" class="mt-3 mb-4 pb-3">
     <button class="btn btn-danger btn-lg mb-2 w-100" style="background-color: var(--et-red);" hx-get="/"
-      hx-target="#chat-view" hx-swap="innerHTML transition:true">Back</button>
+      hx-target="#models-container" hx-swap="delete show:#chat:bottom" hx-preserve="#content">Back</button>
   </div>
   <div class="row">
     {{range .models}}
