@@ -12,6 +12,7 @@ type RecursiveCharacterTextSplitter struct {
 	KeepSeparator    bool
 	IsSeparatorRegex bool
 	ChunkSize        int
+	OverlapSize      int
 	LengthFunction   func(string) int
 }
 
@@ -51,9 +52,42 @@ func splitTextWithRegex(text string, separator string, keepSeparator bool) []str
 	return splits
 }
 
+// SplitTextByCount splits the given text into chunks of the given size.
+func SplitTextByCount(text string, size int) []string {
+	// slice the string into chunks of size
+	var chunks []string
+	for i := 0; i < len(text); i += size {
+		end := i + size
+		if end > len(text) {
+			end = len(text)
+		}
+		chunks = append(chunks, text[i:end])
+	}
+	return chunks
+}
+
 // SplitText splits the given text using the configured separators.
 func (r *RecursiveCharacterTextSplitter) SplitText(text string) []string {
-	return r.splitTextHelper(text, r.Separators)
+	chunks := r.splitTextHelper(text, r.Separators)
+
+	// Apply chunk overlap
+	if r.OverlapSize > 0 {
+		overlappedChunks := make([]string, 0)
+		for i := 0; i < len(chunks)-1; i++ {
+			currentChunk := chunks[i]
+			nextChunk := chunks[i+1]
+
+			nextChunkOverlap := nextChunk[:min(len(nextChunk), r.OverlapSize)]
+
+			overlappedChunk := currentChunk + nextChunkOverlap
+			overlappedChunks = append(overlappedChunks, overlappedChunk)
+		}
+		overlappedChunks = append(overlappedChunks, chunks[len(chunks)-1])
+
+		chunks = overlappedChunks
+	}
+
+	return chunks
 }
 
 // splitTextHelper is a recursive helper function that splits text using the given separators.
@@ -251,4 +285,19 @@ func GetSeparatorsForLanguage(language Language) ([]string, error) {
 	default:
 		return nil, errors.New("unsupported language")
 	}
+}
+
+// Helper functions
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
