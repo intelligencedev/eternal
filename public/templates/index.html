@@ -58,7 +58,7 @@
     <div class="row mt-5">
       <div class="col-2"></div>
       <div id="chat-view" class="col-8">
-        <div id="chat" class="row chat-container fs-5"></div>
+        <div id="chat" class="row chat-container fs-5" hx-preserve></div>
       </div>
       <div id="info" class="col-2 mt-2 pt-1">
       </div>
@@ -146,7 +146,7 @@
               <input type="file" id="file-input" style="display: none;" />
               <textarea id="message" name="userprompt" class="col form-control shadow-none"
                 placeholder="Type your message..." rows="2"
-                style="outline: none;">The following code is a complete example of a FizzBuzz script written in JavaScript:</textarea>
+                style="outline: none;">A simple Hello World in Python:</textarea>
 
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-prompt-send btn-success " type="button" hx-post="/chatsubmit"
@@ -166,7 +166,7 @@
             <div class="row ms-auto w-25">
               <div class="col-auto">
                 <!-- MODELS -->
-                <button class="btn" hx-post="/modelcards" hx-target="#chat-view" hx-preserve="#chat-view" hx-swap="afterbegin transition:true"
+                <button class="btn" hx-post="/modelcards" hx-target="#chat" hx-swap="innerHTML transition:true"
                   data-bs-toggle="tooltip" data-bs-title="Language Models">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none">
