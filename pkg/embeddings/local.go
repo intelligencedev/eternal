@@ -5,6 +5,7 @@ import (
 	"eternal/pkg/documents"
 	"fmt"
 	"os"
+	"strings"
 
 	estore "eternal/pkg/vecstore"
 
@@ -14,10 +15,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// var modelPath = "./data/models/HF/"
-var modelName = "BAAI/bge-large-en-v1.5"
-
-//var modelName = "BAAI/llm-embedder"
+// var modelName = "BAAI/bge-large-en-v1.5"
+var modelName = "avsolatorio/GIST-small-Embedding-v0"
 
 const limit = 128
 
@@ -58,7 +57,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, dataPath string) {
+func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -66,30 +65,29 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		return
 	}
 
-	// 1. Initialization
-	pterm.Info.Println("Initializing...")
-
 	db := estore.NewEmbeddingDB()
 
-	// 2. Code Splitting
-	pterm.Info.Println("Splitting code...")
-	inputFilePath := os.Args[1]
-	content, err := os.ReadFile(inputFilePath)
-	if err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		return
-	}
+	var chunks []string
+	var separators []string
 
-	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
-	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
-	splitter := documents.RecursiveCharacterTextSplitter{
-		Separators:       separators,
-		KeepSeparator:    true,
-		IsSeparatorRegex: false,
-		ChunkSize:        1000,
-		LengthFunction:   func(s string) int { return len(s) },
+	if doctype == "txt" {
+		chunks = documents.SplitTextByCount(string(content), chunkSize)
+	} else {
+		doctype = strings.ToUpper(doctype)
+		separators, _ = documents.GetSeparatorsForLanguage(documents.Language(doctype))
+
+		overlapSize := chunkSize / 2 // Set the overlap size to half of the chunk size
+
+		splitter := documents.RecursiveCharacterTextSplitter{
+			Separators:       separators,
+			KeepSeparator:    true,
+			IsSeparatorRegex: false,
+			ChunkSize:        chunkSize,
+			OverlapSize:      overlapSize, // Add the OverlapSize field
+			LengthFunction:   func(s string) int { return len(s) },
+		}
+		chunks = splitter.SplitText(string(content))
 	}
-	chunks := splitter.SplitText(string(content))
 
 	// Remove duplicate chunks
 	seen := make(map[string]bool)
@@ -101,7 +99,7 @@ func GenerateEmbeddingForTask(task string, dataPath string) {
 		}
 	}
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
+	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
@@ -181,7 +179,7 @@ func GenerateEmbedding(dataPath string) {
 	}
 	chunks := splitter.SplitText(string(content))
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/BAAI/bge-large-en-v1.5/", dataPath)
+	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
@@ -236,6 +234,7 @@ func GenerateEmbedding(dataPath string) {
 	}
 }
 
+// GenerateEmbeddingChat generates an embedding from a prompt for chatbot applications
 func GenerateEmbeddingChat(prompt string, dataPath string) {
 
 	db := estore.NewEmbeddingDB()
