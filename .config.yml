@@ -63,34 +63,12 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
-  - name: 'dolphin-phi2'
-    homepage: 'https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2'
-    gguf: 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/dolphin-2_6-phi-2-GGUF/resolve/main/dolphin-2_6-phi-2.Q8_0.gguf'
-    prompt: "<|im_start|>system{system_message}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
-    ctx: 16384
-    roles:
-      - 'chat'
-    tags:
-      - '2.5B'
-  - name: 'quiet-mistral-7b'
-    homepage: 'https://huggingface.co/Crystalcareai/Quiet-Mistral'
-    gguf: 'https://huggingface.co/Crystalcareai/Quiet-Mistral'
-    downloads:
-      - 'http://localhost:8000/quiet-mistral-7b-Q8_0.gguf'
-    prompt: "{prompt}"
-    ctx: 32768
-    roles:
-      - 'chat'
-    tags:
-      - '7B'
-  - name: 'zephyr-7b-beta'
+  - name: 'starling-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
-    gguf: 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/resolve/main/zephyr-7b-beta.Q8_0.gguf'
-    prompt: "<|system|></s><|user|>{prompt}</s><|assistant|>"
+      - 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF/resolve/main/Starling-LM-7B-beta-Q8_0.gguf'
+    prompt: "Code User: {prompt}<|end_of_turn|>Code Assistant:"
     ctx: 8192
     roles:
       - 'chat'
@@ -100,8 +78,8 @@ language_models:
     homepage: 'https://huggingface.co/beowolx/CodeNinja-1.0-OpenChat-7B'
     gguf: 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF/resolve/main/codeninja-1.0-openchat-7b.Q4_0.gguf'
-    prompt: "GPT4 Correct User: {prompt} Respond to the previous information only with concise answers and get straight to the point. You only respond with one code block if necessary. All code examples are complete and ready to run with a main method or function in addition to any other necessary code. Do not deviate from any instructions given.<|end_of_turn|>GPT4 Correct Assistant:"
+      - 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF/resolve/main/codeninja-1.0-openchat-7b.Q8_0.gguf'
+    prompt: "GPT4 Correct User: {prompt}<|end_of_turn|>GPT4 Correct Assistant:"
     ctx: 8192
     roles:
       - 'code'
@@ -111,7 +89,7 @@ language_models:
     homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
     gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q4_0.gguf'
+      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
     prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
     ctx: 32768
     roles:
@@ -157,24 +135,12 @@ language_models:
     gguf: 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF'
     downloads:
       - 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF/resolve/main/everyone-coder-33b-base.Q8_0.gguf'
-    prompt: "{prompt}"
+    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n### Instruction:\n{prompt}\n### Response:"
     ctx: 16384
     roles:
       - 'code'
     tags:
       - '33B'
-  - name: 'nous-capybara-34b'
-    homepage: 'https://huggingface.co/NousResearch/Nous-Capybara-34B'
-    gguf: 'https://huggingface.co/TheBloke/Nous-Capybara-34B-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/Nous-Capybara-34B-GGUF/resolve/main/nous-capybara-34b.Q6_K.gguf'
-    prompt:  'SYSTEM: You are Nous-Capybara, an AI assistant and your purpose and drive is to assist the user with any request they have. USER: {prompt} </s>ASSISTANT:'
-    ctx: 40000
-    roles:
-      - 'summary'
-      - 'rag'
-    tags:
-      - '34B'
   - name: 'miqu-1-70b'
     homepage: 'https://huggingface.co/miqudev/miqu-1-70b'
     gguf: 'https://huggingface.co/miqudev/miqu-1-70b'
@@ -186,17 +152,7 @@ language_models:
       - 'all'
     tags:
       - '70B'
-  - name: 'senku-70b'
-    homepage: 'https://huggingface.co/ShinojiResearch/Senku-70B-Full'
-    gguf: 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8'
-    downloads:
-      - 'https://huggingface.co/ShinojiResearch/Senku-70B-Q8/resolve/main/ggml-senku-70b-q4_k_m.gguf'
-    prompt:  "<|im_start|>system\n{instructions}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n{response}"
-    ctx: 32764
-    roles:
-      - 'all'
-    tags:
-      - '70B'
+
 
 image_models:
   - name: 'dreamshaper-8-sd15'
