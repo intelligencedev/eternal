@@ -51,14 +51,14 @@
   </style>
 </head>
 
-<body>
+<body class="overflow-y-scroll">
 
   {{template "templates/header".}}
   <div id="content" class="container-fluid overflow-x-hidden">
     <div class="row mt-5">
       <div class="col-2"></div>
       <div id="chat-view" class="col-8">
-        <div id="chat" class="row chat-container fs-5"></div>
+        <div id="chat" class="row chat-container fs-5" hx-preserve></div>
       </div>
       <div id="info" class="col-2 mt-2 pt-1">
       </div>
