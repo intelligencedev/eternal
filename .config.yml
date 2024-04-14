@@ -43,11 +43,20 @@ oai_key: 'sk-...'
 # Anthropic Key for Claude Completions
 anthropic_key: 'sk-...'
 
+# Google API Key for Gemini Completions
+google_key: 'AI...'
+
 language_models:
   - name: 'openai-gpt'
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
     prompt: 'Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.\n### Instruction:\n You are an advanced AI assistant.\n{prompt}\n### Response:'
     ctx: 128000
+    roles:
+      - 'all'
+  - name: 'google-gemini-1.5'
+    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
+    prompt: '{prompt}'
+    ctx: 500000
     roles:
       - 'all'
   - name: 'claude-opus'

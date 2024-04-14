@@ -9,7 +9,7 @@
       <div class="card h-100" data-model-name="{{.Name}}">
         <!-- If .Downloaded is false, add button to call download link -->
         {{if not .Downloaded}}
-        {{if not (or (eq .Name "openai-gpt") (eq .Name "claude-opus"))}}
+        {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
         <div class="card-header col">{{.Name}}</div>
         <div class="row h-100">
           <div name="progress-download" id="progress-download-{{.Name}}"></div>
