@@ -59,19 +59,6 @@ language_models:
     ctx: 500000
     roles:
       - 'all'
-  - name: 'claude-opus'
-    homepage: 'https://www.anthropic.com/product'
-    prompt: |
-      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
-
-      ### Instruction:
-      You are Claude, an advanced AI assistant created by Anthropic.
-      {prompt}
-
-      ### Response:
-    ctx: 128000
-    roles:
-      - 'all'
   - name: 'starling-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF'
