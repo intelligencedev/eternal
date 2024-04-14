@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chat with AI</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <style>
+        /* Simple styling for chat interface */
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            margin-top: 20px;
+            height: 400px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+
+        .chat-message {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            background-color: #e9e9e9;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container" id="chat">
+        <!-- Chat messages will be appended here -->
+    </div>
+
+    <form hx-post="/generate" hx-ext="streaming" hx-swap="afterend" hx-target="#chat" hx-trigger="submit"
+        hx-vals='javascript:{"prompt": document.getElementById("message").value}' hx-indicator=".button">
+        <input type="text" id="message" class="chat-input" placeholder="Type your message..." required>
+        <button type="submit" class="button">Send</button>
+    </form>
+
+    <script>
+        // Listen for stream updates and convert them into chat message divs
+        document.body.addEventListener('htmx:afterSwap', function (evt) {
+            if (evt.detail.target.id === 'chat') {
+                var content = evt.detail.xhr.response;
+                var messageDiv = document.createElement('div');
+                messageDiv.classList.add('chat-message');
+                messageDiv.innerText = content;
+                evt.detail.target.appendChild(messageDiv);
+            }
+        });
+    </script>
+</body>
+
+</html>
