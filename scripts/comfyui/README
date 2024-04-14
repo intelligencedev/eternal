@@ -1,4 +1,23 @@
+# ComfyUI Image Generation
+
 Note: The comfyui bak files are staged but not currently used. We will implement a way to bootstrap a container for Comfy with all of the models and an advanced workflow with a substantial boost to image generation quality over `sdcpp` in a future commit.
 
 All credit to the ComfyUI contributors as this code is a direct port of their work.
 https://github.com/comfyanonymous/ComfyUI/tree/master/script_examples
+
+## MacOS Install
+
+```
+# Install ComfyUI
+$ git clone https://github.com/comfyanonymous/ComfyUI.git
+$ cd ComfyUI
+$ conda create -n comfy python=3.10
+$ conda activate comfy
+$ conda install pytorch torchvision torchaudio -c pytorch-nightly
+$ pip install -r requirements.txt
+
+# Install Comfy Manager
+$ cd custom_nodes
+$ git clone https://github.com/ltdrdata/ComfyUI-Manager.git
+$ python main.py
+```
