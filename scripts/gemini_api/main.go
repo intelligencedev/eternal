@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -31,6 +32,11 @@ func main() {
 
 	model := client.GenerativeModel(MODEL)
 
+	// Configure model parameters by invoking Set* methods on the model.
+	model.SetTemperature(0.1)
+	model.SetTopK(1)
+	model.SetTopP(1)
+
 	iter := model.GenerateContentStream(ctx, genai.Text(prompt))
 	p := message.NewPrinter(language.English)
 	for {
@@ -42,6 +48,9 @@ func main() {
 			log.Fatal(err)
 		}
 
-		p.Print(resp.Candidates[0].Content.Parts[0])
+		// Access the Content field directly (assuming it's a string)
+		textContent := resp.Candidates[0].Content.Parts[0]
+		formattedString := p.Sprintf("%s", textContent)
+		fmt.Print(formattedString)
 	}
 }

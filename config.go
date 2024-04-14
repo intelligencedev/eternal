@@ -21,6 +21,7 @@ type AppConfig struct {
 	ChromedpKey    string                            `yaml:"chromedp_key"`
 	OAIKey         string                            `yaml:"oai_key"`
 	AnthropicKey   string                            `yaml:"anthropic_key"`
+	GoogleKey      string                            `yaml:"google_key"`
 	LanguageModels []llm.Model                       `yaml:"language_models"`
 	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
 }

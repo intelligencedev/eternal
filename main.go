@@ -9,6 +9,7 @@ import (
 	"eternal/pkg/embeddings"
 	"eternal/pkg/llm"
 	"eternal/pkg/llm/anthropic"
+	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
 	"eternal/pkg/web"
@@ -548,10 +549,11 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Check if the first model name starts with "openai-"
 			if strings.HasPrefix(firstModelName, "openai-") {
 				wsroute = "/wsoai"
-			} else if strings.HasPrefix(firstModelName, "claude-") {
+			} else if strings.HasPrefix(firstModelName, "google-") {
+				wsroute = "/wsgoogle"
+			} else if strings.HasPrefix(firstModelName, "anthropic-") {
 				wsroute = "/wsanthropic"
 			} else {
-
 				wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
 			}
 
@@ -1095,6 +1097,55 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			chat.Prompt = cpt.Messages[0].Content
 			chat.Response = err.Error()
 			chat.ModelName = wsMessage.Model
+
+			// Close the socket
+			c.Close()
+		}
+
+		// Increment the chat turn counter
+		chatTurn = chatTurn + 1
+
+		c.Close()
+	}))
+
+	app.Get("/wsgoogle", websocket.New(func(c *websocket.Conn) {
+		apiKey := config.GoogleKey
+
+		// Read the initial message
+		_, message, err := c.ReadMessage()
+		if err != nil {
+			pterm.PrintOnError(err)
+			return
+		}
+
+		// Unmarshal the JSON message
+		var wsMessage WebSocketMessage
+
+		err = json.Unmarshal(message, &wsMessage)
+		if err != nil {
+			pterm.PrintOnError(err)
+			return
+		}
+
+		// Extract the chat_message value
+		chatMessage := wsMessage.ChatMessage
+
+		// Begin tool workflow. Tools will add context to the submitted message for
+		// the model to use. Document is the abstraction that will hold that context.
+		var document string
+
+		// Retrieve the page content from prompt URLs and add it to the document
+		url := web.ExtractURLs(chatMessage)
+
+		if len(url) > 0 {
+			document, _ = web.WebGetHandler(url[0])
+			document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+		}
+
+		// Sends the prompt to the Gemini API for a response
+		if err := google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey); err != nil {
+			pterm.PrintOnError(err)
 
 			// Close the socket
 			c.Close()
