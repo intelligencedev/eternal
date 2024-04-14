@@ -39,7 +39,7 @@ Configure the quant level of the models in your `config.yml` appropriately for y
 ## Features
 
 - Language model catalog for easy download and configuration.
-- Text generation using local language models or OpenAI API.
+- Text generation using local language models, OpenAI GPT-4 an Google Gemini 1.5 Pro.
 - Web retrieval that fetches URL content for LLM to reference.
 - Web Search to automatically retrieve top results for a user's prompt for LLM to reference. _Requires Chrome browser installation._
 - Image generation using Stable Diffusion backend.
