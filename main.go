@@ -689,537 +689,65 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	})
 
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
-		if c == nil {
-			pterm.Error.Println("WebSocket connection is nil")
-			return
-		}
-		defer c.Close()
+		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			// Process the message
+			cpt := llm.GetSystemTemplate(chatMessage)
+			fullPrompt := cpt.Messages[0].Content + "\n" + chatMessage
 
-		// Read the initial message
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Unmarshal the JSON message
-		var wsMessage WebSocketMessage
-
-		err = json.Unmarshal(message, &wsMessage)
-		if err != nil {
-			c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
-			return
-		}
-
-		// Extract the chat_message value
-		chatMessage := wsMessage.ChatMessage
-
-		// Begin tool workflow. Tools will add context to the submitted message for
-		// the model to use. Document is the abstraction that will hold that context.
-		var document string
-
-		// Retrieve the page content from prompt URLs and add it to the document
-		url := web.ExtractURLs(chatMessage)
-
-		if len(url) > 0 {
-			pterm.Info.Println("Extracted URLs: ", url)
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		}
-
-		// TOOL WORKFLOW
-		for _, tool := range tools {
-			pterm.Info.Println("Processing tool: ", tool)
-
-			if tool.Name == "imagegen" && tool.Enabled {
-				if tool.Enabled {
-					// Generate image using sd tool
-					pterm.Info.Println("Generating image...")
-					sdParams := new(sd.SDParams)
-					sdParams.Prompt = chatMessage
-
-					// Call the sd tool
-					sd.Text2Image(config.DataPath, sdParams)
-
-					//res.Error()
-
-					// Get the image host and port
-					imgHost := config.ServiceHosts["image"]["image_host_1"]
-					imgHostURL := fmt.Sprintf("http://%s:%s", imgHost.Host, imgHost.Port)
-
-					pterm.Info.Println("Image host URL: ", imgHostURL)
-
-					// Return the image to the client
-					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-					imgElement := fmt.Sprintf("<img class='rounded-2' src='%s/public/img/sd_out.png?%d' />", imgHostURL, timestamp)
-					//imgElement := "<img src='public/img/sd_out.png' />"
-					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-						pterm.PrintOnError(err)
-						return
-					}
-
-					// Increment the chat turn counter
-					chatTurn = chatTurn + 1
-
-					return
-
-				}
+			// Get the details of the first model from database
+			var model ModelParams
+			err := sqliteDB.First(wsMessage.Model, &model)
+			if err != nil {
+				log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
+				return err
 			}
 
-			if tool.Name == "websearch" && tool.Enabled {
-				if tool.Enabled {
-					urls := web.SearchDuckDuckGo(chatMessage)
-
-					for _, url := range urls {
-						pterm.Info.Printf("Retrieving %s\n", url)
-						document, _ = web.WebGetHandler(url)
-						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-					}
-				}
+			modelOpts := &llm.GGUFOptions{
+				Model:         model.Options.Model,
+				Prompt:        fullPrompt,
+				CtxSize:       model.Options.CtxSize,
+				Temp:          0.1, // Prefer lower temperature for more controlled responses for now
+				RepeatPenalty: 1.1,
+				TopP:          1.0, // Prefer greedy decoding for now
+				TopK:          1.0, // Prefer greedy decoding for now
 			}
 
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		}
-
-		topN := 3 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		var documents []string
-		var documentString string
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
-			fmt.Println("Document:")
-			fmt.Println(documentString)
-		}
-
-		// Remove http(s) links from the documentString
-		documentString = web.RemoveUrls(documentString)
-
-		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
-
-		// // Process the message
-		cpt := llm.GetSystemTemplate(chatMessage)
-		fullPrompt := cpt.Messages[0].Content + "\n" + chatMessage
-
-		// // Get the details of the first model from database
-		var model ModelParams
-
-		err = sqliteDB.First(wsMessage.Model, &model)
-		if err != nil {
-			log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
-			return
-		}
-
-		modelOpts := new(llm.GGUFOptions)
-
-		modelOpts.Model = model.Options.Model
-		modelOpts.Prompt = fullPrompt
-		modelOpts.CtxSize = model.Options.CtxSize
-		modelOpts.Temp = 0.1 // Prefer lower temperature for more controlled responses for now
-		modelOpts.RepeatPenalty = 1.1
-		modelOpts.TopP = 1.0 // Prefer greedy decoding for now
-		modelOpts.TopK = 1.0 // Prefer greedy decoding for now
-
-		if err := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath); err != nil {
-			pterm.PrintOnError(err)
-			// Store the chat in the database
-			chat := new(Chat)
-			chat.Prompt = cpt.Messages[0].Content
-
-			chat.Response = err.Error()
-			chat.ModelName = wsMessage.Model
-
-			// Generate embeddings
-			pterm.Warning.Println("Generating embeddings...")
-			turnMemoryText := chatMessage + "\n" + chat.Response
-			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
-
-			pterm.Warning.Print("Storing chat in database...")
-			if _, err := CreateChat(sqliteDB.db, fullPrompt, chat.Response, chat.ModelName); err != nil {
-				pterm.Error.Println("Error storing chat in database:", err)
-				chatTurn = chatTurn + 1
-				return
-			}
-
-			// Increment the chat turn counter
-			chatTurn = chatTurn + 1
-
-			// Close the connection
-			c.Close()
-
-			return
-		}
-
-		chatTurn = chatTurn + 1
-
-		c.Close()
+			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
+		})
 	}))
 
 	app.Get("/wsoai", websocket.New(func(c *websocket.Conn) {
 		apiKey := config.OAIKey
 
-		// Read the initial message
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Unmarshal the JSON message
-		var wsMessage WebSocketMessage
-
-		err = json.Unmarshal(message, &wsMessage)
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Extract the chat_message value
-		chatMessage := wsMessage.ChatMessage
-
-		// Check if embeddings.db exists
-		if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
-			pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
-			embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
-		}
-
-		// Begin tool workflow. Tools will add context to the submitted message for
-		// the model to use. Document is the abstraction that will hold that context.
-		var document string
-
-		// Retrieve the page content from prompt URLs and add it to the document
-		url := web.ExtractURLs(chatMessage)
-
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		}
-
-		// TOOL WORKFLOW
-		for _, tool := range tools {
-			pterm.Info.Println("Processing tool: ", tool)
-
-			if tool.Name == "imagegen" && tool.Enabled {
-				if tool.Enabled {
-					// Generate image using sd tool
-					pterm.Info.Println("Generating image...")
-					sdParams := new(sd.SDParams)
-					sdParams.Prompt = chatMessage
-
-					// Call the sd tool
-					sd.Text2Image(config.DataPath, sdParams)
-
-					// Return the image to the client
-					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-						pterm.PrintOnError(err)
-						return
-					}
-
-					// Increment the chat turn counter
-					chatTurn = chatTurn + 1
-
-					return
-
-				}
+		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			// Check if embeddings.db exists
+			if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
+				pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
+				embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
 			}
 
-			if tool.Name == "websearch" && tool.Enabled {
-				if tool.Enabled {
-					urls := web.SearchDuckDuckGo(chatMessage)
-
-					for _, url := range urls {
-						pterm.Info.Printf("Retrieving %s\n", url)
-						document, _ = web.WebGetHandler(url)
-						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-					}
-				}
-			}
-
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		}
-
-		topN := 20 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		var documents []string
-		var documentString string
-
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
-			fmt.Println("Document:")
-			fmt.Println(documentString)
-		}
-
-		// Remove http(s) links from the documentString
-		documentString = web.RemoveUrls(documentString)
-
-		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
-
-		// Process the message (existing logic)
-		cpt := llm.GetSystemTemplate(chatMessage)
-
-		// Sends the prompt to the AI assistant for a response
-		if err := openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-1106-preview", cpt.Messages, 0.7, apiKey); err != nil {
-			pterm.PrintOnError(err)
-
-			// Store the chat in the database
-			chat := new(Chat)
-			chat.Prompt = cpt.Messages[0].Content
-			chat.Response = err.Error()
-			chat.ModelName = wsMessage.Model
-
-			// Generate embeddings
-			pterm.Warning.Println("Generating embeddings...")
-			turnMemoryText := chatMessage + "\n" + chat.Response
-			embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
-
-			pterm.Warning.Print("Storing chat in database...")
-			if _, err := CreateChat(sqliteDB.db, chatMessage, chat.Response, chat.ModelName); err != nil {
-				pterm.Error.Println("Error storing chat in database:", err)
-				return
-			}
-
-			// Close the socket
-			c.Close()
-		}
-
-		// Increment the chat turn counter
-		chatTurn = chatTurn + 1
-
-		c.Close()
+			cpt := llm.GetSystemTemplate(chatMessage)
+			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-turbo", cpt.Messages, 0.7, apiKey)
+		})
 	}))
 
 	app.Get("/wsanthropic", websocket.New(func(c *websocket.Conn) {
 		apiKey := config.AnthropicKey
 
-		// Read the initial message
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Unmarshal the JSON message
-		var wsMessage WebSocketMessage
-
-		err = json.Unmarshal(message, &wsMessage)
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Extract the chat_message value
-		chatMessage := wsMessage.ChatMessage
-
-		// Begin tool workflow. Tools will add context to the submitted message for
-		// the model to use. Document is the abstraction that will hold that context.
-		var document string
-
-		// Retrieve the page content from prompt URLs and add it to the document
-		url := web.ExtractURLs(chatMessage)
-
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		}
-
-		// TOOL WORKFLOW
-		for _, tool := range tools {
-			pterm.Info.Println("Processing tool: ", tool)
-
-			if tool.Name == "imagegen" && tool.Enabled {
-				if tool.Enabled {
-					// Generate image using sd tool
-					pterm.Info.Println("Generating image...")
-					sdParams := new(sd.SDParams)
-					sdParams.Prompt = chatMessage
-
-					// Call the sd tool
-					sd.Text2Image(config.DataPath, sdParams)
-
-					// Return the image to the client
-					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-						pterm.PrintOnError(err)
-						return
-					}
-
-					// Increment the chat turn counter
-					chatTurn = chatTurn + 1
-
-					return
-				}
-			}
-
-			if tool.Name == "websearch" && tool.Enabled {
-				if tool.Enabled {
-					urls := web.SearchDuckDuckGo(chatMessage)
-
-					for _, url := range urls {
-						pterm.Info.Printf("Retrieving %s\n", url)
-						document, _ = web.WebGetHandler(url)
-						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-					}
-				}
-			}
-
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		}
-
-		// Process the message (existing logic)
-		cpt := llm.GetSystemTemplate(chatMessage)
-
-		// Convert the chat message to []anthropic.Message
-		var messages []anthropic.Message
-		messages = append(messages, anthropic.Message{Content: cpt.Messages[0].Content})
-
-		// Sends the prompt to the AI assistant for a response
-		if err := anthropic.StreamCompletionToWebSocket(c, chatTurn, wsMessage.Model, messages, 0.1, apiKey); err != nil {
-			pterm.PrintOnError(err)
-			// Store the chat in the database
-			chat := new(Chat)
-			chat.Prompt = cpt.Messages[0].Content
-			chat.Response = err.Error()
-			chat.ModelName = wsMessage.Model
-
-			// Close the socket
-			c.Close()
-		}
-
-		// Increment the chat turn counter
-		chatTurn = chatTurn + 1
-
-		c.Close()
+		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			cpt := llm.GetSystemTemplate(chatMessage)
+			var messages []anthropic.Message
+			messages = append(messages, anthropic.Message{Content: cpt.Messages[0].Content})
+			return anthropic.StreamCompletionToWebSocket(c, chatTurn, wsMessage.Model, messages, 0.1, apiKey)
+		})
 	}))
 
 	app.Get("/wsgoogle", websocket.New(func(c *websocket.Conn) {
 		apiKey := config.GoogleKey
 
-		// Read the initial message
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Unmarshal the JSON message
-		var wsMessage WebSocketMessage
-
-		err = json.Unmarshal(message, &wsMessage)
-		if err != nil {
-			pterm.PrintOnError(err)
-			return
-		}
-
-		// Extract the chat_message value
-		chatMessage := wsMessage.ChatMessage
-
-		// Begin tool workflow. Tools will add context to the submitted message for
-		// the model to use. Document is the abstraction that will hold that context.
-		var document string
-
-		// Retrieve the page content from prompt URLs and add it to the document
-		url := web.ExtractURLs(chatMessage)
-
-		if len(url) > 0 {
-			document, _ = web.WebGetHandler(url[0])
-			document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-		}
-
-		// TOOL WORKFLOW
-		for _, tool := range tools {
-			pterm.Info.Println("Processing tool: ", tool)
-
-			if tool.Name == "imagegen" && tool.Enabled {
-				if tool.Enabled {
-					// Generate image using sd tool
-					pterm.Info.Println("Generating image...")
-					sdParams := new(sd.SDParams)
-					sdParams.Prompt = chatMessage
-
-					// Call the sd tool
-					sd.Text2Image(config.DataPath, sdParams)
-
-					// Return the image to the client
-					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-						pterm.PrintOnError(err)
-						return
-					}
-
-					// Increment the chat turn counter
-					chatTurn = chatTurn + 1
-
-					return
-
-				}
-			}
-
-			if tool.Name == "websearch" && tool.Enabled {
-				if tool.Enabled {
-					urls := web.SearchDuckDuckGo(chatMessage)
-
-					for _, url := range urls {
-						pterm.Info.Printf("Retrieving %s\n", url)
-						document, _ = web.WebGetHandler(url)
-						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-					}
-				}
-			}
-
-			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
-		}
-
-		topN := 20 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		var documents []string
-		var documentString string
-
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
-			fmt.Println("Document:")
-			fmt.Println(documentString)
-		}
-
-		// Remove http(s) links from the documentString
-		documentString = web.RemoveUrls(documentString)
-
-		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
-
-		// Sends the prompt to the Gemini API for a response
-		if err := google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey); err != nil {
-			pterm.PrintOnError(err)
-
-			// Close the socket
-			c.Close()
-		}
-
-		// Increment the chat turn counter
-		chatTurn = chatTurn + 1
-
-		c.Close()
+		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			return google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey)
+		})
 	}))
 
 	go func() {
@@ -1235,4 +763,131 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	}
 
 	pterm.Info.Println("Server gracefully shutdown")
+}
+
+func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(WebSocketMessage, string) error) {
+	if c == nil {
+		pterm.Error.Println("WebSocket connection is nil")
+		return
+	}
+	defer c.Close()
+
+	// Read the initial message
+	_, message, err := c.ReadMessage()
+	if err != nil {
+		pterm.PrintOnError(err)
+		return
+	}
+
+	// Unmarshal the JSON message
+	var wsMessage WebSocketMessage
+	err = json.Unmarshal(message, &wsMessage)
+	if err != nil {
+		c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
+		return
+	}
+
+	// Extract the chat_message value
+	chatMessage := wsMessage.ChatMessage
+
+	// Perform tool workflow and update chatMessage
+	chatMessage = performToolWorkflow(c, config, chatMessage)
+
+	// Process the message using the provided function
+	err = processMessage(wsMessage, chatMessage)
+	if err != nil {
+		pterm.PrintOnError(err)
+		storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+		return
+	}
+
+	// Increment the chat turn counter
+	chatTurn++
+}
+
+func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
+	// Begin tool workflow. Tools will add context to the submitted message for
+	// the model to use. Document is the abstraction that will hold that context.
+	var document string
+
+	// Retrieve the page content from prompt URLs and add it to the document
+	url := web.ExtractURLs(chatMessage)
+	if len(url) > 0 {
+		document, _ = web.WebGetHandler(url[0])
+		document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+	}
+
+	// TOOL WORKFLOW
+	for _, tool := range tools {
+		pterm.Info.Println("Processing tool: ", tool)
+
+		if tool.Name == "imagegen" && tool.Enabled {
+			// Generate image using sd tool
+			pterm.Info.Println("Generating image...")
+			sdParams := &sd.SDParams{Prompt: chatMessage}
+
+			// Call the sd tool
+			sd.Text2Image(config.DataPath, sdParams)
+
+			// Return the image to the client
+			timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+			imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+				pterm.PrintOnError(err)
+				return chatMessage
+			}
+
+			// Increment the chat turn counter
+			chatTurn++
+
+			return chatMessage
+		}
+
+		if tool.Name == "websearch" && tool.Enabled {
+			urls := web.SearchDuckDuckGo(chatMessage)
+
+			for _, url := range urls {
+				pterm.Info.Printf("Retrieving %s\n", url)
+				document, _ = web.WebGetHandler(url)
+				chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+			}
+		}
+
+		document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+	}
+
+	topN := 20 // retrieve top N results. Adjust based on context size.
+	topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+	var documents []string
+	var documentString string
+	if len(topEmbeddings) > 0 {
+		for _, topEmbedding := range topEmbeddings {
+			documents = append(documents, topEmbedding.Word)
+		}
+		documentString = strings.Join(documents, " ")
+		fmt.Println("Document:")
+		fmt.Println(documentString)
+	}
+
+	// Remove http(s) links from the documentString
+	documentString = web.RemoveUrls(documentString)
+
+	chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+
+	return chatMessage
+}
+
+func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) {
+	// Generate embeddings
+	pterm.Warning.Println("Generating embeddings...")
+	turnMemoryText := prompt + "\n" + response
+	embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
+
+	pterm.Warning.Print("Storing chat in database...")
+	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
+		pterm.Error.Println("Error storing chat in database:", err)
+	}
 }
