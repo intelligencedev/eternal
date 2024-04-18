@@ -714,25 +714,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		// Extract the chat_message value
 		chatMessage := wsMessage.ChatMessage
 
-		topN := 10 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		var documents []string
-		var documentString string
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
-			fmt.Println("Document:")
-			fmt.Println(documentString)
-		}
-
-		// Remove http(s) links from the documentString
-		documentString = web.RemoveUrls(documentString)
-
-		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
-
 		// Begin tool workflow. Tools will add context to the submitted message for
 		// the model to use. Document is the abstraction that will hold that context.
 		var document string
@@ -789,7 +770,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			if tool.Name == "websearch" && tool.Enabled {
 				if tool.Enabled {
-					chatMessage = ""
 					urls := web.SearchDuckDuckGo(chatMessage)
 
 					for _, url := range urls {
@@ -802,6 +782,25 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
 		}
+
+		topN := 3 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
+
+		// Remove http(s) links from the documentString
+		documentString = web.RemoveUrls(documentString)
+
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
 		// // Process the message
 		cpt := llm.GetSystemTemplate(chatMessage)
@@ -889,26 +888,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
 		}
 
-		topN := 20 // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		var documents []string
-		var documentString string
-
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
-			fmt.Println("Document:")
-			fmt.Println(documentString)
-		}
-
-		// Remove http(s) links from the documentString
-		documentString = web.RemoveUrls(documentString)
-
-		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
-
 		// Begin tool workflow. Tools will add context to the submitted message for
 		// the model to use. Document is the abstraction that will hold that context.
 		var document string
@@ -967,6 +946,26 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
 		}
+
+		topN := 20 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
+
+		// Remove http(s) links from the documentString
+		documentString = web.RemoveUrls(documentString)
+
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
 		// Process the message (existing logic)
 		cpt := llm.GetSystemTemplate(chatMessage)
@@ -1142,6 +1141,72 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
 			chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
+
+		// TOOL WORKFLOW
+		for _, tool := range tools {
+			pterm.Info.Println("Processing tool: ", tool)
+
+			if tool.Name == "imagegen" && tool.Enabled {
+				if tool.Enabled {
+					// Generate image using sd tool
+					pterm.Info.Println("Generating image...")
+					sdParams := new(sd.SDParams)
+					sdParams.Prompt = chatMessage
+
+					// Call the sd tool
+					sd.Text2Image(config.DataPath, sdParams)
+
+					// Return the image to the client
+					timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+					imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+					formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+					if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+						pterm.PrintOnError(err)
+						return
+					}
+
+					// Increment the chat turn counter
+					chatTurn = chatTurn + 1
+
+					return
+
+				}
+			}
+
+			if tool.Name == "websearch" && tool.Enabled {
+				if tool.Enabled {
+					urls := web.SearchDuckDuckGo(chatMessage)
+
+					for _, url := range urls {
+						pterm.Info.Printf("Retrieving %s\n", url)
+						document, _ = web.WebGetHandler(url)
+						chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+					}
+				}
+			}
+
+			document = fmt.Sprintf("%s\nUse the previous unformation as reference for the following:\n", document)
+		}
+
+		topN := 20 // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+			fmt.Println("Document:")
+			fmt.Println(documentString)
+		}
+
+		// Remove http(s) links from the documentString
+		documentString = web.RemoveUrls(documentString)
+
+		chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
 
 		// Sends the prompt to the Gemini API for a response
 		if err := google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey); err != nil {
