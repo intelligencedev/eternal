@@ -52,6 +52,7 @@ llama:
 # Build stable-diffusion
 .PHONY: sd
 sd:
+    rm -rf $(SD_BUILD_DIR)
 	$(SD_BUILD_CMD)
 
 # Define a macro for copying a build target
