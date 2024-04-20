@@ -155,7 +155,7 @@
 </style>
 
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
-<!-- <div name="chat-{{.turnID}}" id="chat-{{.turnID}}"> -->
+  <!-- <div name="chat-{{.turnID}}" id="chat-{{.turnID}}"> -->
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
       <div>
@@ -163,7 +163,7 @@
       </div>
       <!-- Using a hidden form to send the message -->
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
-      <!-- <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load">   -->
+        <!-- <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load">   -->
         <!-- Get the selectedModels in localStorage and send over websocket -->
         <input type="hidden" name="model" value="{{.model}}">
         <input type="hidden" name="chat_message" value="{{.message}}">
@@ -203,15 +203,15 @@
 <script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
   htmx.on("htmx:wsOpen", function (evt) {
-  console.log("WebSocket opened");
-  const box = document.querySelector(".box");
-  if (box) {
-    box.style.transition = "transform 0.5s ease";
+    console.log("WebSocket opened");
+    const box = document.querySelector(".box");
+    if (box) {
+      box.style.transition = "transform 0.5s ease";
 
-    // Restore original rotation
-    box.style.transform = "rotateX(45deg) rotateY(45deg) rotateZ(-180deg)";
-  }
-});
+      // Restore original rotation
+      box.style.transform = "rotateX(45deg) rotateY(45deg) rotateZ(-180deg)";
+    }
+  });
 
   htmx.on("htmx:wsOnClose", function (evt) {
     console.log("WebSocket closed");
@@ -242,19 +242,24 @@
   // Highlight code blocks
   function highlight() {
     const container = document.getElementById("response-content-{{.turnID}}");
-    // Highlight all code blocks within the container
-    container.querySelectorAll('pre code').forEach((block) => {
-      hljs.highlightElement(block);
+    container.querySelectorAll('pre code').forEach((block, index) => {
+      if (!block.hasAttribute('data-snippet-added')) { // Check if the snippet has not been added
+        hljs.highlightElement(block);
 
-      // Append <codapi-snippet sandbox='python' editor='external'></codapi-snippet> below the code block
-      const snippet = document.createElement('codapi-snippet');
-      //snippet.setAttribute('url', 'http://localhost:1313/v1');
-      snippet.setAttribute('engine', 'browser');
-      snippet.setAttribute('sandbox', 'javascript');
-      snippet.setAttribute('editor', 'basic');
-      snippet.setAttribute('selector', "#response-content-{{.turnID}} pre code");
-      //snippet.innerHTML = block.textContent;
-      container.appendChild(snippet);
+        // Create a new snippet element only if not already added
+        const snippet = document.createElement('codapi-snippet');
+        snippet.setAttribute('url', 'http://localhost:1313/v1');
+        snippet.setAttribute('engine', 'browser');
+        snippet.setAttribute('sandbox', 'javascript');
+        snippet.setAttribute('editor', 'basic');
+        //snippet.innerHTML = block.textContent;
+
+        // Insert the snippet right after the code block
+        block.parentNode.insertAdjacentElement('afterend', snippet);
+
+        // Mark this code block as having a snippet added
+        block.setAttribute('data-snippet-added', 'true');
+      }
     });
   }
 </script>

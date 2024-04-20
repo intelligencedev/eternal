@@ -144,7 +144,10 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 
 	// Save the database to a file
 	pterm.Info.Println("Saving embeddings...")
-	db.SaveEmbeddings("./embeddings.db")
+
+	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
+
+	db.SaveEmbeddings(dbPath)
 }
 
 // GenerateEmbedding generates an embedding from a prompt.
@@ -281,7 +284,7 @@ func GenerateEmbeddingChat(prompt string, dataPath string) {
 
 	// Now save all embeddings
 	pterm.Info.Println("Saving embeddings...")
-	dbPath := fmt.Sprintf("%s/responses.db", dataPath)
+	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
 	pterm.Info.Println(dbPath)
 
 	if err := db.SaveEmbeddings(dbPath); err != nil {
