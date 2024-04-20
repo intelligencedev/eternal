@@ -59,6 +59,17 @@ language_models:
     ctx: 500000
     roles:
       - 'all'
+  - name: 'llama3-8b-instruct'
+    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
+    gguf: 'https://huggingface.co/NousResearch/Meta-Llama-3-8B-Instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/NousResearch/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf'
+    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>{{ system_prompt }}<|eot_id|><|start_header_id|>user<|end_header_id|>{{ user_message_1 }}<|eot_id|><|start_header_id|>assistant"
+    ctx: 8192
+    roles:
+      - 'instruct'
+    tags:
+      - '8B'
   - name: 'starling-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF'

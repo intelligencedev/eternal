@@ -154,7 +154,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--top-k", topK,
 		//"--n-gpu-layers", "-1",
 		"--reverse-prompt", "<|eot_id|>",
-		//"--multiline-input",
+		// "--multiline-input",
 		"--temp", temp,
 		// "--mlock",
 		"--seed", "-1",
@@ -165,9 +165,9 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--keep", "2048",
 		//"--prompt-cache", "cache",
 		//"--verbose-prompt",
-		//"--in-prefix", "<|im_start|>",
+		//"--in-prefix", "\n<|start_header_id|>user<|end_header_id|>\n\n",
 		//"--in-prefix-bos",
-		//"--in-suffix", "assistant",
+		//"--in-suffix", "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 	}
