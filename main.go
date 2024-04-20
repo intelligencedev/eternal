@@ -734,12 +734,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Get("/wsanthropic", websocket.New(func(c *websocket.Conn) {
 		apiKey := config.AnthropicKey
 
-		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			cpt := llm.GetSystemTemplate(chatMessage)
-			var messages []anthropic.Message
-			messages = append(messages, anthropic.Message{Content: cpt.Messages[0].Content})
-			return anthropic.StreamCompletionToWebSocket(c, chatTurn, wsMessage.Model, messages, 0.1, apiKey)
-		})
+		handleAnthropicWS(c, apiKey, chatTurn)
 	}))
 
 	app.Get("/wsgoogle", websocket.New(func(c *websocket.Conn) {
@@ -894,4 +889,37 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
 		pterm.Error.Println("Error storing chat in database:", err)
 	}
+}
+
+func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
+	// Read the initial message
+	_, message, err := c.ReadMessage()
+	if err != nil {
+		pterm.PrintOnError(err)
+		return
+	}
+
+	// Unmarshal the JSON message
+	var wsMessage WebSocketMessage
+	err = json.Unmarshal(message, &wsMessage)
+	if err != nil {
+		c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
+		return
+	}
+
+	// Extract the chat_message value
+	chatMessage := wsMessage.ChatMessage
+
+	messages := []anthropic.Message{
+		{Role: "user", Content: chatMessage},
+	}
+
+	res := anthropic.StreamCompletionToWebSocket(c, chatID, "claude-3-opus-20240229", messages, 0.5, apiKey)
+	if res != nil {
+		pterm.Error.Println("Error in anthropic completion:", res)
+	}
+
+	chatTurn = chatTurn + 1
+
+	return // Return to close the connection
 }

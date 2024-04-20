@@ -201,19 +201,18 @@ func LoadImageModelDataToDB(db *SQLiteDB, models []ImageModel) error {
 }
 
 func AddSelectedModel(db *gorm.DB, modelName string) error {
+	// Remove any existing selected model from the database
+	if err := db.Where("1 = 1").Delete(&SelectedModels{}).Error; err != nil {
+		return err
+	}
+
+	// Create a new selected model
 	selectedModel := SelectedModels{
 		ModelName: modelName,
 	}
 
-	// Check if the model is already selected by the user
-	var count int64
-	db.Model(&SelectedModels{}).Where("model_name = ?", modelName).Count(&count)
-	if count == 0 {
-		// If not, add it to the database
-		return db.Create(&selectedModel).Error
-	}
-
-	return nil // Model is already selected, no action needed
+	// Add the new selected model to the database
+	return db.Create(&selectedModel).Error
 }
 
 func RemoveSelectedModel(db *gorm.DB, modelName string) error {
