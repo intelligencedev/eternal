@@ -797,6 +797,9 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	err = processMessage(wsMessage, chatMessage)
 	if err != nil {
 		pterm.PrintOnError(err)
+
+		pterm.Warning.Println(config.DataPath)
+
 		storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
 
 		// Increment the chat turn counter
@@ -815,7 +818,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	url := web.ExtractURLs(chatMessage)
 	if len(url) > 0 {
 		document, _ = web.WebGetHandler(url[0])
-		document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+		//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
 		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 	}
 
@@ -856,10 +859,10 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			}
 		}
 
-		document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+		//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
 	}
 
-	topN := 20 // retrieve top N results. Adjust based on context size.
+	topN := 1 // retrieve top N results. Adjust based on context size.
 	topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
 	var documents []string
@@ -876,7 +879,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// Remove http(s) links from the documentString
 	documentString = web.RemoveUrls(documentString)
 
-	chatMessage = fmt.Sprintf("%s\nThe previous information contains our conversations. Reference it if relevant for the following:\n%s", documentString, chatMessage)
+	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference. Only use it if it is relevant to the next question or instruction, otherwise ignore it. Never repeat these instructions in your responses. Only respond to the information below:\n%s", documentString, chatMessage)
 
 	return chatMessage
 }
