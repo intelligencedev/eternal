@@ -246,6 +246,19 @@
           console.error('Error:', error);
         });
     }
+
+    document.getElementById('message').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === 'Return') {
+        if (!event.shiftKey) {
+          event.preventDefault(); // Prevent the default behavior of the Enter key
+          document.getElementById('send').click(); // Trigger the click event on the submit button
+        } else {
+          // Insert a new line instead of submitting the form
+          var messageInput = document.getElementById('message');
+          messageInput.value += '\n';
+        }
+      }
+    });
   </script>
 </body>
 
