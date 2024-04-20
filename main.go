@@ -721,10 +721,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
 			// Check if embeddings.db exists
-			if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
-				pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
-				embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
-			}
+			// if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
+			// 	pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
+			// 	embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
+			// }
 
 			cpt := llm.GetSystemTemplate(chatMessage)
 			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-turbo", cpt.Messages, 0.7, apiKey)
