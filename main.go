@@ -798,11 +798,12 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	if err != nil {
 		pterm.PrintOnError(err)
 		storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+
+		// Increment the chat turn counter
+		chatTurn = chatTurn + 1
+		pterm.Warning.Println("Chat turn:", chatTurn)
 		return
 	}
-
-	// Increment the chat turn counter
-	chatTurn++
 }
 
 func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
@@ -840,7 +841,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			}
 
 			// Increment the chat turn counter
-			chatTurn++
+			chatTurn = chatTurn + 1
 
 			return chatMessage
 		}

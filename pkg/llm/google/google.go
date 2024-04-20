@@ -47,7 +47,7 @@ func StreamGeminiResponseToWebSocket(c *websocket.Conn, chatID int, prompt strin
 	for {
 		resp, err := iter.Next()
 		if err == iterator.Done {
-			break
+			return err
 		}
 		if err != nil {
 			pterm.Error.Println(err)
@@ -71,6 +71,4 @@ func StreamGeminiResponseToWebSocket(c *websocket.Conn, chatID int, prompt strin
 			return err
 		}
 	}
-
-	return nil
 }
