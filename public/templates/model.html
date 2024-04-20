@@ -118,39 +118,23 @@
   }
 
   async function selectModel(modelName) {
+    // Deselect all cards
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => card.classList.remove('card-selected'));
 
-    // Get the card element using the data-model-name attribute
-    let cardElement = document.querySelector(`div[data-model-name="${modelName}"]`);
+    // Get the clicked card element
+    const cardElement = document.querySelector(`div[data-model-name="${modelName}"]`);
 
-    cardElement.classList.toggle('card-selected');
+    // Select the clicked card
+    cardElement.classList.add('card-selected');
 
-    // Determine the action based on selection state
-    let action = cardElement.classList.contains('card-selected') ? 'add' : 'remove';
-
-    if (!modelName.startsWith('openai-')) {
-      fetch(`/model/select`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ modelName, action }),
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Failed to update model selection');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
-    }
-
+    // Send request to update model selection in the backend
     fetch(`/model/select`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ modelName, action }),
+      body: JSON.stringify({ modelName, action: 'add' }), // Always 'add' as we deselect all others
     })
       .then(response => {
         if (!response.ok) {

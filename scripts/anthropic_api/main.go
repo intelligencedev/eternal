@@ -38,6 +38,7 @@ func main() {
 	data := `{
 		"model": "claude-3-opus-20240229",
 		"max_tokens": 1024,
+		"stream": true,
 		"messages": [
 			{"role": "user", "content": "Hello, world"}
 		]
@@ -78,6 +79,10 @@ func main() {
 		fmt.Printf("Error unmarshalling response body: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Print the raw response body
+	fmt.Println("Raw Response:")
+	fmt.Println(string(body))
 
 	// Print the response in a more readable format
 	fmt.Println("Response:")

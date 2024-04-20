@@ -153,8 +153,8 @@
             <div class="row ms-auto w-25">
               <div class="col-auto">
                 <!-- MODELS -->
-                <button class="btn" hx-post="/modelcards" hx-target="#chat" hx-preserve="#chat" hx-swap="innerHTML transition:true"
-                  data-bs-toggle="tooltip" data-bs-title="Language Models">
+                <button class="btn" hx-post="/modelcards" hx-target="#chat" hx-preserve="#chat"
+                  hx-swap="innerHTML transition:true" data-bs-toggle="tooltip" data-bs-title="Language Models">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none">
                       <path stroke="#ffffff" stroke-linecap="round" stroke-width="1.5"
@@ -204,6 +204,22 @@
     const tooltipList = [...tooltipTriggerList].map(
       (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
     );
+
+    // Function to toggle button state and border
+    function toggleButtonState(buttonId) {
+      const button = document.getElementById(buttonId);
+      button.style.border = button.style.border ? '' : '2px solid purple'; // Toggle border
+    }
+
+    // Add event listeners to both buttons
+    document.getElementById('websearchBtn').addEventListener('click', () => {
+      toggleButtonState('websearchBtn');
+    });
+
+    document.getElementById('imgGenBtn').addEventListener('click', () => {
+      toggleButtonState('imgGenBtn');
+      downloadImageModel('dreamshaper-8-sd15'); // Keep existing functionality
+    });
 
     function downloadImageModel(modelName) {
       // Toggle a border on the imgGenBtn
