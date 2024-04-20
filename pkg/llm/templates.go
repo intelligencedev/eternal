@@ -27,7 +27,7 @@ func GetSystemTemplate(userPrompt string) ChatPromptTemplate {
 	template := NewChatPromptTemplate([]Message{
 		{
 			Role:    "system",
-			Content: "You are a helpful AI assistant that responds in well structured markdown.",
+			Content: "You are a helpful AI assistant.",
 		},
 		{
 			Role:    "user",
