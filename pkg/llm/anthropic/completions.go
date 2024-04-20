@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"strings"
-
-	"eternal/pkg/llm"
 	"eternal/pkg/web"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/pterm/pterm"
@@ -44,48 +43,56 @@ type CompletionResponse struct {
 	} `json:"usage"`
 }
 
+type ContentBlockDelta struct {
+	Type  string    `json:"type"`
+	Index int       `json:"index"`
+	Delta TextDelta `json:"delta"`
+}
+
+type TextDelta struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
 func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, messages []Message, temperature float64, apiKey string) error {
+
 	payload := &CompletionRequest{
 		Model:       model,
-		MaxTokens:   124000,
-		Messages:    messages,
+		MaxTokens:   1024,
 		Stream:      true,
+		Messages:    messages,
 		Temperature: temperature,
 	}
 
-	pterm.Info.Println(payload)
-
 	resp, err := SendRequest(completionsEndpoint, payload, apiKey)
 	if err != nil {
-		pterm.Error.Println(err)
 		return err
 	}
 	defer resp.Body.Close()
-
-	pterm.Warning.Println("Response status:", resp.Status)
-	pterm.Warning.Println(err)
 
 	// Handle streaming response
 	msgBuffer := new(bytes.Buffer)
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
+		fmt.Println(line)
 		if strings.HasPrefix(line, "data: ") {
-			jsonStr := line[6:] // Strip the "data: " prefix
-			var data CompletionResponse
-			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-				return fmt.Errorf("%s", msgBuffer.String())
+			line = strings.TrimPrefix(line, "data: ")
+
+			// Unmarshal the JSON response
+			var data ContentBlockDelta
+			if err := json.Unmarshal([]byte(line), &data); err != nil {
+				return err
 			}
 
-			// Accumulate content from each choice in the buffer
-			for _, content := range data.Content {
-				msgBuffer.WriteString(content.Text)
-			}
+			msgBuffer.WriteString(data.Delta.Text)
 
-			// Process the accumulated content after streaming is complete
 			htmlMsg := web.MarkdownToHTML(msgBuffer.Bytes())
-			turnIDStr := fmt.Sprint(chatID + llm.TurnCounter)
+
+			turnIDStr := strconv.Itoa(chatID)
+
 			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg)
+
 			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 				pterm.Error.Println("WebSocket write error:", err)
 				return err
@@ -99,4 +106,5 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 	}
 
 	return nil
+
 }
