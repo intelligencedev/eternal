@@ -26,10 +26,17 @@ func MarkdownToHTML(mdContent []byte) []byte {
 	extensions := parser.CommonExtensions
 	parser := parser.NewWithExtensions(extensions)
 	htmlFlags := html.CommonFlags
-	renderer := html.NewRenderer(html.RendererOptions{Flags: htmlFlags})
+
+	// Custom CSS to apply 0px bottom margin to <code> elements
+	customCSS := "code { margin-bottom: 0px; }"
+
+	renderer := html.NewRenderer(html.RendererOptions{
+		Flags: htmlFlags,
+		CSS:   customCSS, // Adding custom CSS here
+	})
 
 	// Convert markdown to HTML
-	html := markdown.ToHTML(preprocessedContent, parser, renderer)
+	htmlContent := markdown.ToHTML(preprocessedContent, parser, renderer)
 
-	return html
+	return htmlContent
 }
