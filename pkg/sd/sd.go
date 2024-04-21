@@ -83,13 +83,13 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 		//"--vae", vaePath, // NOT WORKING DO NOT USE
 		"-o", outPath,
 		"--rng", "std_default",
-		"--cfg-scale", "2",
+		"--cfg-scale", "8",
 		"--sampling-method", "dpm2",
-		"--steps", "6",
+		"--steps", "20",
 		"--seed", "-1",
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
-		"--clip-skip", "2",
+		//"--clip-skip", "2",
 		"--width", "512",
 		"--height", "768",
 	}
