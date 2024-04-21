@@ -57,12 +57,12 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) {
+func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
 
 	instruction, ok := INSTRUCTIONS[task]
 	if !ok {
 		fmt.Printf("Unknown task: %s\n", task)
-		return
+		return fmt.Errorf("unknown task: %s", task)
 	}
 
 	db := estore.NewEmbeddingDB()
@@ -104,7 +104,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
 	if err != nil {
 		pterm.Error.Println("Error loading model...")
-		panic(err)
+		return err
 	}
 
 	// 3. Embedding Generation
@@ -130,7 +130,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 		err = encoder(chunk) // Actually invoke the encoder function with the chunk
 		if err != nil {
 			pterm.Error.Println("Error encoding text...")
-			panic(err)
+			return err
 		}
 
 		embedding := estore.Embedding{
@@ -148,6 +148,8 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
 
 	db.SaveEmbeddings(dbPath)
+
+	return nil
 }
 
 // GenerateEmbedding generates an embedding from a prompt.
