@@ -91,6 +91,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	pterm.Info.Sprintf("GPU Layers: %s\n", config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers)
+
 	if _, err := os.Stat(config.DataPath); os.IsNotExist(err) {
 		err = os.Mkdir(config.DataPath, 0755)
 		if err != nil {
@@ -711,6 +713,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic.")
 
 			modelOpts := &llm.GGUFOptions{
+				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
 				Model:         model.Options.Model,
 				Prompt:        fullPrompt,
 				CtxSize:       model.Options.CtxSize,
