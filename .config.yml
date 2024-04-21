@@ -173,7 +173,7 @@ language_models:
 
 
 image_models:
-  - name: 'dreamshaper-8-sd15'
-    homepage: 'https://huggingface.co/Lykon/dreamshaper-8'
+  - name: 'dreamshaper-8-turbo-sdxl'
+    homepage: 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/'
     downloads:
-      - 'https://civitai.com/api/download/models/128713'
+      - 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/resolve/main/DreamShaperXL_Turbo_V2-SFW.safetensors'
