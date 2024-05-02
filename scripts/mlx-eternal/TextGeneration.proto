@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package textgenerator;
+
+// Specify the Go package where the generated code will be placed.
+option go_package = "./eproto";
+
+// The text generation service definition.
+service TextGenerator {
+  rpc GenerateTextStream (TextRequest) returns (stream TextResponse);
+}
+
+// The request message containing the user's prompt.
+message TextRequest {
+  string prompt = 1;
+}
+
+// The response message containing the generated text.
+message TextResponse {
+  string response = 1;
+}
