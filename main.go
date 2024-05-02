@@ -708,7 +708,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
 			// Replace {system} with the system message
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic.")
+			// fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic.")
 
 			modelOpts := &llm.GGUFOptions{
 				Model:         model.Options.Model,
@@ -803,7 +803,7 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 
 		pterm.Warning.Println(config.DataPath)
 
-		err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+		//err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
@@ -818,12 +818,12 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	var document string
 
 	// Retrieve the page content from prompt URLs and add it to the document
-	url := web.ExtractURLs(chatMessage)
-	if len(url) > 0 {
-		document, _ = web.WebGetHandler(url[0])
-		//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-		chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-	}
+	// url := web.ExtractURLs(chatMessage)
+	// if len(url) > 0 {
+	// 	document, _ = web.WebGetHandler(url[0])
+	// 	//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+	// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
+	// }
 
 	// TOOL WORKFLOW
 	for _, tool := range tools {
@@ -865,19 +865,19 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
 	}
 
-	topN := 1 // retrieve top N results. Adjust based on context size.
-	topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+	//topN := 1 // retrieve top N results. Adjust based on context size.
+	//topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
-	var documents []string
+	//var documents []string
 	var documentString string
-	if len(topEmbeddings) > 0 {
-		for _, topEmbedding := range topEmbeddings {
-			documents = append(documents, topEmbedding.Word)
-		}
-		documentString = strings.Join(documents, " ")
-		fmt.Println("Document:")
-		fmt.Println(documentString)
-	}
+	// if len(topEmbeddings) > 0 {
+	// 	for _, topEmbedding := range topEmbeddings {
+	// 		documents = append(documents, topEmbedding.Word)
+	// 	}
+	// 	documentString = strings.Join(documents, " ")
+	// 	fmt.Println("Document:")
+	// 	fmt.Println(documentString)
+	// }
 
 	// Remove http(s) links from the documentString
 	documentString = web.RemoveUrls(documentString)
