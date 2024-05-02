@@ -152,7 +152,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
-		//"--n-gpu-layers", "-1",
+		"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
 		"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
