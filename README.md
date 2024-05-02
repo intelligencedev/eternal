@@ -98,6 +98,10 @@ $ make all
 
 Please submit an issue if you encounter any issues with the build process.
 
+## Developers
+
+Ensure the git submodules are 
+
 ## Disclaimer
 
 This README is a high-level overview of the Eternal application. Detailed setup instructions and a complete list of features, dependencies, and configurations should be consulted in the actual application documentation.
