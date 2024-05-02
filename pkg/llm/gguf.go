@@ -161,6 +161,15 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
+		// "--rope-scaling", "linear",
+		// "--rope-scale", "8",
+		// "--rope-freq-base", "1",
+		// "--rope-freq-scale", "1",
+		// "--yarn-orig-ctx", "4096",
+		//"--yarn-ext-factor", "1.0",
+		//"--yarn-attn-factor", "1.0",
+		//"--yarn-beta-slow", "0.0",
+		//"--yarn-beta-fast", "0.0",
 		//"-cml",
 		//"--keep", "2048",
 		//"--prompt-cache", "cache",
@@ -170,6 +179,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--in-suffix", "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
+		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
 	}
 
 	return exec.Command(cmdPath, cmdArgs...)
