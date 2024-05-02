@@ -33,9 +33,12 @@ service_hosts:
     llm_host_1:
       host: 'localhost'
       port: '8080'
+      gpu_layers: -1
+
     llm_host_2:
       host: 'localhost'
       port: '8080'
+      gpu_layers: -1
 
 # OpenAI API Key
 oai_key: 'sk-...'
