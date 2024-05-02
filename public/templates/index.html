@@ -107,7 +107,7 @@
               <!-- Image Generation -->
               <div class="col" id="txt2img">
                 <button id="imgGenBtn" class="btn" data-model-name="128713"
-                  onclick="downloadImageModel('dreamshaper-8-sd15')" hx-post="/tool/imagegen" hx-swap="none"
+                  onclick="downloadImageModel('dreamshaper-8-turbo-sdxl')" hx-post="/tool/imagegen" hx-swap="none"
                   data-bs-toggle="tooltip">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#FFFFFF"
@@ -214,7 +214,7 @@
 
     document.getElementById('imgGenBtn').addEventListener('click', () => {
       toggleButtonState('imgGenBtn');
-      downloadImageModel('dreamshaper-8-sd15'); // Keep existing functionality
+      downloadImageModel('dreamshaper-8-turbo-sdxl'); // Keep existing functionality
     });
 
     function downloadImageModel(modelName) {

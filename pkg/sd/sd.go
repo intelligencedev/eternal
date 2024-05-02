@@ -70,7 +70,7 @@ type SDParams struct {
 func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 	//vaePath := filepath.Join(dataPath, "models/StableDiffusion/sd15/sdxl_vae.safetensors")
 	//modelPath := filepath.Join(dataPath, "models/StableDiffusion/sd15/dreamshaper_8_q5_1.gguf")
-	modelPath := filepath.Join(dataPath, "models/dreamshaper-8-sd15/128713")
+	modelPath := filepath.Join(dataPath, "models/dreamshaper-8-turbo-sdxl/DreamShaperXL_Turbo_V2-SFW.safetensors")
 	outPath := filepath.Join(dataPath, "web/img/sd_out.png")
 	cmdPath := filepath.Join(dataPath, "sd/sd")
 
@@ -83,15 +83,15 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 		//"--vae", vaePath, // NOT WORKING DO NOT USE
 		"-o", outPath,
 		"--rng", "std_default",
-		//"--cfg-scale", "7",
+		"--cfg-scale", "4",
 		"--sampling-method", "dpm2",
-		//"--steps", "20",
+		"--steps", "10",
 		"--seed", "-1",
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
-		"--clip-skip", "2",
-		"--width", "512",
-		"--height", "768",
+		//"--clip-skip", "2",
+		"--width", "1024",
+		"--height", "1024",
 	}
 
 	// Print cmdArgs
@@ -215,6 +215,7 @@ func (pr *ProgressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// Download downloads a file from a URL to a local path, resuming if possible.
 func Download(url string, localPath string) error {
 	dir := filepath.Dir(localPath)
 	// Ensure the directory exists
@@ -235,11 +236,6 @@ func Download(url string, localPath string) error {
 		return fmt.Errorf("failed to stat file: %w", err)
 	}
 	size := fi.Size()
-
-	// If already downloaded, no need to download again
-	if size > 0 {
-		fmt.Printf("Resuming download from byte %d...\n", size)
-	}
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("GET", url, nil)
@@ -270,7 +266,7 @@ func Download(url string, localPath string) error {
 	pterm.Info.Printf("Downloading model:\nURL: %s\nFile: %s\n", url, localPath)
 
 	// Initialize the progress bar
-	progressBar, _ := pterm.DefaultProgressbar.WithTotal(int(resp.ContentLength)).WithTitle("Downloading").Start()
+	progressBar, _ := pterm.DefaultProgressbar.WithTotal(int(resp.ContentLength + size)).WithTitle("Downloading").Start()
 
 	// Wrap the response body in a custom reader that updates the progress bar
 	progressReader := &ProgressReader{
@@ -292,7 +288,11 @@ func Download(url string, localPath string) error {
 	// Finish the progress bar
 	progressBar.Stop()
 
-	pterm.Success.Println("Download completed successfully.")
+	// Update the model's downloaded state in the database
+	// err = UpdateModelDownloadedState(modelName, true)
+	// if err != nil {
+	//     log.Errorf("Failed to update model downloaded state: %v", err)
+	// }
 
 	return nil
 }
@@ -311,18 +311,32 @@ func GetDownloadProgress(key string) string {
 	return "0%"
 }
 
+// GetExpectedFileSize returns the expected file size of a download.
+func GetExpectedFileSize(url string) (int64, error) {
+	// Create a new HTTP request
+	req, err := http.NewRequest("HEAD", url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Make the HTTP request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("failed to start file download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("bad status getting file: %s", resp.Status)
+	}
+
+	return resp.ContentLength, nil
+}
+
 func (m *Model) Delete() error {
 	if err := os.Remove(m.LocalPath); err != nil {
 		return fmt.Errorf("failed to delete model: %w", err)
 	}
 
 	return nil
-}
-
-func IncrementTurnCounter() {
-	TurnCounter++
-}
-
-func GetTurnCounter() int {
-	return TurnCounter
 }
