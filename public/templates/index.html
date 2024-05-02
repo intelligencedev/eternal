@@ -135,7 +135,7 @@
                 style="outline: none;">write a complete example in javascript that prints hello world and then another separate complete example that prints hello art!.</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-prompt-send btn-success " type="button" hx-post="/chatsubmit"
-                hx-target="#chat" hx-swap="beforeend"
+                hx-target="#chat" hx-swap="beforeend show:bottom"
                 hx-on::after-request="document.getElementById('message').value=''">
                 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path fill="#ffffff" fill-rule="evenodd"
