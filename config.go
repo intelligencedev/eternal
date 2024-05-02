@@ -27,13 +27,14 @@ type AppConfig struct {
 }
 
 type BackendHost struct {
-	ID        uint           `gorm:"primaryKey" yaml:"-"`
-	Host      string         `yaml:"host" gorm:"column:host"`
-	Port      string         `yaml:"port" gorm:"column:port"`
-	ModelType string         `yaml:"model_type" gorm:"column:model_type"`
-	CreatedAt time.Time      `yaml:"-"`
-	UpdatedAt time.Time      `yaml:"-"`
-	DeletedAt gorm.DeletedAt `gorm:"index" yaml:"-"`
+	ID            uint           `gorm:"primaryKey" yaml:"-"`
+	Host          string         `yaml:"host" gorm:"column:host"`
+	Port          string         `yaml:"port" gorm:"column:port"`
+	GgufGPULayers int            `yaml:"gpu_layers" gorm:"column:gguf_gpu_layers"`
+	ModelType     string         `yaml:"model_type" gorm:"column:model_type"`
+	CreatedAt     time.Time      `yaml:"-"`
+	UpdatedAt     time.Time      `yaml:"-"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" yaml:"-"`
 }
 
 // LoadConfig loads configuration from a YAML file.
