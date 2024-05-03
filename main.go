@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/blevesearch/bleve/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -43,8 +44,9 @@ var (
 	osFS  afero.Fs = afero.NewOsFs()
 	memFS afero.Fs = afero.NewMemMapFs()
 
-	chatTurn = 1
-	sqliteDB *SQLiteDB
+	chatTurn    = 1
+	sqliteDB    *SQLiteDB
+	searchIndex bleve.Index
 
 	tools []Tool
 )
@@ -126,6 +128,23 @@ func main() {
 	err = sqliteDB.AutoMigrate(&ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
 	if err != nil {
 		log.Fatalf("Failed to auto migrate database: %v", err)
+	}
+
+	searchDB := fmt.Sprintf("%s/search.bleve", config.DataPath)
+
+	// If the database exists, open it, else create a new one
+	if _, err := os.Stat(searchDB); os.IsNotExist(err) {
+		mapping := bleve.NewIndexMapping()
+		searchIndex, err = bleve.New(searchDB, mapping)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		searchIndex, err = bleve.Open(searchDB)
+		if err != nil {
+			log.Fatalf("Failed to open search index: %v", err)
+		}
 	}
 
 	// Instantiate ModelParams then populate it with each model from the config
@@ -722,7 +741,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
 			// Replace {system} with the system message
-			// fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic.")
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -734,6 +753,22 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				TopP:          1.0, // Prefer greedy decoding for now
 				TopK:          1.0, // Prefer greedy decoding for now
 			}
+
+			// Search the search index for the chat message
+			// searchResults, err := search.Search(searchIndex, chatMessage)
+			// if err != nil {
+			// 	log.Errorf("Error searching index: %v", err)
+			// }
+
+			// search for some text
+			// query := bleve.NewMatchQuery(chatMessage)
+			// search := bleve.NewSearchRequest(query)
+			// searchResults, err := searchIndex.Search(search)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	return err
+			// }
+			// pterm.Info.Println(searchResults)
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
@@ -812,14 +847,12 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	chatMessage = performToolWorkflow(c, config, chatMessage)
 
 	// Process the message using the provided function
-	err = processMessage(wsMessage, chatMessage)
-	if err != nil {
-		pterm.PrintOnError(err)
-
-		pterm.Warning.Println(config.DataPath)
+	res := processMessage(wsMessage, chatMessage)
+	if res != nil {
+		pterm.Warning.Println(res)
 
 		if config.Tools.Memory.Enabled {
-			err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+			err = storeChat(sqliteDB.db, config, chatMessage, res.Error(), wsMessage.Model)
 			if err != nil {
 				pterm.PrintOnError(err)
 			}
@@ -852,6 +885,10 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			pterm.Info.Println("Retrieving memory content...")
 			document = fmt.Sprintf("%s\n%s", document, documentString)
 
+			// Replace new lines with spaces
+			document = strings.ReplaceAll(document, "\n\n", "\n")
+		} else {
+			pterm.Info.Println("No memory content found...")
 		}
 	}
 
@@ -876,6 +913,9 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		if len(urls[:topN]) > 0 {
 			for _, url := range urls[:topN] {
+
+				pterm.Info.Printf("Fetching URL: %s\n", url)
+
 				page, err := web.WebGetHandler(url)
 				if err != nil {
 					pterm.PrintOnError(err)
@@ -915,16 +955,25 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
 
-	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference for the following:\n%s", document, chatMessage)
+	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the following task or question:\n%s", document, chatMessage)
+
+	pterm.Error.Println("Tool workflow complete")
 
 	return chatMessage
 }
 
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
 	// Generate embeddings
-	pterm.Warning.Println("Generating embeddings...")
-	turnMemoryText := prompt + "\n" + response
-	err := embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
+	pterm.Warning.Println("Generating embeddings for chat...")
+	//turnMemoryText := prompt + "\n" + response
+
+	// err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", prompt, "txt", 2048, 500, config.DataPath)
+	// if err != nil {
+	// 	pterm.Error.Println("Error generating embeddings:", err)
+	// 	return err
+	// }
+
+	err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", response, "txt", 2048, 500, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err
