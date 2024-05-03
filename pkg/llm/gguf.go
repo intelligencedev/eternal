@@ -136,9 +136,10 @@ type GGUFOptions struct {
 }
 
 func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
-	cmdPath = filepath.Join(cmdPath, "gguf/main")
+	execPath := filepath.Join(cmdPath, "gguf/main")
+	//cachePath := filepath.Join(cmdPath, "cache")
 
-	ctxSize := fmt.Sprintf("%d", options.CtxSize)
+	//ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
 	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
 	topP := fmt.Sprintf("%f", options.TopP)
@@ -148,27 +149,31 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--no-display-prompt",
 		"-m", options.Model,
 		"-p", options.Prompt,
-		"-c", ctxSize,
+		"-c", "0", // 0 = loaded from model
+		"--n-predict", "-1", // -1 = infinity, -2 = until context filled
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
 		"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
-		//"--reverse-prompt", "<|eot_id|>",
+		"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
+		//--dynatemp-range", "0.5", // 0.0 = disabled
+		"--flash-attn", // enable flash attention, default disabled
 		// "--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
 		//"--simple-io",
 		//"--keep", "2048",
-		//"--prompt-cache", "cache",
+		//"--prompt-cache", cachePath,
+		//"--prompt-cache-all",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
-		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
+		"--override-kv", "tokenizer.ggml.pre=str:llama3",
 	}
 
-	return exec.Command(cmdPath, cmdArgs...)
+	return exec.Command(execPath, cmdArgs...)
 }
 
 // Upgrades the HTTP connection to a WebSocket connection

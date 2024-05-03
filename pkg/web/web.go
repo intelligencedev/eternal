@@ -38,6 +38,8 @@ var (
 		"www.nbcnews.com",
 		"www.msn.com",
 		"www.sciencedaily.com",
+		"reuters.com",
+		"bbc.com",
 		// Add more URLs to block from search results
 	}
 )
@@ -119,6 +121,31 @@ func cleanURL(url string) string {
 	return url
 }
 
+// func ParseReaderView(r io.Reader) (string, error) {
+// 	doc, err := html.Parse(r)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	var readerView bytes.Buffer
+// 	var f func(*html.Node)
+// 	f = func(n *html.Node) {
+// 		// Check if the node is an element node
+// 		if n.Type == html.ElementNode {
+// 			// Check if the node is a block element that typically contains content
+// 			if isContentElement(n) {
+// 				renderNode(&readerView, n)
+// 			}
+// 		}
+// 		for c := n.FirstChild; c != nil; c = c.NextSibling {
+// 			f(c)
+// 		}
+// 	}
+// 	f(doc)
+
+// 	return readerView.String(), nil
+// }
+
 func ParseReaderView(r io.Reader) (string, error) {
 	doc, err := html.Parse(r)
 	if err != nil {
@@ -130,8 +157,8 @@ func ParseReaderView(r io.Reader) (string, error) {
 	f = func(n *html.Node) {
 		// Check if the node is an element node
 		if n.Type == html.ElementNode {
-			// Check if the node is a block element that typically contains content
-			if isContentElement(n) {
+			// Check if the node is an article element or a descendant of an article element
+			if isArticleElement(n) {
 				renderNode(&readerView, n)
 			}
 		}
@@ -142,6 +169,19 @@ func ParseReaderView(r io.Reader) (string, error) {
 	f(doc)
 
 	return readerView.String(), nil
+}
+
+// isArticleElement checks if the node is an article element or a descendant of an article element.
+func isArticleElement(n *html.Node) bool {
+	if n.DataAtom == atom.Article {
+		return true
+	}
+	for p := n.Parent; p != nil; p = p.Parent {
+		if p.DataAtom == atom.Article {
+			return true
+		}
+	}
+	return false
 }
 
 // isContentElement checks if the node is an element of interest for the reader view.
