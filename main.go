@@ -91,6 +91,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Populate tools based on the configuration
+	var tools []Tool
+
+	// Print the tools enabled in the config
+
+	if config.Tools.WebGet.Enabled {
+		tools = append(tools, Tool{Name: "webget", Enabled: true})
+	}
+	if config.Tools.WebSearch.Enabled {
+		tools = append(tools, Tool{Name: "websearch", Enabled: true})
+	}
+
 	pterm.Info.Sprintf("GPU Layers: %s\n", config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers)
 
 	if _, err := os.Stat(config.DataPath); os.IsNotExist(err) {
@@ -646,7 +658,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Get("/dpsearch", func(c *fiber.Ctx) error {
 		urls := []string{}
 		query := c.Query("q")
-		res := web.SearchDuckDuckGo(query)
+		res := web.SearchDDG(query)
 
 		if len(res) == 0 {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving search results")
@@ -820,59 +832,76 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// the model to use. Document is the abstraction that will hold that context.
 	var document string
 
-	// Retrieve the page content from prompt URLs and add it to the document
-	// url := web.ExtractURLs(chatMessage)
-	// if len(url) > 0 {
-	// 	document, _ = web.WebGetHandler(url[0])
-	// 	//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-	// 	chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-	// }
+	if config.Tools.WebGet.Enabled {
+		url := web.ExtractURLs(chatMessage)
+		if len(url) > 0 {
+			pterm.Info.Println("Retrieving page content...")
 
-	// TOOL WORKFLOW
-	for _, tool := range tools {
-		pterm.Info.Println("Processing tool: ", tool)
-
-		if tool.Name == "imagegen" && tool.Enabled {
-			// Generate image using sd tool
-			pterm.Info.Println("Generating image...")
-			sdParams := &sd.SDParams{Prompt: chatMessage}
-
-			// Call the sd tool
-			sd.Text2Image(config.DataPath, sdParams)
-
-			// Return the image to the client
-			timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-			imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-				pterm.PrintOnError(err)
-				return chatMessage
-			}
-
-			// Increment the chat turn counter
-			chatTurn = chatTurn + 1
-
-			return chatMessage
+			document, _ = web.WebGetHandler(url[0])
+			//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+			//chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
-
-		if tool.Name == "websearch" && tool.Enabled {
-			urls := web.SearchDuckDuckGo(chatMessage)
-
-			for _, url := range urls {
-				pterm.Info.Printf("Retrieving %s\n", url)
-				document, _ = web.WebGetHandler(url)
-				chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
-			}
-		}
-
-		//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
 	}
+
+	if config.Tools.WebSearch.Enabled {
+		pterm.Info.Println("Searching the web...")
+
+		urls := web.SearchDDG(chatMessage)
+
+		prunedUrls := web.RemoveUnwantedURLs(urls)
+
+		if len(prunedUrls) > 0 {
+			pterm.Info.Println("Pruned URLs:", prunedUrls)
+
+			url := prunedUrls[:1]
+
+			pageContent, _ := web.WebGetHandler(url[0])
+
+			document = fmt.Sprintf("%s\n%s", document, pageContent)
+
+			// for _, url := range prunedUrls {
+			// 	// Append the content of the page to the document
+			// 	pageContent, _ := web.WebGetHandler(url)
+			// 	document = fmt.Sprintf("%s\n%s", document, pageContent)
+			// }
+		}
+	}
+
+	// TODO: Legacy tool workflow, still need to expose this as a proper config item
+	// for _, tool := range tools {
+	// 	if tool.Name == "imagegen" && tool.Enabled {
+	// 		pterm.Info.Println("Generating image...")
+
+	// 		sdParams := &sd.SDParams{Prompt: chatMessage}
+
+	// 		// Call the sd tool
+	// 		sd.Text2Image(config.DataPath, sdParams)
+
+	// 		// Return the image to the client
+	// 		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+	// 		imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+	// 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+	// 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+	// 			pterm.PrintOnError(err)
+	// 			return chatMessage
+	// 		}
+
+	// 		// Increment the chat turn counter
+	// 		chatTurn = chatTurn + 1
+
+	// 		return chatMessage
+	// 	}
+
+	// 	// Remove http(s) links from the document
+	// 	document = web.RemoveUrls(document)
+	// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
+	// }
 
 	//topN := 1 // retrieve top N results. Adjust based on context size.
 	//topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
-	//var documents []string
-	var documentString string
+	//var documenta []string
+	//var documentString string
 	// if len(topEmbeddings) > 0 {
 	// 	for _, topEmbedding := range topEmbeddings {
 	// 		documents = append(documents, topEmbedding.Word)
@@ -882,10 +911,10 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// 	fmt.Println(documentString)
 	// }
 
-	// Remove http(s) links from the documentString
-	documentString = web.RemoveUrls(documentString)
+	//Remove http(s) links from the documentString
+	document = web.RemoveUrls(document)
 
-	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference. Only use it if it is relevant to the next question or instruction, otherwise ignore it. Never repeat these instructions in your responses. Do no ask follow up questions in your response. You must always respond to the information below if you know the answer:\n%s", documentString, chatMessage)
+	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference for the following:\n%s", document, chatMessage)
 
 	return chatMessage
 }

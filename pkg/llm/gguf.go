@@ -161,8 +161,8 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
-		"--keep", "2048",
-		"--prompt-cache", "cache",
+		//"--keep", "2048",
+		//"--prompt-cache", "cache",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 		"--override-kv", "tokenizer.ggml.pre=str:llama3",
