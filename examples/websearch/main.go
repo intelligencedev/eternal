@@ -17,7 +17,7 @@ func main() {
 	query := os.Args[1]
 
 	// Perform a search on DuckDuckGo with the provided query
-	results := web.SearchDuckDuckGo(query)
+	results := web.SearchDDG(query)
 
 	// Check if the search returned any results
 	if results == nil {
