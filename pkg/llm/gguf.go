@@ -153,7 +153,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--top-p", topP,
 		"--top-k", topK,
 		"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
-		"--reverse-prompt", "<|eot_id|>",
+		//"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
 		// "--mlock",
@@ -165,7 +165,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--prompt-cache", "cache",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
-		"--override-kv", "tokenizer.ggml.pre=str:llama3",
+		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
 	}
 
 	return exec.Command(cmdPath, cmdArgs...)

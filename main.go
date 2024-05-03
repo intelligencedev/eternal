@@ -818,7 +818,7 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 
 		pterm.Warning.Println(config.DataPath)
 
-		//err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+		err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
@@ -832,14 +832,30 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// the model to use. Document is the abstraction that will hold that context.
 	var document string
 
+	if config.Tools.Memory.Enabled {
+		topN := config.Tools.Memory.TopN // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+
+			pterm.Info.Println("Retrieving memory content...")
+			document = fmt.Sprintf("%s\n%s", document, documentString)
+
+		}
+	}
+
 	if config.Tools.WebGet.Enabled {
 		url := web.ExtractURLs(chatMessage)
 		if len(url) > 0 {
 			pterm.Info.Println("Retrieving page content...")
 
 			document, _ = web.WebGetHandler(url[0])
-			//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-			//chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
 	}
 
@@ -853,7 +869,8 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		if len(prunedUrls) > 0 {
 			pterm.Info.Println("Pruned URLs:", prunedUrls)
 
-			url := prunedUrls[:1]
+			topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
+			url := prunedUrls[:topN]
 
 			pageContent, _ := web.WebGetHandler(url[0])
 
@@ -868,50 +885,32 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	// TODO: Legacy tool workflow, still need to expose this as a proper config item
-	// for _, tool := range tools {
-	// 	if tool.Name == "imagegen" && tool.Enabled {
-	// 		pterm.Info.Println("Generating image...")
+	for _, tool := range tools {
+		if tool.Name == "imagegen" && tool.Enabled {
+			pterm.Info.Println("Generating image...")
 
-	// 		sdParams := &sd.SDParams{Prompt: chatMessage}
+			sdParams := &sd.SDParams{Prompt: chatMessage}
 
-	// 		// Call the sd tool
-	// 		sd.Text2Image(config.DataPath, sdParams)
+			// Call the sd tool
+			sd.Text2Image(config.DataPath, sdParams)
 
-	// 		// Return the image to the client
-	// 		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-	// 		imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-	// 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-	// 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-	// 			pterm.PrintOnError(err)
-	// 			return chatMessage
-	// 		}
+			// Return the image to the client
+			timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+			imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+				pterm.PrintOnError(err)
+				return chatMessage
+			}
 
-	// 		// Increment the chat turn counter
-	// 		chatTurn = chatTurn + 1
+			// Increment the chat turn counter
+			chatTurn = chatTurn + 1
 
-	// 		return chatMessage
-	// 	}
+			return chatMessage
+		}
+	}
 
-	// 	// Remove http(s) links from the document
-	// 	document = web.RemoveUrls(document)
-	// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-	// }
-
-	//topN := 1 // retrieve top N results. Adjust based on context size.
-	//topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-	//var documenta []string
-	//var documentString string
-	// if len(topEmbeddings) > 0 {
-	// 	for _, topEmbedding := range topEmbeddings {
-	// 		documents = append(documents, topEmbedding.Word)
-	// 	}
-	// 	documentString = strings.Join(documents, " ")
-	// 	fmt.Println("Document:")
-	// 	fmt.Println(documentString)
-	// }
-
-	//Remove http(s) links from the documentString
+	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
 
 	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference for the following:\n%s", document, chatMessage)

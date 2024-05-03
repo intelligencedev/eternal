@@ -2,14 +2,14 @@
 current_user: 'User'
 
 # Display name for LLM responses
-assistant_name: 'Assistant'
+assistant_name: 'Eternal Assistant'
 
 # Host name and port of the frontend and management server
 control_host: 'localhost'
 control_port: 8080
 
 # datapath will be created by Eternal to host persistent data
-data_path: '/Users/$USER/.eternal'
+data_path: '/Users/arturoaquino/.eternal-v1'
 
 # Service hosts for specific functionalities
 service_hosts:
@@ -34,11 +34,20 @@ service_hosts:
       host: 'localhost'
       port: '8080'
       gpu_layers: -1
-
     llm_host_2:
       host: 'localhost'
       port: '8080'
       gpu_layers: -1
+
+tools:
+  memory:
+    enabled: true
+    top_n: 3 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+  webget:
+    enabled: false
+    top_n: 1 # Number of URLs to return. Higher numbers require models with much higher context.
+  websearch:
+    enabled: false
 
 # OpenAI API Key
 oai_key: 'sk-...'
@@ -54,12 +63,6 @@ language_models:
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
     prompt: '{system}\n\n{prompt}'
     ctx: 128000
-    roles:
-      - 'all'
-  - name: 'google-gemini-1.5'
-    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
-    prompt: '{prompt}'
-    ctx: 500000
     roles:
       - 'all'
   - name: 'anthropic-claude-opus'
