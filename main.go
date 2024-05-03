@@ -818,7 +818,12 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 
 		pterm.Warning.Println(config.DataPath)
 
-		err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+		if config.Tools.Memory.Enabled {
+			err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+			if err != nil {
+				pterm.PrintOnError(err)
+			}
+		}
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
@@ -860,27 +865,24 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.WebSearch.Enabled {
+
+		topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
+
 		pterm.Info.Println("Searching the web...")
 
 		urls := web.SearchDDG(chatMessage)
 
-		prunedUrls := web.RemoveUnwantedURLs(urls)
+		pterm.Warning.Printf("URLs to fetch: %v\n", urls)
 
-		if len(prunedUrls) > 0 {
-			pterm.Info.Println("Pruned URLs:", prunedUrls)
+		if len(urls[:topN]) > 0 {
+			for _, url := range urls[:topN] {
+				page, err := web.WebGetHandler(url)
+				if err != nil {
+					pterm.PrintOnError(err)
+				}
 
-			topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
-			url := prunedUrls[:topN]
-
-			pageContent, _ := web.WebGetHandler(url[0])
-
-			document = fmt.Sprintf("%s\n%s", document, pageContent)
-
-			// for _, url := range prunedUrls {
-			// 	// Append the content of the page to the document
-			// 	pageContent, _ := web.WebGetHandler(url)
-			// 	document = fmt.Sprintf("%s\n%s", document, pageContent)
-			// }
+				document = fmt.Sprintf("%s\n%s", document, page)
+			}
 		}
 	}
 

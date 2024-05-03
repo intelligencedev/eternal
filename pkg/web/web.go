@@ -252,6 +252,9 @@ func SearchDDG(query string) []string {
 	// Only return the top n results
 	// resultURLs = resultURLs[:3]
 
+	// Remove unwanted URLs from the list
+	resultURLs = RemoveUnwantedURLs(resultURLs)
+
 	pterm.Warning.Println("Search results:", resultURLs)
 
 	return resultURLs
@@ -282,10 +285,12 @@ func GetSearchResults(urls []string) string {
 func RemoveUnwantedURLs(urls []string) []string {
 	var resultURLs []string
 	for _, url := range urls {
-		// Check if the URL contains unwanted URLs
+		pterm.Info.Printf("Checking URL: %s", url)
+
 		unwanted := false
 		for _, unwantedURL := range unwantedURLs {
 			if strings.Contains(url, unwantedURL) {
+				pterm.Warning.Printf("URL %s contains unwanted URL %s", url, unwantedURL)
 				unwanted = true
 				break
 			}
@@ -294,6 +299,9 @@ func RemoveUnwantedURLs(urls []string) []string {
 			resultURLs = append(resultURLs, url)
 		}
 	}
+
+	pterm.Info.Printf("Filtered URLs: %v", resultURLs)
+
 	return resultURLs
 }
 
