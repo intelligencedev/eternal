@@ -160,7 +160,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
-		"--simple-io",
+		//"--simple-io",
 		//"--keep", "2048",
 		//"--prompt-cache", "cache",
 		//"--grammar-file", "./json.gbnf",
