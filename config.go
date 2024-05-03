@@ -24,6 +24,14 @@ type AppConfig struct {
 	GoogleKey      string                            `yaml:"google_key"`
 	LanguageModels []llm.Model                       `yaml:"language_models"`
 	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
+	Tools          struct {
+		WebGet struct {
+			Enabled bool `yaml:"enabled"`
+		} `yaml:"webget"`
+		WebSearch struct {
+			Enabled bool `yaml:"enabled"`
+		} `yaml:"websearch"`
+	} `yaml:"tools"`
 }
 
 type BackendHost struct {

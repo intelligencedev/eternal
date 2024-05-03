@@ -21,22 +21,23 @@ import (
 
 var (
 	unwantedURLs = []string{
-		"youtube.com",
-		"wired.com",
-		"techcrunch.com",
-		"wsj.com",
-		"cnn.com",
-		"nytimes.com",
-		"forbes.com",
-		"businessinsider.com",
-		"theverge.com",
-		"thehill.com",
-		"theatlantic.com",
-		"foxnews.com",
-		"theguardian.com",
-		"nbcnews.com",
-		"msn.com",
-		"sciencedaily.com",
+		"www.youtube.com",
+		"www.youtube.com/watch",
+		"www.wired.com",
+		"www.techcrunch.com",
+		"www.wsj.com",
+		"www.cnn.com",
+		"www.nytimes.com",
+		"www.forbes.com",
+		"www.businessinsider.com",
+		"www.theverge.com",
+		"www.thehill.com",
+		"www.theatlantic.com",
+		"www.foxnews.com",
+		"www.theguardian.com",
+		"www.nbcnews.com",
+		"www.msn.com",
+		"www.sciencedaily.com",
 		// Add more URLs to block from search results
 	}
 )
@@ -186,8 +187,8 @@ func isInlineElement(n *html.Node) bool {
 	return false
 }
 
-// SearchDuckDuckGo performs a search on DuckDuckGo and retrieves the HTML of the first page of results.
-func SearchDuckDuckGo(query string) []string {
+// SearchDDG performs a search on DuckDuckGo and retrieves the HTML of the first page of results.
+func SearchDDG(query string) []string {
 	// Initialize headless Chrome
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -248,11 +249,10 @@ func SearchDuckDuckGo(query string) []string {
 		return nil
 	}
 
-	// Remove unwanted URLs
-	resultURLs = RemoveUnwantedURLs(resultURLs)
-
 	// Only return the top n results
-	resultURLs = resultURLs[:1]
+	// resultURLs = resultURLs[:3]
+
+	pterm.Warning.Println("Search results:", resultURLs)
 
 	return resultURLs
 }
@@ -279,23 +279,21 @@ func GetSearchResults(urls []string) string {
 }
 
 // RemoveUnwantedURLs removes unwanted URLs from the list of URLs.
-func Contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 func RemoveUnwantedURLs(urls []string) []string {
 	var resultURLs []string
 	for _, url := range urls {
-		if !Contains(unwantedURLs, url) {
+		// Check if the URL contains unwanted URLs
+		unwanted := false
+		for _, unwantedURL := range unwantedURLs {
+			if strings.Contains(url, unwantedURL) {
+				unwanted = true
+				break
+			}
+		}
+		if !unwanted {
 			resultURLs = append(resultURLs, url)
 		}
 	}
-
 	return resultURLs
 }
 
