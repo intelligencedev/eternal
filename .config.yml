@@ -41,13 +41,13 @@ service_hosts:
 
 tools:
   memory:
-    enabled: true
-    top_n: 3 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+    enabled: false
+    top_n: 1 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
   webget:
     enabled: false
-    top_n: 1 # Number of URLs to return. Higher numbers require models with much higher context.
   websearch:
-    enabled: false
+    enabled: true
+    top_n: 1 # Number of page results to retrieve. Higher numbers require models with much higher context.
 
 # OpenAI API Key
 oai_key: 'sk-...'
