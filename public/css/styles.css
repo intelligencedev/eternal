@@ -4,6 +4,9 @@
     --et-green: #2cb67d;
     --et-blue: #2d68f0;
     --et-red: #e45858;
+    --et-yellow: #f3d672;
+    --et-light: #d9d9d9;
+
 
     /* Galactic Gray Theme */
     --et-galactic-primary: #cccccc;
@@ -149,7 +152,7 @@ pre code {
 
 .dark-blur {
     /* Apply a blur effect to the background */
-    backdrop-filter: blur(10px) brightness(90%);
+    backdrop-filter: blur(8px) brightness(100%);
     --webkit-backface-visibility: hidden;
     --moz-backface-visibility: hidden;
     --webkit-transform: translate3d(0, 0, 0);
