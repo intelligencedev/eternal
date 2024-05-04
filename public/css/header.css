@@ -1,8 +1,7 @@
 #cb-header {
     position: relative;
     height: 50px;
-    /* Adjust the height as needed */
-    /* background: linear-gradient(to bottom, rgba(28, 10, 51, 1) 75%, rgba(0, 0, 0, 0) 100%); */
+    filter: blur(5px); /* Apply blur */
 }
 
 .box-container {
@@ -10,14 +9,12 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 2;
+    z-index: 1; /* Move behind the header */
 }
 
 .box {
     width: 20px;
-    /* Half of the original size */
     height: 20px;
-    /* Half of the original size */
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.5s ease;
@@ -27,53 +24,50 @@
 .box .panel {
     position: absolute;
     width: 20px;
-    /* Half of the original size */
     height: 20px;
-    /* Half of the original size */
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-color, #FFF); /* Default to white if variable not set */
     border: 1px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px;
 }
 
-.box .panel.front {
-    transform: translateZ(12.5px);
-    /* Half of the original size */
+.box .panel::before,
+.box .panel::after {
+    content: '';
+    display: block;
+    width: 12px; /* Diameter = 2 * radius */
+    height: 12px; /* Diameter = 2 * radius */
+    border-radius: 50%; /* Makes the shape a circle */
+    position: absolute; /* Positions the pseudo-elements absolutely within their parent */
 }
 
-.box .panel.back {
-    transform: rotateY(180deg) translateZ(12.5px);
-    /* Half of the original size */
+.box .panel::before {
+    background: black;
+    top: 0; /* Aligns the circle to the top */
+    left: 0; /* Aligns the circle to the left */
 }
 
-.box .panel.top {
-    transform: rotateX(90deg) translateZ(12.5px);
-    /* Half of the original size */
+.box .panel::after {
+    background: white;
+    bottom: 0; /* Aligns the circle to the bottom */
+    right: 0; /* Aligns the circle to the right */
 }
 
-.box .panel.bottom {
-    transform: rotateX(-90deg) translateZ(12.5px);
-    /* Half of the original size */
-}
 
-.box .panel.left {
-    transform: rotateY(-90deg) translateZ(12.5px);
-    /* Half of the original size */
-}
-
-.box .panel.right {
-    transform: rotateY(90deg) translateZ(12.5px);
-    /* Half of the original size */
-}
+.box .panel.front { transform: translateZ(10px); }
+.box .panel.back { transform: rotateY(180deg) translateZ(10px); }
+.box .panel.top { transform: rotateX(90deg) translateZ(10px); }
+.box .panel.bottom { transform: rotateX(-90deg) translateZ(10px); }
+.box .panel.left { transform: rotateY(-90deg) translateZ(10px); }
+.box .panel.right { transform: rotateY(90deg) translateZ(10px); }
 
 @keyframes spin {
-    from {
-        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
-    }
-
-    to {
-        transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg);
-    }
+    from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    to { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
 }
 
 .box:hover {
-    animation: spin linear infinite;
+    animation: spin 2s linear infinite;
 }
