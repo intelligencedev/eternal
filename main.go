@@ -14,6 +14,7 @@ import (
 	"eternal/pkg/sd"
 	"eternal/pkg/web"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -47,8 +48,6 @@ var (
 	chatTurn    = 1
 	sqliteDB    *SQLiteDB
 	searchIndex bleve.Index
-
-	tools []Tool
 )
 
 type WebSocketMessage struct {
@@ -57,10 +56,9 @@ type WebSocketMessage struct {
 	Headers     map[string]interface{} `json:"HEADERS"`
 }
 
-// Define a Tool struct
 type Tool struct {
-	Name    string
-	Enabled bool
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
 }
 
 func main() {
@@ -208,13 +206,6 @@ func main() {
 		log.Fatalf("Failed to load image model data to database: %v", err)
 	}
 
-	// Populate tools
-	websearch := Tool{Name: "websearch", Enabled: false}
-	imagegen := Tool{Name: "imagegen", Enabled: false}
-
-	// Append tools to the list
-	tools = append(tools, websearch, imagegen)
-
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -307,27 +298,19 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Post("/tool/:toolName", func(c *fiber.Ctx) error {
 		toolName := c.Params("toolName")
 
-		// Find the index of the tool and a flag indicating if it's found
-		var index int
-		found := false
-		for i, t := range tools {
-			if t.Name == toolName {
-				index = i
-				found = true
-				break
-			}
+		switch toolName {
+		case "websearch":
+			config.Tools.WebSearch.Enabled = !config.Tools.WebSearch.Enabled
+		case "webget":
+			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
+		case "imggen":
+			config.Tools.ImgGen.Enabled = true
+		default:
+			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
 		}
 
-		// If the tool is not found, return a 404 error
-		if !found {
-			return c.Status(404).SendString("Tool not found")
-		}
-
-		// Toggle the Enabled status of the tool
-		tools[index].Enabled = !tools[index].Enabled
-
-		// Return the updated tool as JSON
-		return c.JSON(tools[index])
+		return c.JSON(fiber.Map{
+			"message": fmt.Sprintf("Tool %s is now %t", toolName, config.Tools.ImgGen.Enabled)})
 	})
 
 	app.Get("/openai/models", func(c *fiber.Ctx) error {
@@ -535,6 +518,42 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				if err := sd.Download(downloadURL, modelPath); err != nil {
 					log.Errorf("Error in download: %v", err)
 				}
+			}()
+		}
+
+		// https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/sdxl_vae.safetensors
+		vaeName := "sdxl_vae.safetensors"
+		vaeURL := "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/sdxl_vae.safetensors"
+		vaePath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, vaeName)
+
+		// Download SDXL VAE fix if it doesn't exist
+		if _, err := os.Stat(vaePath); os.IsNotExist(err) {
+			// Start the download in a goroutine
+			go func() {
+				// Download the file
+				response, err := http.Get(vaeURL)
+				if err != nil {
+					pterm.Error.Printf("Failed to download file: %v", err)
+					return
+				}
+				defer response.Body.Close()
+
+				// Create the file
+				file, err := os.Create(vaePath)
+				if err != nil {
+					pterm.Error.Printf("Failed to create file: %v", err)
+					return
+				}
+				defer file.Close()
+
+				// Write the downloaded data to the file
+				_, err = io.Copy(file, response.Body)
+				if err != nil {
+					pterm.Error.Printf("Failed to write to file: %v", err)
+					return
+				}
+
+				pterm.Info.Printf("Downloaded file: %s", vaeName)
 			}()
 		}
 
@@ -858,6 +877,11 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Perform tool workflow and update chatMessage
 	chatMessage = performToolWorkflow(c, config, chatMessage)
 
+	// If image generation is enabled, return early
+	if config.Tools.ImgGen.Enabled {
+		return
+	}
+
 	// Process the message using the provided function
 	res := processMessage(wsMessage, chatMessage)
 	if res != nil {
@@ -881,6 +905,29 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// Begin tool workflow. Tools will add context to the submitted message for
 	// the model to use. Document is the abstraction that will hold that context.
 	var document string
+
+	if config.Tools.ImgGen.Enabled {
+		pterm.Info.Println("Generating image...")
+		sdParams := &sd.SDParams{Prompt: chatMessage}
+
+		// Call the sd tool
+		sd.Text2Image(config.DataPath, sdParams)
+
+		// Return the image to the client
+		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+		imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+			pterm.PrintOnError(err)
+			return chatMessage
+		}
+
+		// Increment the chat turn counter
+		chatTurn = chatTurn + 1
+
+		// End the tool workflow
+		return chatMessage
+	}
 
 	if config.Tools.Memory.Enabled {
 		topN := config.Tools.Memory.TopN // retrieve top N results. Adjust based on context size.
@@ -967,31 +1014,28 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}
 	}
 
-	// TODO: Legacy tool workflow, still need to expose this as a proper config item
-	for _, tool := range tools {
-		if tool.Name == "imagegen" && tool.Enabled {
-			pterm.Info.Println("Generating image...")
+	// if config.Tools. == "imagegen" && tool.Enabled {
+	// 	pterm.Info.Println("Generating image...")
 
-			sdParams := &sd.SDParams{Prompt: chatMessage}
+	// 	sdParams := &sd.SDParams{Prompt: chatMessage}
 
-			// Call the sd tool
-			sd.Text2Image(config.DataPath, sdParams)
+	// 	// Call the sd tool
+	// 	sd.Text2Image(config.DataPath, sdParams)
 
-			// Return the image to the client
-			timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-			imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-				pterm.PrintOnError(err)
-				return chatMessage
-			}
+	// 	// Return the image to the client
+	// 	timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+	// 	imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+	// 	formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+	// 	if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+	// 		pterm.PrintOnError(err)
+	// 		return chatMessage
+	// 	}
 
-			// Increment the chat turn counter
-			chatTurn = chatTurn + 1
+	// 	// Increment the chat turn counter
+	// 	chatTurn = chatTurn + 1
 
-			return chatMessage
-		}
-	}
+	// 	return chatMessage
+	// }
 
 	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
