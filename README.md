@@ -44,6 +44,10 @@ Configure the quant level of the models in your `config.yml` appropriately for y
 - Web Search to automatically retrieve top results for a user's prompt for LLM to reference. _Requires Chrome browser installation._
 - Image generation using Stable Diffusion backend.
 
+## Getting Started
+
+Basic [documentation](https://github.com/intelligencedev/eternal/blob/main/docs/general_instructions.md) is provided in the `docs` folder in this repository.
+
 ## Showcase
 
 ### Web Retrieval - Search
