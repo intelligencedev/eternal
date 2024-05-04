@@ -4,11 +4,11 @@ import (
 	"context"
 	"eternal/pkg/documents"
 	"fmt"
-	"os"
 	"strings"
 
 	estore "eternal/pkg/vecstore"
 
+	"github.com/blevesearch/bleve/v2"
 	"github.com/nlpodyssey/cybertron/pkg/models/bert"
 	"github.com/nlpodyssey/cybertron/pkg/tasks"
 	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
@@ -57,9 +57,9 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
+func GenerateEmbeddingForTask(searchIdx bleve.Index, task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
 
-	instruction, ok := INSTRUCTIONS[task]
+	_, ok := INSTRUCTIONS[task]
 	if !ok {
 		fmt.Printf("Unknown task: %s\n", task)
 		return fmt.Errorf("unknown task: %s", task)
@@ -93,6 +93,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	seen := make(map[string]bool)
 	var uniqueChunks []string
 	for _, chunk := range chunks {
+
 		if _, ok := seen[chunk]; !ok {
 			uniqueChunks = append(uniqueChunks, chunk)
 			seen[chunk] = true
@@ -101,7 +102,14 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 
 	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
-	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
+	tasksConfig := &tasks.Config{
+		ModelsDir:        modelsDir,
+		ModelName:        modelName,
+		DownloadPolicy:   tasks.DownloadMissing,
+		ConversionPolicy: tasks.ConvertMissing,
+	}
+
+	model, err := tasks.Load[textencoding.Interface](tasksConfig)
 	if err != nil {
 		pterm.Error.Println("Error loading model...")
 		return err
@@ -110,9 +118,13 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
 	for _, chunk := range uniqueChunks {
+		data := struct {
+			Name string
+		}{
+			Name: chunk,
+		}
 
-		fmt.Print(instruction.Query)
-		fmt.Println(chunk)
+		searchIdx.Index(chunk, data)
 
 		var vec []float64
 
@@ -152,148 +164,163 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	return nil
 }
 
-// GenerateEmbedding generates an embedding from a prompt.
-func GenerateEmbedding(dataPath string) {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: main.go <path_to_input_file>")
-		return
-	}
+// // GenerateEmbedding generates an embedding from a prompt.
+// func GenerateEmbedding(dataPath string) {
+// 	if len(os.Args) < 2 {
+// 		fmt.Println("Usage: main.go <path_to_input_file>")
+// 		return
+// 	}
 
-	// 1. Initialization
-	pterm.Info.Println("Initializing...")
+// 	// 1. Initialization
+// 	pterm.Info.Println("Initializing...")
 
-	db := estore.NewEmbeddingDB()
+// 	db := estore.NewEmbeddingDB()
 
-	// 2. Code Splitting
-	pterm.Info.Println("Splitting code...")
-	inputFilePath := os.Args[1]
-	content, err := os.ReadFile(inputFilePath)
-	if err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		return
-	}
+// 	// 2. Code Splitting
+// 	pterm.Info.Println("Splitting code...")
+// 	inputFilePath := os.Args[1]
+// 	content, err := os.ReadFile(inputFilePath)
+// 	if err != nil {
+// 		fmt.Printf("Error reading file: %v\n", err)
+// 		return
+// 	}
 
-	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
-	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
-	splitter := documents.RecursiveCharacterTextSplitter{
-		Separators:       separators,
-		KeepSeparator:    true,
-		IsSeparatorRegex: false,
-		ChunkSize:        1000,
-		LengthFunction:   func(s string) int { return len(s) },
-	}
-	chunks := splitter.SplitText(string(content))
+// 	separators, _ := documents.GetSeparatorsForLanguage(documents.JSON)
+// 	// Updated the RecursiveCharacterTextSplitter to include OverlapSize and updated SplitText method
+// 	splitter := documents.RecursiveCharacterTextSplitter{
+// 		Separators:       separators,
+// 		KeepSeparator:    true,
+// 		IsSeparatorRegex: false,
+// 		ChunkSize:        1000,
+// 		LengthFunction:   func(s string) int { return len(s) },
+// 	}
+// 	chunks := splitter.SplitText(string(content))
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
+// 	// Index the chunks in the Bleve index
+// 	index, err := bleve.Open("index")
+// 	if err != nil {
+// 		index, err = bleve.New("index", bleve.NewIndexMapping())
+// 		if err != nil {
+// 			fmt.Printf("Error creating index: %v\n", err)
+// 			return
+// 		}
+// 	}
 
-	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
-	if err != nil {
-		pterm.Error.Println("Error loading model...")
-		panic(err)
-	}
+// 	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
 
-	// 3. Embedding Generation
-	pterm.Info.Println("Generating embeddings...")
-	for _, chunk := range chunks {
+// 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
+// 	if err != nil {
+// 		pterm.Error.Println("Error loading model...")
+// 		panic(err)
+// 	}
 
-		fmt.Print("Encoding text...")
-		fmt.Println(chunk)
+// 	// 3. Embedding Generation
+// 	pterm.Info.Println("Generating embeddings...")
+// 	for _, chunk := range chunks {
+// 		err = search.IndexData(&index, chunk, chunk)
+// 		if err != nil {
+// 			fmt.Printf("Error indexing data: %v\n", err)
+// 			return
+// 		}
 
-		var vec []float64
-		err := func(text string) error {
-			result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
-			if err != nil {
-				return err
-			}
+// 		fmt.Print("Encoding text...")
+// 		fmt.Println(chunk)
 
-			vec = result.Vector.Data().F64()[:limit]
+// 		var vec []float64
+// 		err := func(text string) error {
+// 			result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
+// 			if err != nil {
+// 				return err
+// 			}
 
-			embedding := estore.Embedding{
-				Word:       chunk,
-				Vector:     vec,
-				Similarity: 0.0,
-			}
+// 			vec = result.Vector.Data().F64()[:limit]
 
-			db.AddEmbedding(embedding)
+// 			embedding := estore.Embedding{
+// 				Word:       chunk,
+// 				Vector:     vec,
+// 				Similarity: 0.0,
+// 			}
 
-			fmt.Println(result.Vector.Data().F64()[:limit])
+// 			db.AddEmbedding(embedding)
 
-			return nil
-		}(chunk) // Actually invoke the encoder function with the chunk
+// 			fmt.Println(result.Vector.Data().F64()[:limit])
 
-		if err != nil {
-			pterm.Error.Println("Error encoding text...")
-			panic(err)
-		}
-	}
+// 			return nil
+// 		}(chunk) // Actually invoke the encoder function with the chunk
 
-	// Save the database to a file
-	pterm.Info.Println("Saving embeddings...")
-	db.SaveEmbeddings("./test.db")
+// 		if err != nil {
+// 			pterm.Error.Println("Error encoding text...")
+// 			panic(err)
+// 		}
+// 	}
 
-	if len(chunks) > 0 {
-		embedding, ok := db.RetrieveEmbedding(chunks[0])
-		if ok {
-			fmt.Printf("Embedding for the first chunk:\n%v\n", embedding)
-		}
-	}
-}
+// 	// Save the database to a file
+// 	pterm.Info.Println("Saving embeddings...")
+// 	db.SaveEmbeddings("./test.db")
 
-// GenerateEmbeddingChat generates an embedding from a prompt for chatbot applications
-func GenerateEmbeddingChat(prompt string, dataPath string) {
+// 	if len(chunks) > 0 {
+// 		embedding, ok := db.RetrieveEmbedding(chunks[0])
+// 		if ok {
+// 			fmt.Printf("Embedding for the first chunk:\n%v\n", embedding)
+// 		}
+// 	}
+// }
 
-	db := estore.NewEmbeddingDB()
+// // GenerateEmbeddingChat generates an embedding from a prompt for chatbot applications
+// func GenerateEmbeddingChat(prompt string, dataPath string) {
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/", dataPath)
+// 	db := estore.NewEmbeddingDB()
 
-	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
-	if err != nil {
-		pterm.Error.Println("Error loading model...")
-		panic(err)
-	}
+// 	modelsDir := fmt.Sprintf("%s/data/models/HF/", dataPath)
 
-	pterm.Info.Println("Generating embeddings...")
+// 	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelsDir, ModelName: modelName})
+// 	if err != nil {
+// 		pterm.Error.Println("Error loading model...")
+// 		panic(err)
+// 	}
 
-	var embeddings []estore.Embedding // Slice to store multiple embeddings
+// 	pterm.Info.Println("Generating embeddings...")
 
-	encoder := func(text string) error {
-		result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
-		if err != nil {
-			return err
-		}
+// 	var embeddings []estore.Embedding // Slice to store multiple embeddings
 
-		vec := result.Vector.Data().F64()[:limit] // Ensure 'limit' is defined and valid
-		fmt.Println(vec)
+// 	encoder := func(text string) error {
+// 		result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
+// 		if err != nil {
+// 			return err
+// 		}
 
-		embedding := estore.Embedding{
-			Word:       text,
-			Vector:     vec,
-			Similarity: 0.0,
-		}
+// 		vec := result.Vector.Data().F64()[:limit] // Ensure 'limit' is defined and valid
+// 		fmt.Println(vec)
 
-		embeddings = append(embeddings, embedding) // Append to slice
-		return nil
-	}
+// 		embedding := estore.Embedding{
+// 			Word:       text,
+// 			Vector:     vec,
+// 			Similarity: 0.0,
+// 		}
 
-	err = encoder(prompt)
-	if err != nil {
-		pterm.Error.Println("Error encoding text...")
-		panic(err)
-	}
+// 		embeddings = append(embeddings, embedding) // Append to slice
+// 		return nil
+// 	}
 
-	// Add generated embeddings to the database
-	db.AddEmbeddings(embeddings)
+// 	err = encoder(prompt)
+// 	if err != nil {
+// 		pterm.Error.Println("Error encoding text...")
+// 		panic(err)
+// 	}
 
-	// Now save all embeddings
-	pterm.Info.Println("Saving embeddings...")
-	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
-	pterm.Info.Println(dbPath)
+// 	// Add generated embeddings to the database
+// 	db.AddEmbeddings(embeddings)
 
-	if err := db.SaveEmbeddings(dbPath); err != nil {
-		pterm.Error.Println("Error saving embeddings:", err)
-		panic(err)
-	}
-}
+// 	// Now save all embeddings
+// 	pterm.Info.Println("Saving embeddings...")
+// 	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
+// 	pterm.Info.Println(dbPath)
+
+// 	if err := db.SaveEmbeddings(dbPath); err != nil {
+// 		pterm.Error.Println("Error saving embeddings:", err)
+// 		panic(err)
+// 	}
+// }
 
 func Search(dataPath string, dbName string, prompt string, topN int) []estore.Embedding {
 	db := estore.NewEmbeddingDB()

@@ -25,11 +25,16 @@ type AppConfig struct {
 	LanguageModels []llm.Model                       `yaml:"language_models"`
 	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
 	Tools          struct {
+		Memory struct {
+			Enabled bool `yaml:"enabled"`
+			TopN    int  `yaml:"top_n"`
+		} `yaml:"memory"`
 		WebGet struct {
 			Enabled bool `yaml:"enabled"`
 		} `yaml:"webget"`
 		WebSearch struct {
 			Enabled bool `yaml:"enabled"`
+			TopN    int  `yaml:"top_n"`
 		} `yaml:"websearch"`
 	} `yaml:"tools"`
 }
