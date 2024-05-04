@@ -194,6 +194,14 @@
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/settings.js"></script>
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
+    const textarea = document.getElementById('message');
+    const maxRows = 8;
+
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = `${Math.min(this.scrollHeight, this.clientHeight * maxRows)}px`;
+    });
+
     const tooltipTriggerList = document.querySelectorAll(
       "[data-bs-toggle='tooltip']"
     );
@@ -243,6 +251,8 @@
         if (!event.shiftKey) {
           event.preventDefault(); // Prevent the default behavior of the Enter key
           document.getElementById('send').click(); // Trigger the click event on the submit button
+          textarea.style.height = 'auto';
+          textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;
         } else {
           // Insert a new line instead of submitting the form
           var messageInput = document.getElementById('message');
