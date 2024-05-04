@@ -11,15 +11,15 @@ Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/chat.png">
-    <img alt="logo" height="400px" src="./public/img/chat.png">
+    <source media="(prefers-color-scheme: dark)" srcset="./public/img/chat.png">
+    <img alt="logo" src="./public/img/chat.png" style="width:50%; height:50%"
   </picture>
 </div>
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/models.png">
-    <img alt="logo" height="400px" src="./public/img/models.png">
+    <source media="(prefers-color-scheme: dark)" srcset="./public/img/models.png">
+    <img alt="logo" src="./public/img/models.png" style="width:50%; height:50%"
   </picture>
 </div>
 
@@ -54,7 +54,7 @@ The search button can be enabled to fetch one result from a popular search engin
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web.png">
-    <img alt="logo" height="400px" src="./public/img/web.png">
+    <img alt="logo" height="400px" src="./public/img/web.png" style="width:50%; height:50%">
   </picture>
 </div>
 
@@ -65,7 +65,7 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code_fixed.png">
-    <img alt="logo" height="400px" src="./public/img/code_fixed.png">
+    <img alt="logo" height="400px" src="./public/img/code_fixed.png" style="width:50%; height:50%">
   </picture>
 </div>
 
@@ -75,7 +75,7 @@ Embedded Stable Diffusion for easy high quality image generation.
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
-    <img alt="logo" height="400px" src="./public/img/sd.png">
+    <img alt="logo" height="400px" src="./public/img/sd.png" style="width:50%; height:50%">
   </picture>
 </div>
 
@@ -97,10 +97,6 @@ $ make all
 ```
 
 Please submit an issue if you encounter any issues with the build process.
-
-## Developers
-
-Ensure the git submodules are 
 
 ## Disclaimer
 
