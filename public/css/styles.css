@@ -1,17 +1,35 @@
 :root {
+    /* Default Accents */
     --et-purple: #7f5af0;
-    /* Purple Nebula */
     --et-green: #2cb67d;
-    /* Cosmic Green */
     --et-blue: #2d68f0;
-    /* Deep Space Blue */
     --et-red: #e45858;
-    /* Supernova Red */
+
+    /* Galactic Gray Theme */
+    --et-galactic-primary: #cccccc;
+    --et-galactic-secondary: #808080;
+    --et-galactic-accent: #333333;
+    --et-galactic-background: #101010;
+    --et-galactic-border-highlight: #ffffff;
+
+    /*  Aurora Theme */
+    --et-aurora-primary: #00ffa3; /* Bright Aqua */
+    --et-aurora-secondary: #00875f; /* Deep Aqua Green */
+    --et-aurora-accent: #004d39; /* Dark Teal */
+    --et-aurora-background: #00231c; /* Very Dark Green */
+    --et-aurora-border-highlight: #00ffc4; /* Bright Teal */
+
+    /*  Celestial Theme */
+    --et-celestial-primary: #4b8f8c; /* Teal Blue */
+    --et-celestial-secondary: #32717a; /* Sea Green Blue */
+    --et-celestial-accent: #1b3a41; /* Dark Cyan */
+    --et-celestial-background: #081a1c; /* Almost Black Cyan */
+    --et-celestial-border-highlight: #6cbfbf; /* Soft Cyan */
 }
 
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #1A1A2E;
+    background-color: var(--et-galactic-background);
 }
 
 @font-face {
@@ -97,7 +115,7 @@ codapi-toolbar a {
 }
 
 .user-prompt {
-    background-color: #2c2f33;
+    background-color: var(--et-galactic-accent);
     border-left: 3px solid var(--et-red);
     /* padding: 8px 12px;
     margin-top: 20px;
@@ -107,7 +125,7 @@ codapi-toolbar a {
 }
 
 .response {
-    background-color: #2c2f33;
+    background-color: var(--et-galactic-accent);
     border-left: 3px solid var(--et-purple);
     /* padding: 8px 12px;
     margin-bottom: 10px;
@@ -131,7 +149,7 @@ pre code {
 
 .dark-blur {
     /* Apply a blur effect to the background */
-    backdrop-filter: blur(50px) brightness(90%);
+    backdrop-filter: blur(10px) brightness(90%);
     --webkit-backface-visibility: hidden;
     --moz-backface-visibility: hidden;
     --webkit-transform: translate3d(0, 0, 0);
