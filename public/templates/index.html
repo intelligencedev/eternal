@@ -83,7 +83,7 @@
             <div class="row ms-auto w-25">
               <!-- WEB PAGE RETRIEVAL -->
               <div class="col">
-                <button id="webget-btn" class="btn" data-bs-toggle="tooltip" data-bs-title="Web Retrieval">
+                <!-- <button id="webget-btn" class="btn" data-bs-toggle="tooltip" data-bs-title="Web Retrieval">
                   <svg id="webget" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none" stroke="#ffffff" stroke-width="1.5">
                       <path
@@ -91,18 +91,18 @@
                       <path stroke-linecap="round" d="M12 6v2m0 0v2m0-2h-2m2 0h2m-6 6h8m-7 4h6" />
                     </g>
                   </svg>
-                </button>
+                </button> -->
               </div>
               <!-- WEB SEARCH -->
               <div class="col">
-                <button id="websearchBtn" class="btn" hx-post="/tool/websearch" hx-swap="none" data-bs-toggle="tooltip"
+                <!-- <button id="websearchBtn" class="btn" hx-post="/tool/websearch" hx-swap="none" data-bs-toggle="tooltip"
                   data-bs-title="Web Search">
                   <svg id="websearch" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#ffffff" fill-rule="evenodd"
                       d="M9.944 3.25h4.112c1.838 0 3.294 0 4.433.153c1.172.158 2.121.49 2.87 1.238c.748.749 1.08 1.698 1.238 2.87c.09.673.127 1.456.142 2.363a.755.755 0 0 1 .004.23c.007.566.007 1.178.007 1.84V13a.75.75 0 0 1-1.5 0v-1c0-.446 0-.862-.002-1.25H2.752c-.002.388-.002.804-.002 1.25c0 1.907.002 3.262.14 4.29c.135 1.005.389 1.585.812 2.008c.423.423 1.003.677 2.009.812c1.028.138 2.382.14 4.289.14h3a.75.75 0 0 1 0 1.5H9.944c-1.838 0-3.294 0-4.433-.153c-1.172-.158-2.121-.49-2.87-1.238c-.748-.749-1.08-1.698-1.238-2.87c-.153-1.14-.153-2.595-.153-4.433v-.112c0-.662 0-1.274.007-1.84a.757.757 0 0 1 .003-.23c.016-.907.053-1.69.143-2.363c.158-1.172.49-2.121 1.238-2.87c.749-.748 1.698-1.08 2.87-1.238c1.14-.153 2.595-.153 4.433-.153m-7.168 6h18.448a15.6 15.6 0 0 0-.114-1.54c-.135-1.005-.389-1.585-.812-2.008c-.423-.423-1.003-.677-2.009-.812c-1.027-.138-2.382-.14-4.289-.14h-4c-1.907 0-3.261.002-4.29.14c-1.005.135-1.585.389-2.008.812c-.423.423-.677 1.003-.812 2.009c-.06.445-.094.952-.114 1.539M18 14.75a2.25 2.25 0 1 0 0 4.5a2.25 2.25 0 0 0 0-4.5M14.25 17a3.75 3.75 0 1 1 6.879 2.068l.901.902a.75.75 0 1 1-1.06 1.06l-.902-.901A3.75 3.75 0 0 1 14.25 17m-9-1a.75.75 0 0 1 .75-.75h4a.75.75 0 0 1 0 1.5H6a.75.75 0 0 1-.75-.75"
                       clip-rule="evenodd" />
                   </svg>
-                </button>
+                </button> -->
               </div>
               <!-- Image Generation -->
               <div class="col" id="txt2img">
@@ -206,11 +206,6 @@
       const button = document.getElementById(buttonId);
       button.style.border = button.style.border ? '' : '2px solid purple'; // Toggle border
     }
-
-    // Add event listeners to both buttons
-    document.getElementById('websearchBtn').addEventListener('click', () => {
-      toggleButtonState('websearchBtn');
-    });
 
     document.getElementById('imgGenBtn').addEventListener('click', () => {
       toggleButtonState('imgGenBtn');

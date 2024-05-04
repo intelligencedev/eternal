@@ -52,8 +52,12 @@ Basic [documentation](https://github.com/intelligencedev/eternal/blob/main/docs/
 
 ### Web Retrieval - Search
 
-Prompt for a URL and Eternal automatically fetches and sanitizes the page content for reference.
-The search button can be enabled to fetch one result from a popular search engine. (Limited to 1 while context management features are matured.) _Requires Chrome browser installation._
+Web tools can be enabled via the `config.yml` file.  
+
+- `webget`: Attempts to fetch a URL passed in as part of the prompt.
+- `websearch`: Searches the public web for pages related to your prompt.
+
+_Requires Chrome browser installation._
 
 <div align="center">
   <picture>
