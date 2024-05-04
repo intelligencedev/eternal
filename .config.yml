@@ -2,14 +2,14 @@
 current_user: 'User'
 
 # Display name for LLM responses
-assistant_name: 'Eternal Assistant'
+assistant_name: 'Eternal'
 
 # Host name and port of the frontend and management server
 control_host: 'localhost'
 control_port: 8080
 
 # datapath will be created by Eternal to host persistent data
-data_path: '/Users/arturoaquino/.eternal-v1'
+data_path: '/Users/$USER/.eternal'
 
 # Service hosts for specific functionalities
 service_hosts:
