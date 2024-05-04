@@ -74,8 +74,12 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 Embedded Stable Diffusion for easy high quality image generation.
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
-    <img alt="logo" height="400px" src="./public/img/sd.png" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen1.png">
+    <img alt="logo" height="400px" src="./public/img/imggen1.png" style="width:50%; height:50%">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen2.png">
+    <img alt="logo" height="400px" src="./public/img/imggen2.png" style="width:50%; height:50%">
   </picture>
 </div>
 
