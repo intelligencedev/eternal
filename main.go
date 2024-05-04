@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/blevesearch/bleve/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -43,8 +44,9 @@ var (
 	osFS  afero.Fs = afero.NewOsFs()
 	memFS afero.Fs = afero.NewMemMapFs()
 
-	chatTurn = 1
-	sqliteDB *SQLiteDB
+	chatTurn    = 1
+	sqliteDB    *SQLiteDB
+	searchIndex bleve.Index
 
 	tools []Tool
 )
@@ -126,6 +128,23 @@ func main() {
 	err = sqliteDB.AutoMigrate(&ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
 	if err != nil {
 		log.Fatalf("Failed to auto migrate database: %v", err)
+	}
+
+	searchDB := fmt.Sprintf("%s/search.bleve", config.DataPath)
+
+	// If the database exists, open it, else create a new one
+	if _, err := os.Stat(searchDB); os.IsNotExist(err) {
+		mapping := bleve.NewIndexMapping()
+		searchIndex, err = bleve.New(searchDB, mapping)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		searchIndex, err = bleve.Open(searchDB)
+		if err != nil {
+			log.Fatalf("Failed to open search index: %v", err)
+		}
 	}
 
 	// Instantiate ModelParams then populate it with each model from the config
@@ -721,8 +740,20 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Replace {user} with the chat Message
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
+			sysPrompt := `Respond to each query using the following process to reason through to the most insightful answer:
+			First, carefully analyze the question to identify the key pieces of information required to answer it comprehensively. Break the question down into its core components.
+			For each component of the question, brainstorm several relevant ideas, facts, and perspectives that could help address that part of the query. Consider the question from multiple angles.
+			Critically evaluate each of those ideas you generated. Assess how directly relevant they are to the question, how logical and well-supported they are, and how clearly they convey key points. Aim to hone in on the strongest and most pertinent thoughts.
+			Take the most promising ideas and try to combine them into a coherent line of reasoning that flows logically from one point to the next in order to address the original question. See if you can construct a compelling argument or explanation.
+			If your current line of reasoning doesn't fully address all aspects of the original question in a satisfactory way, continue to iteratively explore other possible angles by swapping in alternative ideas and seeing if they allow you to build a stronger overall case.
+			As you work through the above process, make a point to capture your thought process and explain the reasoning behind why you selected or discarded certain ideas. Highlight the relative strengths and flaws in different possible arguments. Make your reasoning transparent.
+			After exploring multiple possible thought paths, integrating the strongest arguments, and explaining your reasoning along the way, pull everything together into a clear, concise, and complete final response that directly addresses the original query.
+			Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
+			The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.`
+
 			// Replace {system} with the system message
-			// fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic.")
+			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", sysPrompt)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -734,6 +765,22 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				TopP:          1.0, // Prefer greedy decoding for now
 				TopK:          1.0, // Prefer greedy decoding for now
 			}
+
+			// Search the search index for the chat message
+			// searchResults, err := search.Search(searchIndex, chatMessage)
+			// if err != nil {
+			// 	log.Errorf("Error searching index: %v", err)
+			// }
+
+			// search for some text
+			// query := bleve.NewMatchQuery(chatMessage)
+			// search := bleve.NewSearchRequest(query)
+			// searchResults, err := searchIndex.Search(search)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	return err
+			// }
+			// pterm.Info.Println(searchResults)
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
@@ -812,13 +859,16 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	chatMessage = performToolWorkflow(c, config, chatMessage)
 
 	// Process the message using the provided function
-	err = processMessage(wsMessage, chatMessage)
-	if err != nil {
-		pterm.PrintOnError(err)
+	res := processMessage(wsMessage, chatMessage)
+	if res != nil {
+		//pterm.Warning.Println(res)
 
-		pterm.Warning.Println(config.DataPath)
-
-		//err = storeChat(sqliteDB.db, config, chatMessage, err.Error(), wsMessage.Model)
+		if config.Tools.Memory.Enabled {
+			err = storeChat(sqliteDB.db, config, chatMessage, res.Error(), wsMessage.Model)
+			if err != nil {
+				pterm.PrintOnError(err)
+			}
+		}
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
@@ -832,98 +882,139 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	// the model to use. Document is the abstraction that will hold that context.
 	var document string
 
+	if config.Tools.Memory.Enabled {
+		topN := config.Tools.Memory.TopN // retrieve top N results. Adjust based on context size.
+		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		var documents []string
+		var documentString string
+		if len(topEmbeddings) > 0 {
+			for _, topEmbedding := range topEmbeddings {
+				documents = append(documents, topEmbedding.Word)
+			}
+			documentString = strings.Join(documents, " ")
+
+			pterm.Info.Println("Retrieving memory content...")
+			document = fmt.Sprintf("%s\n%s", document, documentString)
+
+			// Replace new lines with spaces
+			document = strings.ReplaceAll(document, "\n\n", "\n")
+		} else {
+			pterm.Info.Println("No memory content found...")
+		}
+	}
+
 	if config.Tools.WebGet.Enabled {
 		url := web.ExtractURLs(chatMessage)
 		if len(url) > 0 {
 			pterm.Info.Println("Retrieving page content...")
 
 			document, _ = web.WebGetHandler(url[0])
-			//document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-			//chatMessage = fmt.Sprintf("%s%s", document, chatMessage)
 		}
 	}
 
 	if config.Tools.WebSearch.Enabled {
+
+		topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
+
 		pterm.Info.Println("Searching the web...")
 
 		urls := web.SearchDDG(chatMessage)
 
-		prunedUrls := web.RemoveUnwantedURLs(urls)
+		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
 
-		if len(prunedUrls) > 0 {
-			pterm.Info.Println("Pruned URLs:", prunedUrls)
+		if len(urls) > 0 {
+			pagesRetrieved := 0
 
-			url := prunedUrls[:1]
+			for {
+				// Check if we have collected topN pages
+				if pagesRetrieved >= topN {
+					break
+				}
 
-			pageContent, _ := web.WebGetHandler(url[0])
+				// Iterate over URLs
+				for _, url := range urls {
+					pterm.Info.Printf("Fetching URL: %s\n", url)
 
-			document = fmt.Sprintf("%s\n%s", document, pageContent)
+					page, err := web.WebGetHandler(url)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", url)
 
-			// for _, url := range prunedUrls {
-			// 	// Append the content of the page to the document
-			// 	pageContent, _ := web.WebGetHandler(url)
-			// 	document = fmt.Sprintf("%s\n%s", document, pageContent)
-			// }
+							// Remove the URL from the list, do not use the web package
+							urls = urls[1:]
+
+							pterm.Warning.Printf("URL list: %s\n", urls)
+
+							// Increase the timeout for the next request to avoid spamming the same URL
+							time.Sleep(5 * time.Second)
+
+							continue
+						}
+						pterm.PrintOnError(err)
+					} else {
+						// Page successfully retrieved, update document and increment pagesRetrieved
+						document = fmt.Sprintf("%s\n%s", document, page)
+						pagesRetrieved++
+
+						// Check if we have collected topN pages
+						if pagesRetrieved >= topN {
+							break
+						}
+					}
+				}
+			}
 		}
 	}
 
 	// TODO: Legacy tool workflow, still need to expose this as a proper config item
-	// for _, tool := range tools {
-	// 	if tool.Name == "imagegen" && tool.Enabled {
-	// 		pterm.Info.Println("Generating image...")
+	for _, tool := range tools {
+		if tool.Name == "imagegen" && tool.Enabled {
+			pterm.Info.Println("Generating image...")
 
-	// 		sdParams := &sd.SDParams{Prompt: chatMessage}
+			sdParams := &sd.SDParams{Prompt: chatMessage}
 
-	// 		// Call the sd tool
-	// 		sd.Text2Image(config.DataPath, sdParams)
+			// Call the sd tool
+			sd.Text2Image(config.DataPath, sdParams)
 
-	// 		// Return the image to the client
-	// 		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-	// 		imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-	// 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-	// 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-	// 			pterm.PrintOnError(err)
-	// 			return chatMessage
-	// 		}
+			// Return the image to the client
+			timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+			imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
+			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+				pterm.PrintOnError(err)
+				return chatMessage
+			}
 
-	// 		// Increment the chat turn counter
-	// 		chatTurn = chatTurn + 1
+			// Increment the chat turn counter
+			chatTurn = chatTurn + 1
 
-	// 		return chatMessage
-	// 	}
+			return chatMessage
+		}
+	}
 
-	// 	// Remove http(s) links from the document
-	// 	document = web.RemoveUrls(document)
-	// 	document = fmt.Sprintf("%s\nUse the previous information as reference for the following:\n", document)
-	// }
-
-	//topN := 1 // retrieve top N results. Adjust based on context size.
-	//topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-	//var documenta []string
-	//var documentString string
-	// if len(topEmbeddings) > 0 {
-	// 	for _, topEmbedding := range topEmbeddings {
-	// 		documents = append(documents, topEmbedding.Word)
-	// 	}
-	// 	documentString = strings.Join(documents, " ")
-	// 	fmt.Println("Document:")
-	// 	fmt.Println(documentString)
-	// }
-
-	//Remove http(s) links from the documentString
+	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
 
-	chatMessage = fmt.Sprintf("%s\nThe previous information contains information to reference for the following:\n%s", document, chatMessage)
+	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the following task or question:\n%s", document, chatMessage)
+
+	pterm.Error.Println("Tool workflow complete")
 
 	return chatMessage
 }
 
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
 	// Generate embeddings
-	pterm.Warning.Println("Generating embeddings...")
-	turnMemoryText := prompt + "\n" + response
-	err := embeddings.GenerateEmbeddingForTask("chat", turnMemoryText, "txt", 500, 100, config.DataPath)
+	pterm.Warning.Println("Generating embeddings for chat...")
+	//turnMemoryText := prompt + "\n" + response
+
+	// err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", prompt, "txt", 2048, 500, config.DataPath)
+	// if err != nil {
+	// 	pterm.Error.Println("Error generating embeddings:", err)
+	// 	return err
+	// }
+
+	err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", response, "txt", 2048, 500, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err
