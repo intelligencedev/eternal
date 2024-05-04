@@ -71,6 +71,7 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 	//vaePath := filepath.Join(dataPath, "models/StableDiffusion/sd15/sdxl_vae.safetensors")
 	//modelPath := filepath.Join(dataPath, "models/StableDiffusion/sd15/dreamshaper_8_q5_1.gguf")
 	modelPath := filepath.Join(dataPath, "models/dreamshaper-8-turbo-sdxl/DreamShaperXL_Turbo_V2-SFW.safetensors")
+	vaePath := filepath.Join(dataPath, "models/dreamshaper-8-turbo-sdxl/sdxl_vae.safetensors")
 	outPath := filepath.Join(dataPath, "web/img/sd_out.png")
 	cmdPath := filepath.Join(dataPath, "sd/sd")
 
@@ -78,17 +79,18 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 
 	cmdArgs := []string{
 		"-p", params.Prompt,
-		"-n", "ugly, low quality, deformed, malformed, floating limbs, bad hands, poorly drawn, bad anatomy, extra limb, blurry, disfigured, realistic, child",
+		"-n", "ugly, low quality, deformed, malformed, floating limbs, bad hands, poorly drawn, bad anatomy, extra limb, blurry, disfigured, realistic, child, long neck, big forehead",
 		"-m", modelPath,
-		//"--vae", vaePath, // NOT WORKING DO NOT USE
+		"--vae", vaePath,
 		"-o", outPath,
 		"--rng", "std_default",
-		"--cfg-scale", "4",
-		"--sampling-method", "dpm2",
-		"--steps", "10",
+		"--cfg-scale", "2",
+		"--sampling-method", "dpm++2m",
+		"--steps", "6",
 		"--seed", "-1",
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
+		"--strength", "1.0",
 		//"--clip-skip", "2",
 		"--width", "1024",
 		"--height", "1024",
