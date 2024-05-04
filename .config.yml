@@ -46,7 +46,7 @@ tools:
   webget:
     enabled: false
   websearch:
-    enabled: true
+    enabled: false
     top_n: 1 # Number of page results to retrieve. Higher numbers require models with much higher context.
 
 # OpenAI API Key

@@ -40,8 +40,15 @@ var (
 		"www.sciencedaily.com",
 		"reuters.com",
 		"bbc.com",
+		"thenewstack.io",
+		"abcnews.go.com",
+		"apnews.com",
+		"bloomberg.com",
+		"polygon.com",
 		// Add more URLs to block from search results
 	}
+
+	resultURLs []string
 )
 
 func WebGetHandler(url string) (string, error) {
@@ -50,9 +57,15 @@ func WebGetHandler(url string) (string, error) {
 		chromedp.Flag("headless", true),
 		// other options if needed...
 	)
+
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer cancel()
+
 	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	// Set a timeout for the entire operation
+	ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	// Retrieve and sanitize the page
@@ -85,10 +98,6 @@ func WebGetHandler(url string) (string, error) {
 	return cleanedHTML, nil
 }
 
-var (
-	resultURLs []string
-)
-
 // ExtractURLs extracts and cleans URLs from the input string.
 func ExtractURLs(input string) []string {
 	// Regular expression to match URLs and port numbers
@@ -107,6 +116,26 @@ func ExtractURLs(input string) []string {
 	return cleanedURLs
 }
 
+// RemoveUrls removes URLs from the input string slice.
+func RemoveUrl(input []string) []string {
+	// Regular expression to match URLs and port numbers
+	urlRegex := `http.*?://[^\s<>{}|\\^` + "`" + `"]+`
+	re := regexp.MustCompile(urlRegex)
+
+	// Iterate over each string in the input slice
+	for i, str := range input {
+		// Find all URLs in the current string
+		matches := re.FindAllString(str, -1)
+
+		// Remove URLs from the current string
+		for _, match := range matches {
+			input[i] = strings.ReplaceAll(input[i], match, "")
+		}
+	}
+
+	return input
+}
+
 // cleanURL removes illegal trailing characters from the URL.
 func cleanURL(url string) string {
 	// Define illegal trailing characters.
@@ -121,31 +150,6 @@ func cleanURL(url string) string {
 	return url
 }
 
-// func ParseReaderView(r io.Reader) (string, error) {
-// 	doc, err := html.Parse(r)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	var readerView bytes.Buffer
-// 	var f func(*html.Node)
-// 	f = func(n *html.Node) {
-// 		// Check if the node is an element node
-// 		if n.Type == html.ElementNode {
-// 			// Check if the node is a block element that typically contains content
-// 			if isContentElement(n) {
-// 				renderNode(&readerView, n)
-// 			}
-// 		}
-// 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-// 			f(c)
-// 		}
-// 	}
-// 	f(doc)
-
-// 	return readerView.String(), nil
-// }
-
 func ParseReaderView(r io.Reader) (string, error) {
 	doc, err := html.Parse(r)
 	if err != nil {
@@ -157,8 +161,8 @@ func ParseReaderView(r io.Reader) (string, error) {
 	f = func(n *html.Node) {
 		// Check if the node is an element node
 		if n.Type == html.ElementNode {
-			// Check if the node is an article element or a descendant of an article element
-			if isArticleElement(n) {
+			// Check if the node is a block element that typically contains content
+			if isContentElement(n) {
 				renderNode(&readerView, n)
 			}
 		}
@@ -169,19 +173,6 @@ func ParseReaderView(r io.Reader) (string, error) {
 	f(doc)
 
 	return readerView.String(), nil
-}
-
-// isArticleElement checks if the node is an article element or a descendant of an article element.
-func isArticleElement(n *html.Node) bool {
-	if n.DataAtom == atom.Article {
-		return true
-	}
-	for p := n.Parent; p != nil; p = p.Parent {
-		if p.DataAtom == atom.Article {
-			return true
-		}
-	}
-	return false
 }
 
 // isContentElement checks if the node is an element of interest for the reader view.
@@ -229,6 +220,10 @@ func isInlineElement(n *html.Node) bool {
 
 // SearchDDG performs a search on DuckDuckGo and retrieves the HTML of the first page of results.
 func SearchDDG(query string) []string {
+
+	// Clear the resultURLs slice
+	resultURLs = nil
+
 	// Initialize headless Chrome
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -243,15 +238,14 @@ func SearchDDG(query string) []string {
 	defer cancel()
 
 	var nodes []*cdp.Node
-	var resultURLs []string
 
 	// Perform the search on DuckDuckGo
 	err := chromedp.Run(ctx,
-		chromedp.Navigate(`https://duckduckgo.com/`),
+		chromedp.Navigate(`https://lite.duckduckgo.com/lite/`),
 		chromedp.WaitVisible(`input[name="q"]`, chromedp.ByQuery),
 		chromedp.SendKeys(`input[name="q"]`, query+kb.Enter, chromedp.ByQuery),
 		chromedp.Sleep(5*time.Second), // Wait for JavaScript to load the search results
-		chromedp.WaitVisible(`button[id="more-results"]`, chromedp.ByQuery),
+		chromedp.WaitVisible(`input[name="q"]`, chromedp.ByQuery),
 		chromedp.Nodes(`a`, &nodes, chromedp.ByQueryAll),
 	)
 	if err != nil {
@@ -276,8 +270,8 @@ func SearchDDG(query string) []string {
 				}
 			}
 
-			for url := range uniqueUrls {
-				resultURLs = append(resultURLs, url)
+			for u := range uniqueUrls {
+				resultURLs = append(resultURLs, u)
 			}
 
 			return nil
@@ -288,9 +282,6 @@ func SearchDDG(query string) []string {
 		log.Printf("Error processing results: %v", err)
 		return nil
 	}
-
-	// Only return the top n results
-	// resultURLs = resultURLs[:3]
 
 	// Remove unwanted URLs from the list
 	resultURLs = RemoveUnwantedURLs(resultURLs)
@@ -323,20 +314,19 @@ func GetSearchResults(urls []string) string {
 
 // RemoveUnwantedURLs removes unwanted URLs from the list of URLs.
 func RemoveUnwantedURLs(urls []string) []string {
-	var resultURLs []string
-	for _, url := range urls {
-		pterm.Info.Printf("Checking URL: %s", url)
+	for _, u := range urls {
+		pterm.Info.Printf("Checking URL: %s", u)
 
 		unwanted := false
 		for _, unwantedURL := range unwantedURLs {
-			if strings.Contains(url, unwantedURL) {
-				pterm.Warning.Printf("URL %s contains unwanted URL %s", url, unwantedURL)
+			if strings.Contains(u, unwantedURL) {
+				pterm.Warning.Printf("URL %s contains unwanted URL %s", u, unwantedURL)
 				unwanted = true
 				break
 			}
 		}
 		if !unwanted {
-			resultURLs = append(resultURLs, url)
+			resultURLs = append(resultURLs, u)
 		}
 	}
 

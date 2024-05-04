@@ -740,8 +740,20 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Replace {user} with the chat Message
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
+			sysPrompt := `Respond to each query using the following process to reason through to the most insightful answer:
+			First, carefully analyze the question to identify the key pieces of information required to answer it comprehensively. Break the question down into its core components.
+			For each component of the question, brainstorm several relevant ideas, facts, and perspectives that could help address that part of the query. Consider the question from multiple angles.
+			Critically evaluate each of those ideas you generated. Assess how directly relevant they are to the question, how logical and well-supported they are, and how clearly they convey key points. Aim to hone in on the strongest and most pertinent thoughts.
+			Take the most promising ideas and try to combine them into a coherent line of reasoning that flows logically from one point to the next in order to address the original question. See if you can construct a compelling argument or explanation.
+			If your current line of reasoning doesn't fully address all aspects of the original question in a satisfactory way, continue to iteratively explore other possible angles by swapping in alternative ideas and seeing if they allow you to build a stronger overall case.
+			As you work through the above process, make a point to capture your thought process and explain the reasoning behind why you selected or discarded certain ideas. Highlight the relative strengths and flaws in different possible arguments. Make your reasoning transparent.
+			After exploring multiple possible thought paths, integrating the strongest arguments, and explaining your reasoning along the way, pull everything together into a clear, concise, and complete final response that directly addresses the original query.
+			Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
+			The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.`
+
 			// Replace {system} with the system message
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
+			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", sysPrompt)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -849,7 +861,7 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Process the message using the provided function
 	res := processMessage(wsMessage, chatMessage)
 	if res != nil {
-		pterm.Warning.Println(res)
+		//pterm.Warning.Println(res)
 
 		if config.Tools.Memory.Enabled {
 			err = storeChat(sqliteDB.db, config, chatMessage, res.Error(), wsMessage.Model)
@@ -909,19 +921,48 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		urls := web.SearchDDG(chatMessage)
 
-		pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
 
-		if len(urls[:topN]) > 0 {
-			for _, url := range urls[:topN] {
+		if len(urls) > 0 {
+			pagesRetrieved := 0
 
-				pterm.Info.Printf("Fetching URL: %s\n", url)
-
-				page, err := web.WebGetHandler(url)
-				if err != nil {
-					pterm.PrintOnError(err)
+			for {
+				// Check if we have collected topN pages
+				if pagesRetrieved >= topN {
+					break
 				}
 
-				document = fmt.Sprintf("%s\n%s", document, page)
+				// Iterate over URLs
+				for _, url := range urls {
+					pterm.Info.Printf("Fetching URL: %s\n", url)
+
+					page, err := web.WebGetHandler(url)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", url)
+
+							// Remove the URL from the list, do not use the web package
+							urls = urls[1:]
+
+							pterm.Warning.Printf("URL list: %s\n", urls)
+
+							// Increase the timeout for the next request to avoid spamming the same URL
+							time.Sleep(5 * time.Second)
+
+							continue
+						}
+						pterm.PrintOnError(err)
+					} else {
+						// Page successfully retrieved, update document and increment pagesRetrieved
+						document = fmt.Sprintf("%s\n%s", document, page)
+						pagesRetrieved++
+
+						// Check if we have collected topN pages
+						if pagesRetrieved >= topN {
+							break
+						}
+					}
+				}
 			}
 		}
 	}
