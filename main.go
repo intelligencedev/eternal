@@ -1014,29 +1014,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}
 	}
 
-	// if config.Tools. == "imagegen" && tool.Enabled {
-	// 	pterm.Info.Println("Generating image...")
-
-	// 	sdParams := &sd.SDParams{Prompt: chatMessage}
-
-	// 	// Call the sd tool
-	// 	sd.Text2Image(config.DataPath, sdParams)
-
-	// 	// Return the image to the client
-	// 	timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
-	// 	imgElement := fmt.Sprintf("<img class='rounded-2' src='public/img/sd_out.png?%d' />", timestamp)
-	// 	formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-	// 	if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-	// 		pterm.PrintOnError(err)
-	// 		return chatMessage
-	// 	}
-
-	// 	// Increment the chat turn counter
-	// 	chatTurn = chatTurn + 1
-
-	// 	return chatMessage
-	// }
-
 	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
 
@@ -1050,13 +1027,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
 	// Generate embeddings
 	pterm.Warning.Println("Generating embeddings for chat...")
-	//turnMemoryText := prompt + "\n" + response
-
-	// err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", prompt, "txt", 2048, 500, config.DataPath)
-	// if err != nil {
-	// 	pterm.Error.Println("Error generating embeddings:", err)
-	// 	return err
-	// }
 
 	err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", response, "txt", 2048, 500, config.DataPath)
 	if err != nil {
@@ -1102,6 +1072,4 @@ func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 	}
 
 	chatTurn = chatTurn + 1
-
-	return // Return to close the connection
 }
