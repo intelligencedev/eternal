@@ -45,6 +45,8 @@ If you encounter a bug, please open an issue.
 
 ## Tool Configuration
 
+The tools are highly experimental and may not work as intended in some cases. It is recommended that the memory tool be disabled when enabling the web tools to prevent Eternal from running that embeddings workflow for memory which can be time consuming on large documents. This will be improved in future updates.
+
 Deploying public web tools and scraping the public internet carries risk of your public IP and/or client getting banned from services. Always monitor the CLI logs as the tools execute their workflows to ensure your client does not spam. If this occurs, quit the application via the CLI using CTRL+C . Disable the web tools and open an Issue so we can implement a diligent fix.
 
 The web retrieval tools require a Google Chrome installation. Search works without requiring any APIs or paid services and runs entirely local by making calls to a popular and private search engine. We ask that you give the [search platform your support](https://duckduckgo.com/donations) for providing a great service.
