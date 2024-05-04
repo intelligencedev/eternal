@@ -75,7 +75,11 @@ Embedded Stable Diffusion for easy high quality image generation.
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
-    <img alt="logo" height="400px" src="./public/img/sd.png" style="width:50%; height:50%">
+    <img alt="logo" height="400px" src="./public/img/imggen1.png" style="width:50%; height:50%">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/sd.png">
+    <img alt="logo" height="400px" src="./public/img/imggen2.png" style="width:50%; height:50%">
   </picture>
 </div>
 
