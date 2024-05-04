@@ -36,6 +36,9 @@ type AppConfig struct {
 			Enabled bool `yaml:"enabled"`
 			TopN    int  `yaml:"top_n"`
 		} `yaml:"websearch"`
+		ImgGen struct {
+			Enabled bool `yaml:"enabled"`
+		} `yaml:"img_gen"`
 	} `yaml:"tools"`
 }
 
