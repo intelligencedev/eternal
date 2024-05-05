@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"eternal/pkg/embeddings"
+	"eternal/pkg/hfutils"
 	"eternal/pkg/llm"
 	"eternal/pkg/llm/anthropic"
 	"eternal/pkg/llm/google"
@@ -509,22 +510,59 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			return c.Status(fiber.StatusBadRequest).SendString("Missing parameters")
 		}
 
+		modelRoot := fmt.Sprintf("%s/models/%s", config.DataPath, modelName)
 		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
+		tmpPath := fmt.Sprintf("%s/tmp", config.DataPath)
+
+		// Create the model directory if it doesn't exist
+		if _, err := os.Stat(modelRoot); os.IsNotExist(err) {
+			if err := os.MkdirAll(modelRoot, 0755); err != nil {
+				log.Errorf("Error creating model directory: %v", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
+			}
+		}
+
+		// Create the tmp directory if it doesn't exist
+		if _, err := os.Stat(tmpPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(tmpPath, 0755); err != nil {
+				log.Errorf("Error creating tmp directory: %v", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
+			}
+		}
 
 		// Check if the modelPath does not exist and download it if it doesn't
 		if _, err := os.Stat(modelPath); err != nil {
 			// Start the download in a goroutine
-			go func() {
-				if err := sd.Download(downloadURL, modelPath); err != nil {
-					log.Errorf("Error in download: %v", err)
-				}
-			}()
+			dm := hfutils.ConcurrentDownloadManager{
+				FileName:    modelFileName,
+				URL:         downloadURL,
+				Destination: modelPath,
+				NumParts:    3,
+				TempDir:     tmpPath,
+				//Sha256Checksum: "abc123...", // Optional, provide if needed.
+			}
+
+			go dm.PrintProgress()
+
+			if err := dm.Download(); err != nil {
+				fmt.Println("Download failed:", err)
+			} else {
+				fmt.Println("Download successful!")
+			}
 		}
 
 		// https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/sdxl_vae.safetensors
 		vaeName := "sdxl_vae.safetensors"
 		vaeURL := "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/sdxl_vae.safetensors"
 		vaePath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, vaeName)
+
+		// Create the model directory if it doesn't exist
+		if _, err := os.Stat(modelRoot); os.IsNotExist(err) {
+			if err := os.MkdirAll(modelRoot, 0755); err != nil {
+				log.Errorf("Error creating model directory: %v", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
+			}
+		}
 
 		// Download SDXL VAE fix if it doesn't exist
 		if _, err := os.Stat(vaePath); os.IsNotExist(err) {

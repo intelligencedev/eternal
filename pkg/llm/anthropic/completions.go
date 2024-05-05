@@ -58,7 +58,7 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 
 	payload := &CompletionRequest{
 		Model:       model,
-		MaxTokens:   1024,
+		MaxTokens:   4096,
 		Stream:      true,
 		Messages:    messages,
 		Temperature: temperature,
