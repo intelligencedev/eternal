@@ -32,6 +32,8 @@ else
 	$(error Unsupported operating system)
 endif
 
+$(shell mkdir -p $(ARTIFACTS_DIR))
+
 # Adjusted copy command for SD binary
 COPY_SD_CMD = cp $(SD_BUILD_DIR)/bin/sd $(ARTIFACTS_DIR)
 
@@ -65,10 +67,6 @@ endef
 
 # Generate the copy targets
 $(foreach target,$(LLAMA_BUILD_TARGETS),$(eval $(call COPY_BUILD_TARGET,$(target))))
-
-# Ensure the ARTIFACTS_DIR exists
-$(ARTIFACTS_DIR):
-	mkdir -p $(ARTIFACTS_DIR)
 
 # Copy llama artifacts
 .PHONY: copy-llama-artifacts
