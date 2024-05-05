@@ -152,7 +152,7 @@ pre code {
 
 .dark-blur {
     /* Apply a blur effect to the background */
-    backdrop-filter: blur(8px) brightness(100%);
+    backdrop-filter: blur(7px) brightness(100%);
     --webkit-backface-visibility: hidden;
     --moz-backface-visibility: hidden;
     --webkit-transform: translate3d(0, 0, 0);
