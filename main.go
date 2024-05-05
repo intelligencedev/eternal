@@ -537,7 +537,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				FileName:    modelFileName,
 				URL:         downloadURL,
 				Destination: modelPath,
-				NumParts:    3,
+				NumParts:    1,
 				TempDir:     tmpPath,
 				//Sha256Checksum: "abc123...", // Optional, provide if needed.
 			}

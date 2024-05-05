@@ -140,8 +140,7 @@ func (dm *ConcurrentDownloadManager) downloadPart(partNum, start, end int) error
 }
 
 func (dm *ConcurrentDownloadManager) mergeParts() error {
-	finalPath := filepath.Join(dm.TempDir, dm.FileName)
-	finalFile, err := os.Create(finalPath)
+	finalFile, err := os.Create(dm.Destination)
 	if err != nil {
 		return err
 	}
@@ -199,7 +198,6 @@ func (dm *ConcurrentDownloadManager) PrintProgress() {
 		fmt.Printf("\rDownloading... %.2f%% complete (%d of %d bytes)", percent, downloaded, dm.TotalLength)
 
 		if downloaded >= dm.TotalLength {
-			fmt.Println("\nDownload complete.")
 			break
 		}
 	}
