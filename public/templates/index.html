@@ -94,7 +94,7 @@
                 </button>
               </div>
               <!-- Roles -->
-              <div class="col">
+              <div class="col" id="imgstatus">
                 <!-- <button id="rolesBtn" class="btn" hx-post="/tool/websearch" hx-swap="none" data-bs-toggle="tooltip"
                   data-bs-title="Assistant Roles">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -110,8 +110,8 @@
               </div>
               <!-- Image Generation -->
               <div class="col" id="txt2img">
-                <!-- <button id="imgGenBtn" class="btn" data-model-name="128713"
-                  onclick="downloadImageModel('dreamshaper-8-turbo-sdxl')" hx-post="/tool/imggen" hx-swap="none"
+                <button id="imgGenBtn" class="btn" data-model-name="128713"
+                  onclick="downloadImageModel('dreamshaper-8-turbo-sdxl')" hx-target="#imgstatus"
                   data-bs-toggle="tooltip">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#FFFFFF"
@@ -122,7 +122,7 @@
                     <path fill="#FFFFFF"
                       d="M8.859 2h6.282c.21 0 .37 0 .51.015a2.623 2.623 0 0 1 2.159 1.672H6.19a2.623 2.623 0 0 1 2.159-1.672c.14-.015.3-.015.51-.015ZM6.88 4.5c-1.252 0-2.278.84-2.62 1.954a2.814 2.814 0 0 0-.021.07c.358-.12.73-.2 1.108-.253c.973-.139 2.202-.139 3.629-.139h6.203c1.427 0 2.656 0 3.628.139c.378.053.75.132 1.11.253a2.771 2.771 0 0 0-.021-.07C19.553 5.34 18.527 4.5 17.276 4.5H6.878Z" />
                   </svg>
-                </button> -->
+                </button>
               </div>
             </div>
             <div class="w-50 input-group mx-1">
