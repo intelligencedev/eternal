@@ -494,6 +494,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	})
 
 	app.Post("/imgmodel/download", func(c *fiber.Ctx) error {
+		config.Tools.ImgGen.Enabled = true
+
 		modelName := c.Query("model")
 
 		var downloadURL string
