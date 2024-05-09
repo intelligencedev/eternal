@@ -3,6 +3,7 @@ package vecstore
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -146,6 +147,10 @@ func (db *EmbeddingDB) RecreateDocument(embeddings []Embedding) string {
 
 // CosineSimilarity calculates the cosine similarity between two vectors.
 func CosineSimilarity(a, b []float64) float64 {
+	if len(a) != len(b) {
+		log.Fatal("Vectors must be of the same length")
+	}
+
 	var dotProduct, magnitudeA, magnitudeB float64
 	var wg sync.WaitGroup
 

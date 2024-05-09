@@ -263,6 +263,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.JSON(config)
 	})
 
+	app.Get("/flow", func(c *fiber.Ctx) error {
+		return c.Render("templates/flow", fiber.Map{})
+	})
+
 	app.Post("/upload", func(c *fiber.Ctx) error {
 		pterm.Warning.Println("Uploads route hit")
 
@@ -799,20 +803,9 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Replace {user} with the chat Message
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
-			sysPrompt := `Respond to each query using the following process to reason through to the most insightful answer:
-			First, carefully analyze the question to identify the key pieces of information required to answer it comprehensively. Break the question down into its core components.
-			For each component of the question, brainstorm several relevant ideas, facts, and perspectives that could help address that part of the query. Consider the question from multiple angles.
-			Critically evaluate each of those ideas you generated. Assess how directly relevant they are to the question, how logical and well-supported they are, and how clearly they convey key points. Aim to hone in on the strongest and most pertinent thoughts.
-			Take the most promising ideas and try to combine them into a coherent line of reasoning that flows logically from one point to the next in order to address the original question. See if you can construct a compelling argument or explanation.
-			If your current line of reasoning doesn't fully address all aspects of the original question in a satisfactory way, continue to iteratively explore other possible angles by swapping in alternative ideas and seeing if they allow you to build a stronger overall case.
-			As you work through the above process, make a point to capture your thought process and explain the reasoning behind why you selected or discarded certain ideas. Highlight the relative strengths and flaws in different possible arguments. Make your reasoning transparent.
-			After exploring multiple possible thought paths, integrating the strongest arguments, and explaining your reasoning along the way, pull everything together into a clear, concise, and complete final response that directly addresses the original query.
-			Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
-			The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.`
-
 			// Replace {system} with the system message
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", sysPrompt)
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", llm.AssistantDefault)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -840,6 +833,39 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// 	return err
 			// }
 			// pterm.Info.Println(searchResults)
+
+			////////////////////////
+			// AGENT REPLIES
+			///////////////////////
+
+			advWorkflow := false
+			if advWorkflow {
+
+				res1 := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
+
+				var smodel ModelParams
+				newModel := "llama3-70b-instruct"
+				err = sqliteDB.First(newModel, &smodel)
+				if err != nil {
+					log.Errorf("Error getting model %s: %v", newModel, err)
+					return err
+				}
+
+				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, llm.AssistantVisualBot)
+
+				smodelOpts := &llm.GGUFOptions{
+					NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
+					Model:         smodel.Options.Model,
+					Prompt:        nextPrompt,
+					CtxSize:       smodel.Options.CtxSize,
+					Temp:          0.1, // Prefer lower temperature for more controlled responses for now
+					RepeatPenalty: 1.1,
+					TopP:          1.0, // Prefer greedy decoding for now
+					TopK:          1.0, // Prefer greedy decoding for now
+				}
+
+				return llm.LMResponse(*c, chatTurn, smodelOpts, config.DataPath)
+			}
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
