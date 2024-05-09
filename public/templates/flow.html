@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Drawflow</title>
+</head>
+<body>
+  <script src="../js/drawflow.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/all.min.js" integrity="sha256-KzZiKy0DWYsnwMF+X1DvQngQ2/FxF7MF3Ff72XcpuPs=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" type="text/css" href="../../css/drawflow/drawflow.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../css/drawflow/beautiful.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+  <script src="https://unpkg.com/micromodal/dist/micromodal.min.js"></script>
+
+
+  <header>
+    <h2>Drawflow</h2>
+  </header>
+  <div class="wrapper">
+    <div class="col">
+      <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="prompt">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M8 12h1m7 0h-4m4-4h-1m-3 0H8m0 8h5M3 14v-4c0-3.771 0-5.657 1.172-6.828C5.343 2 7.229 2 11 2h2c3.771 0 5.657 0 6.828 1.172c.654.653.943 1.528 1.07 2.828M21 10v4c0 3.771 0 5.657-1.172 6.828C18.657 22 16.771 22 13 22h-2c-3.771 0-5.657 0-6.828-1.172c-.654-.653-.943-1.528-1.07-2.828"/>
+        </svg>
+        <span> Prompt</span>
+      </div>
+      <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="slack">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="currentColor">
+              <path d="M16 10.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5s.448-1.5 1-1.5s1 .672 1 1.5Zm-6 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S8.448 9 9 9s1 .672 1 1.5Z"/>
+              <path fill-rule="evenodd" d="M9.944 1.25H10a.75.75 0 0 1 0 1.5c-1.907 0-3.261.002-4.29.14c-1.005.135-1.585.389-2.008.812c-.423.423-.677 1.003-.812 2.009c-.138 1.028-.14 2.382-.14 4.289a.75.75 0 0 1-1.5 0v-.056c0-1.838 0-3.294.153-4.433c.158-1.172.49-2.121 1.238-2.87c.749-.748 1.698-1.08 2.87-1.238c1.14-.153 2.595-.153 4.433-.153Zm8.345 1.64c-1.027-.138-2.382-.14-4.289-.14a.75.75 0 0 1 0-1.5h.056c1.838 0 3.294 0 4.433.153c1.172.158 2.121.49 2.87 1.238c.748.749 1.08 1.698 1.238 2.87c.153 1.14.153 2.595.153 4.433V10a.75.75 0 0 1-1.5 0c0-1.907-.002-3.261-.14-4.29c-.135-1.005-.389-1.585-.812-2.008c-.423-.423-1.003-.677-2.009-.812ZM2 13.25a.75.75 0 0 1 .75.75c0 1.907.002 3.262.14 4.29c.135 1.005.389 1.585.812 2.008c.423.423 1.003.677 2.009.812c1.028.138 2.382.14 4.289.14a.75.75 0 0 1 0 1.5h-.056c-1.838 0-3.294 0-4.433-.153c-1.172-.158-2.121-.49-2.87-1.238c-.748-.749-1.08-1.698-1.238-2.87c-.153-1.14-.153-2.595-.153-4.433V14a.75.75 0 0 1 .75-.75Zm20 0a.75.75 0 0 1 .75.75v.056c0 1.838 0 3.294-.153 4.433c-.158 1.172-.49 2.121-1.238 2.87c-.749.748-1.698 1.08-2.87 1.238c-1.14.153-2.595.153-4.433.153H14a.75.75 0 0 1 0-1.5c1.907 0 3.262-.002 4.29-.14c1.005-.135 1.585-.389 2.008-.812c.423-.423.677-1.003.812-2.009c.138-1.027.14-2.382.14-4.289a.75.75 0 0 1 .75-.75ZM8.397 15.553a.75.75 0 0 1 1.05-.155c.728.54 1.607.852 2.553.852s1.825-.313 2.553-.852a.75.75 0 1 1 .894 1.204A5.766 5.766 0 0 1 12 17.75a5.766 5.766 0 0 1-3.447-1.148a.75.75 0 0 1-.156-1.049Z" clip-rule="evenodd"/>
+          </g>
+        </svg>
+        <span> Assistant</span>
+      </div>
+      <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="github">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="none">
+              <path stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M2 8V6c0-1.4 0-2.1.272-2.635a2.5 2.5 0 0 1 1.093-1.093C3.9 2 4.6 2 6 2c1.4 0 2.1 0 2.635.272a2.5 2.5 0 0 1 1.093 1.093C10 3.9 10 4.6 10 6v12c0 1.4 0 2.1-.272 2.635a2.5 2.5 0 0 1-1.093 1.092C8.1 22 7.4 22 6 22c-1.4 0-2.1 0-2.635-.273a2.5 2.5 0 0 1-1.093-1.092C2 20.1 2 19.4 2 18v-6m5 7H5"/>
+              <path stroke="currentColor" stroke-width="1.5" d="m13.314 4.929l-2.142 2.142c-.579.578-.867.867-1.02 1.235C10 8.673 10 9.082 10 9.9v9.656l8.97-8.97c.99-.99 1.486-1.485 1.671-2.056a2.5 2.5 0 0 0 0-1.545c-.185-.57-.68-1.066-1.67-2.056c-.99-.99-1.486-1.485-2.056-1.67a2.5 2.5 0 0 0-1.545 0c-.571.185-1.066.68-2.056 1.67Z"/>
+              <path fill="currentColor" d="M18 22v-.75v.75Zm0-8v.75V14Zm4 4h-.75h.75Zm-.273 2.635l-.668-.34l.668.34Zm-1.092 1.092l-.34-.668l.34.668Zm1.092-6.362l-.668.34l.668-.34Zm-1.092-1.092l-.34.668l.34-.668ZM13 22.75a.75.75 0 0 0 0-1.5v1.5Zm4-1.5a.75.75 0 0 0 0 1.5v-1.5Zm-1.5-6.5H18v-1.5h-2.5v1.5ZM21.25 18c0 .712 0 1.202-.032 1.58c-.03.371-.085.57-.159.715l1.337.68c.199-.39.28-.809.317-1.272c.038-.454.037-1.015.037-1.703h-1.5ZM18 22.75c.688 0 1.249 0 1.703-.037c.463-.037.882-.118 1.273-.317l-.681-1.337c-.145.074-.344.13-.714.16c-.38.03-.869.031-1.581.031v1.5Zm3.06-2.456a1.75 1.75 0 0 1-.765.765l.68 1.337a3.25 3.25 0 0 0 1.42-1.42l-1.336-.681ZM22.75 18c0-.688 0-1.249-.037-1.703c-.037-.463-.118-.882-.317-1.273l-1.337.682c.074.144.13.343.16.713c.03.38.031.869.031 1.581h1.5ZM18 14.75c.712 0 1.202 0 1.58.032c.371.03.57.085.715.159l.68-1.337c-.39-.199-.809-.28-1.272-.317c-.454-.038-1.015-.037-1.703-.037v1.5Zm4.396.274a3.25 3.25 0 0 0-1.42-1.42l-.681 1.337c.329.167.596.435.764.764l1.337-.68ZM13 21.25H6v1.5h7v-1.5Zm5 0h-1v1.5h1v-1.5Z"/>
+          </g>
+        </svg>
+        <span> Tool</span>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="menu">
+        <ul>
+          <li onclick="editor.changeModule('Home'); changeModule(event);" class="selected">Main</li>
+          <li onclick="editor.changeModule('Other'); changeModule(event);">Other Module</li>
+        </ul>
+      </div>
+      <div id="drawflow" ondrop="drop(event)" ondragover="allowDrop(event)">
+
+        <div class="btn-export" onclick="Swal.fire({ title: 'Export',
+        html: '<pre><code>'+JSON.stringify(editor.export(), null,4)+'</code></pre>'
+        })">Export</div>
+        <div class="btn-clear" onclick="editor.clearModuleSelected()">Clear</div>
+        <div class="btn-lock">
+          <i id="lock" class="fas fa-lock" onclick="editor.editor_mode='fixed'; changeMode('lock');"></i>
+          <i id="unlock" class="fas fa-lock-open" onclick="editor.editor_mode='edit'; changeMode('unlock');" style="display:none;"></i>
+        </div>
+        <div class="bar-zoom">
+          <i class="fas fa-search-minus" onclick="editor.zoom_out()"></i>
+          <i class="fas fa-search" onclick="editor.zoom_reset()"></i>
+          <i class="fas fa-search-plus" onclick="editor.zoom_in()"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    var id = document.getElementById("drawflow");
+    const editor = new Drawflow(id);
+    editor.reroute = true;
+    editor.reroute_fix_curvature = true;
+    editor.force_first_input = false;
+
+  /*
+    editor.createCurvature = function(start_pos_x, start_pos_y, end_pos_x, end_pos_y, curvature_value, type) {
+      var center_x = ((end_pos_x - start_pos_x)/2)+start_pos_x;
+      return ' M ' + start_pos_x + ' ' + start_pos_y + ' L '+ center_x +' ' +  start_pos_y  + ' L ' + center_x + ' ' +  end_pos_y  + ' L ' + end_pos_x + ' ' + end_pos_y;
+    }*/
+
+
+
+    
+
+    const dataToImport =  {"drawflow":{"Home":{"data":{"1":{"id":1,"name":"welcome","data":{},"class":"welcome","html":"\n    <div>\n      <div class=\"title-box\">👏 Welcome!!</div>\n      <div class=\"box\">\n        <p>Simple flow library <b>demo</b>\n        <a href=\"https://github.com/jerosoler/Drawflow\" target=\"_blank\">Drawflow</a> by <b>Jero Soler</b></p><br>\n\n        <p>Multiple input / outputs<br>\n           Data sync nodes<br>\n           Import / export<br>\n           Modules support<br>\n           Simple use<br>\n           Type: Fixed or Edit<br>\n           Events: view console<br>\n           Pure Javascript<br>\n        </p>\n        <br>\n        <p><b><u>Shortkeys:</u></b></p>\n        <p>🎹 <b>Delete</b> for remove selected<br>\n        💠 Mouse Left Click == Move<br>\n        ❌ Mouse Right == Delete Option<br>\n        🔍 Ctrl + Wheel == Zoom<br>\n        📱 Mobile support<br>\n        ...</p>\n      </div>\n    </div>\n    ", "typenode": false, "inputs":{},"outputs":{},"pos_x":50,"pos_y":50},"2":{"id":2,"name":"slack","data":{},"class":"slack","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-slack\"></i> Slack chat message</div>\n          </div>\n          ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1028,"pos_y":87},"3":{"id":3,"name":"telegram","data":{"channel":"channel_2"},"class":"telegram","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-telegram-plane\"></i> Telegram bot</div>\n            <div class=\"box\">\n              <p>Send to telegram</p>\n              <p>select channel</p>\n              <select df-channel>\n                <option value=\"channel_1\">Channel 1</option>\n                <option value=\"channel_2\">Channel 2</option>\n                <option value=\"channel_3\">Channel 3</option>\n                <option value=\"channel_4\">Channel 4</option>\n              </select>\n            </div>\n          </div>\n          ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1032,"pos_y":184},"4":{"id":4,"name":"email","data":{},"class":"email","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-at\"></i> Send Email </div>\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"5","input":"output_1"}]}},"outputs":{},"pos_x":1033,"pos_y":439},"5":{"id":5,"name":"template","data":{"template":"Write your template"},"class":"template","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-code\"></i> Template</div>\n              <div class=\"box\">\n                Ger Vars\n                <textarea df-template></textarea>\n                Output template with vars\n              </div>\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"6","input":"output_1"}]}},"outputs":{"output_1":{"connections":[{"node":"4","output":"input_1"},{"node":"11","output":"input_1"}]}},"pos_x":607,"pos_y":304},"6":{"id":6,"name":"github","data":{"name":"https://github.com/jerosoler/Drawflow"},"class":"github","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-github \"></i> Github Stars</div>\n            <div class=\"box\">\n              <p>Enter repository url</p>\n            <input type=\"text\" df-name>\n            </div>\n          </div>\n          ", "typenode": false, "inputs":{},"outputs":{"output_1":{"connections":[{"node":"5","output":"input_1"}]}},"pos_x":341,"pos_y":191},"7":{"id":7,"name":"prompt","data":{},"class":"prompt","html":"\n        <div>\n          <div class=\"title-box\"><i class=\"fab fa-prompt\"></i> prompt Message</div>\n        </div>\n        ", "typenode": false, "inputs":{},"outputs":{"output_1":{"connections":[{"node":"2","output":"input_1"},{"node":"3","output":"input_1"},{"node":"11","output":"input_1"}]}},"pos_x":347,"pos_y":87},"11":{"id":11,"name":"log","data":{},"class":"log","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-file-signature\"></i> Save log file </div>\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"5","input":"output_1"},{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1031,"pos_y":363}}},"Other":{"data":{"8":{"id":8,"name":"personalized","data":{},"class":"personalized","html":"\n            <div>\n              Personalized\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"12","input":"output_1"},{"node":"12","input":"output_2"},{"node":"12","input":"output_3"},{"node":"12","input":"output_4"}]}},"outputs":{"output_1":{"connections":[{"node":"9","output":"input_1"}]}},"pos_x":764,"pos_y":227},"9":{"id":9,"name":"dbclick","data":{"name":"Hello World!!"},"class":"dbclick","html":"\n            <div>\n            <div class=\"title-box\"><i class=\"fas fa-mouse\"></i> Db Click</div>\n              <div class=\"box dbclickbox\" ondblclick=\"showpopup(event)\">\n                Db Click here\n                <div class=\"modal\" style=\"display:none\">\n                  <div class=\"modal-content\">\n                    <span class=\"close\" onclick=\"closemodal(event)\">&times;</span>\n                    Change your variable {name} !\n                    <input type=\"text\" df-name>\n                  </div>\n\n                </div>\n              </div>\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[{"node":"8","input":"output_1"}]}},"outputs":{"output_1":{"connections":[{"node":"12","output":"input_2"}]}},"pos_x":209,"pos_y":38},"12":{"id":12,"name":"multiple","data":{},"class":"multiple","html":"\n            <div>\n              <div class=\"box\">\n                Multiple!\n              </div>\n            </div>\n            ", "typenode": false, "inputs":{"input_1":{"connections":[]},"input_2":{"connections":[{"node":"9","input":"output_1"}]},"input_3":{"connections":[]}},"outputs":{"output_1":{"connections":[{"node":"8","output":"input_1"}]},"output_2":{"connections":[{"node":"8","output":"input_1"}]},"output_3":{"connections":[{"node":"8","output":"input_1"}]},"output_4":{"connections":[{"node":"8","output":"input_1"}]}},"pos_x":179,"pos_y":272}}}}}
+    editor.start();
+    editor.import(dataToImport);
+
+
+
+  /*
+    var welcome = `
+    <div>
+      <div class="title-box">👏 Welcome!!</div>
+      <div class="box">
+        <p>Simple flow library <b>demo</b>
+        <a href="https://github.com/jerosoler/Drawflow" target="_blank">Drawflow</a> by <b>Jero Soler</b></p><br>
+
+        <p>Multiple input / outputs<br>
+           Data sync nodes<br>
+           Import / export<br>
+           Modules support<br>e
+           Simple use<br>
+           Type: Fixed or Edit<br>
+           Events: view console<br>
+           Pure Javascript<br>
+        </p>
+        <br>
+        <p><b><u>Shortkeys:</u></b></p>
+        <p>🎹 <b>Delete</b> for remove selected<br>
+        💠 Mouse Left Click == Move<br>
+        ❌ Mouse Right == Delete Option<br>
+        🔍 Ctrl + Wheel == Zoom<br>
+        📱 Mobile support<br>
+        ...</p>
+      </div>
+    </div>
+    `;
+*/
+
+
+    //editor.addNode(name, "typenode": false,  inputs, outputs, posx, posy, class, data, html);
+    /*editor.addNode('welcome', 0, 0, 50, 50, 'welcome', {}, welcome );
+    editor.addModule('Other');
+    */
+
+    // Events!
+    editor.on('nodeCreated', function(id) {
+      console.log("Node created " + id);
+    })
+
+    editor.on('nodeRemoved', function(id) {
+      console.log("Node removed " + id);
+    })
+
+    editor.on('nodeSelected', function(id) {
+      console.log("Node selected " + id);
+    })
+
+    editor.on('moduleCreated', function(name) {
+      console.log("Module Created " + name);
+    })
+
+    editor.on('moduleChanged', function(name) {
+      console.log("Module Changed " + name);
+    })
+
+    editor.on('connectionCreated', function(connection) {
+      console.log('Connection created');
+      console.log(connection);
+    })
+
+    editor.on('connectionRemoved', function(connection) {
+      console.log('Connection removed');
+      console.log(connection);
+    })
+/*
+    editor.on('mouseMove', function(position) {
+      console.log('Position mouse x:' + position.x + ' y:'+ position.y);
+    })
+*/
+    editor.on('nodeMoved', function(id) {
+      console.log("Node moved " + id);
+    })
+
+    editor.on('zoom', function(zoom) {
+      console.log('Zoom level ' + zoom);
+    })
+
+    editor.on('translate', function(position) {
+      console.log('Translate x:' + position.x + ' y:'+ position.y);
+    })
+
+    editor.on('addReroute', function(id) {
+      console.log("Reroute added " + id);
+    })
+
+    editor.on('removeReroute', function(id) {
+      console.log("Reroute removed " + id);
+    })
+    /* DRAG EVENT */
+
+    /* Mouse and Touch Actions */
+
+    var elements = document.getElementsByClassName('drag-drawflow');
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].addEventListener('touchend', drop, false);
+      elements[i].addEventListener('touchmove', positionMobile, false);
+      elements[i].addEventListener('touchstart', drag, false );
+    }
+
+    var mobile_item_selec = '';
+    var mobile_last_move = null;
+   function positionMobile(ev) {
+     mobile_last_move = ev;
+   }
+
+   function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    function drag(ev) {
+      if (ev.type === "touchstart") {
+        mobile_item_selec = ev.target.closest(".drag-drawflow").getAttribute('data-node');
+      } else {
+      ev.dataTransfer.setData("node", ev.target.getAttribute('data-node'));
+      }
+    }
+
+    function drop(ev) {
+      if (ev.type === "touchend") {
+        var parentdrawflow = document.elementFromPoint( mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY).closest("#drawflow");
+        if(parentdrawflow != null) {
+          addNodeToDrawFlow(mobile_item_selec, mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY);
+        }
+        mobile_item_selec = '';
+      } else {
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("node");
+        addNodeToDrawFlow(data, ev.clientX, ev.clientY);
+      }
+
+    }
+
+    function addNodeToDrawFlow(name, pos_x, pos_y) {
+      if(editor.editor_mode === 'fixed') {
+        return false;
+      }
+      pos_x = pos_x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)) - (editor.precanvas.getBoundingClientRect().x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
+      pos_y = pos_y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)) - (editor.precanvas.getBoundingClientRect().y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)));
+
+
+      switch (name) {
+        case 'prompt':
+        var prompt = `
+        <div>
+          <div class="title-box"><i class="fab fa-prompt"></i> prompt Message</div>
+        </div>
+        `;
+          editor.addNode('prompt', 0,  1, pos_x, pos_y, 'prompt', {}, prompt );
+          break;
+        case 'slack':
+          var slackchat = `
+          <div>
+            <div class="title-box"><i class="fab fa-slack"></i> Slack chat message</div>
+          </div>
+          `
+          editor.addNode('slack', 1, 0, pos_x, pos_y, 'slack', {}, slackchat );
+          break;
+        case 'github':
+          var githubtemplate = `
+          <div>
+            <div class="title-box"><i class="fab fa-github "></i> Github Stars</div>
+            <div class="box">
+              <p>Enter repository url</p>
+            <input type="text" df-name>
+            </div>
+          </div>
+          `;
+          editor.addNode('github', 0, 1, pos_x, pos_y, 'github', { "name": ''}, githubtemplate );
+          break;
+
+        default:
+      }
+    }
+
+  var transform = '';
+  function showpopup(e) {
+    e.target.closest(".drawflow-node").style.zIndex = "9999";
+    e.target.children[0].style.display = "block";
+    //document.getElementById("modalfix").style.display = "block";
+
+    //e.target.children[0].style.transform = 'translate('+translate.x+'px, '+translate.y+'px)';
+    transform = editor.precanvas.style.transform;
+    editor.precanvas.style.transform = '';
+    editor.precanvas.style.left = editor.canvas_x +'px';
+    editor.precanvas.style.top = editor.canvas_y +'px';
+    console.log(transform);
+
+    //e.target.children[0].style.top  =  -editor.canvas_y - editor.container.offsetTop +'px';
+    //e.target.children[0].style.left  =  -editor.canvas_x  - editor.container.offsetLeft +'px';
+    editor.editor_mode = "fixed";
+
+  }
+
+   function closemodal(e) {
+     e.target.closest(".drawflow-node").style.zIndex = "2";
+     e.target.parentElement.parentElement.style.display  ="none";
+     //document.getElementById("modalfix").style.display = "none";
+     editor.precanvas.style.transform = transform;
+       editor.precanvas.style.left = '0px';
+       editor.precanvas.style.top = '0px';
+      editor.editor_mode = "edit";
+   }
+
+    function changeModule(event) {
+      var all = document.querySelectorAll(".menu ul li");
+        for (var i = 0; i < all.length; i++) {
+          all[i].classList.remove('selected');
+        }
+      event.target.classList.add('selected');
+    }
+
+    function changeMode(option) {
+
+    //console.log(lock.id);
+      if(option == 'lock') {
+        lock.style.display = 'none';
+        unlock.style.display = 'block';
+      } else {
+        lock.style.display = 'block';
+        unlock.style.display = 'none';
+      }
+
+    }
+
+  </script>
+</body>
+</html>

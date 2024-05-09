@@ -78,6 +78,12 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
+  - name: 'google-gemini-1.5'
+    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
+    prompt: '{prompt}'
+    ctx: 500000
+    roles:
+      - 'all'
   - name: 'starling-7b-beta'
     homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
     gguf: 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF'
