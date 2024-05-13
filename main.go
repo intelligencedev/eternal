@@ -1094,7 +1094,7 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	// Generate embeddings
 	pterm.Warning.Println("Generating embeddings for chat...")
 
-	err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", response, "txt", 2048, 500, config.DataPath)
+	err := embeddings.GenerateEmbeddingForTask("chat", response, "txt", 2048, 500, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err

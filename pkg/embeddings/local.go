@@ -8,7 +8,6 @@ import (
 
 	estore "eternal/pkg/vecstore"
 
-	"github.com/blevesearch/bleve/v2"
 	"github.com/nlpodyssey/cybertron/pkg/models/bert"
 	"github.com/nlpodyssey/cybertron/pkg/tasks"
 	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
@@ -57,7 +56,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(searchIdx bleve.Index, task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
+func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
 
 	_, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -71,7 +70,10 @@ func GenerateEmbeddingForTask(searchIdx bleve.Index, task string, content string
 	var separators []string
 
 	if doctype == "txt" {
+		// convert to lower case
+		content = strings.ToLower(content)
 		chunks = documents.SplitTextByCount(string(content), chunkSize)
+
 	} else {
 		doctype = strings.ToUpper(doctype)
 		separators, _ = documents.GetSeparatorsForLanguage(documents.Language(doctype))
@@ -118,14 +120,6 @@ func GenerateEmbeddingForTask(searchIdx bleve.Index, task string, content string
 	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
 	for _, chunk := range uniqueChunks {
-		data := struct {
-			Name string
-		}{
-			Name: chunk,
-		}
-
-		searchIdx.Index(chunk, data)
-
 		var vec []float64
 
 		encoder := func(text string) error {
