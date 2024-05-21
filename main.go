@@ -851,7 +851,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 					return err
 				}
 
-				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, llm.AssistantVisualBot)
+				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, llm.AssistantDefault)
 
 				smodelOpts := &llm.GGUFOptions{
 					NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -882,7 +882,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// }
 
 			cpt := llm.GetSystemTemplate(chatMessage)
-			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-turbo", cpt.Messages, 0.7, apiKey)
+			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4o", cpt.Messages, 0.3, apiKey)
 		})
 	}))
 

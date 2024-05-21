@@ -1,170 +1,14 @@
 <style>
-  .loadership_JTACT {
-    display: flex;
-    position: relative;
-    width: 68px;
-    height: 68px;
-  }
-
-  .loadership_JTACT div {
-    animation: loadership_JTACT_roller 1.2s infinite;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
-    transform-origin: 34px 34px;
-  }
-
-  .loadership_JTACT div:after {
-    content: " ";
-    display: block;
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #ffffff;
-  }
-
-  .loadership_JTACT div:nth-child(1) {
-    animation-delay: 0.00s;
-  }
-
-  .loadership_JTACT div:nth-child(1):after {
-    top: 60px;
-    left: 30px;
-  }
-
-
-  .loadership_JTACT div:nth-child(2) {
-    animation-delay: -0.04s;
-  }
-
-  .loadership_JTACT div:nth-child(2):after {
-    top: 56px;
-    left: 45px;
-  }
-
-
-  .loadership_JTACT div:nth-child(3) {
-    animation-delay: -0.07s;
-  }
-
-  .loadership_JTACT div:nth-child(3):after {
-    top: 45px;
-    left: 56px;
-  }
-
-
-  .loadership_JTACT div:nth-child(4) {
-    animation-delay: -0.11s;
-  }
-
-  .loadership_JTACT div:nth-child(4):after {
-    top: 30px;
-    left: 60px;
-  }
-
-
-  .loadership_JTACT div:nth-child(5) {
-    animation-delay: -0.14s;
-  }
-
-  .loadership_JTACT div:nth-child(5):after {
-    top: 15px;
-    left: 56px;
-  }
-
-
-  .loadership_JTACT div:nth-child(6) {
-    animation-delay: -0.18s;
-  }
-
-  .loadership_JTACT div:nth-child(6):after {
-    top: 4px;
-    left: 45px;
-  }
-
-
-  .loadership_JTACT div:nth-child(7) {
-    animation-delay: -0.22s;
-  }
-
-  .loadership_JTACT div:nth-child(7):after {
-    top: 0px;
-    left: 30px;
-  }
-
-
-  .loadership_JTACT div:nth-child(8) {
-    animation-delay: -0.25s;
-  }
-
-  .loadership_JTACT div:nth-child(8):after {
-    top: 4px;
-    left: 15px;
-  }
-
-
-  .loadership_JTACT div:nth-child(9) {
-    animation-delay: -0.29s;
-  }
-
-  .loadership_JTACT div:nth-child(9):after {
-    top: 15px;
-    left: 4px;
-  }
-
-
-  .loadership_JTACT div:nth-child(10) {
-    animation-delay: -0.32s;
-  }
-
-  .loadership_JTACT div:nth-child(10):after {
-    top: 30px;
-    left: 0px;
-  }
-
-
-  .loadership_JTACT div:nth-child(11) {
-    animation-delay: -0.36s;
-  }
-
-  .loadership_JTACT div:nth-child(11):after {
-    top: 45px;
-    left: 4px;
-  }
-
-
-  .loadership_JTACT div:nth-child(12) {
-    animation-delay: -0.40s;
-  }
-
-  .loadership_JTACT div:nth-child(12):after {
-    top: 56px;
-    left: 15px;
-  }
-
-
-
-  @keyframes loadership_JTACT_roller {
-    0% {
-      transform: rotate(0deg);
-    }
-
-    100% {
-      transform: rotate(360deg);
-    }
-  }
+  /* Your existing CSS styles */
 </style>
 
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
-  <!-- <div name="chat-{{.turnID}}" id="chat-{{.turnID}}"> -->
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
       <div>
         <span class="badge my-3 mx-1" style="background-color: var(--et-red);">{{.username}}</span>
       </div>
-      <!-- Using a hidden form to send the message -->
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
-        <!-- <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load">   -->
-        <!-- Get the selectedModels in localStorage and send over websocket -->
         <input type="hidden" name="model" value="{{.model}}">
         <input type="hidden" name="chat_message" value="{{.message}}">
       </form>
@@ -178,9 +22,7 @@
       <div>
         <span class="badge my-3 mx-1" style="background-color: var(--et-purple);">{{.assistant}}</span>
       </div>
-      <!-- Messages received from WebSocket will be appended here -->
-      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
-        hx-on:load="highlight()">
+      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream" hx-on:load="highlight()">
         <div class="loadership_JTACT">
           <div></div>
           <div></div>
@@ -199,7 +41,7 @@
     </div>
   </div>
 </div>
-<!-- <codapi-settings url="http://localhost:1313/v1"></codapi-settings> -->
+
 <script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
   htmx.on("htmx:wsOpen", function (evt) {
@@ -207,8 +49,6 @@
     const box = document.querySelector(".box");
     if (box) {
       box.style.transition = "transform 0.5s ease";
-
-      // Restore original rotation
       box.style.transform = "rotateX(45deg) rotateY(45deg) rotateZ(-180deg)";
     }
     scrollToBottom();
@@ -226,10 +66,9 @@
   function scrollToBottom() {
     setTimeout(function () {
       window.scrollTo(0, document.body.scrollHeight);
-    }, 0); // Timeout ensures the DOM has been painted
+    }, 0);
   }
 
-  // Call scrollToBottom in the htmx event handlers
   htmx.on("htmx:wsAfterMessage", function (evt) {
     const box = document.querySelector(".box");
     const newRotation = chatRotation();
@@ -240,23 +79,17 @@
     scrollToBottom();
   });
 
-  // Highlight code blocks
   function highlight() {
     const container = document.getElementById("response-content-{{.turnID}}");
     container.querySelectorAll('pre code').forEach((block, index) => {
       if (!block.hasAttribute('data-snippet-added')) {
         hljs.highlightElement(block);
-
         block.classList.add('rounded-2');
-
-        // Create a new snippet element only if not already added
         const snippet = document.createElement('codapi-snippet');
         snippet.setAttribute('url', 'http://localhost:1313/v1');
         snippet.setAttribute('engine', 'browser');
         snippet.setAttribute('sandbox', 'javascript');
         snippet.setAttribute('editor', 'basic');
-
-        // Create a button to copy code
         const copyButton = document.createElement('button');
         copyButton.classList.add('btn', 'btn-link');
         copyButton.innerHTML = `
@@ -270,19 +103,13 @@
             alert('Failed to copy code.');
           });
         };
-
-        // Insert the snippet and the button after the code block
         const wrapper = document.createElement('div');
         wrapper.setAttribute('id', 'snippet-wrapper');
         wrapper.classList.add('rounded-2', 'mb-3');
-        // Add background color to the wrapper rgb #272822
         wrapper.style.backgroundColor = '#272822';
         wrapper.appendChild(snippet);
         wrapper.appendChild(copyButton);
-
         block.parentNode.insertAdjacentElement('afterend', wrapper);
-
-        // Mark this code block as having a snippet added
         block.setAttribute('data-snippet-added', 'true');
       }
     });
