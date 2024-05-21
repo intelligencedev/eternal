@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"eternal/pkg/llm"
@@ -18,6 +19,7 @@ import (
 const (
 	baseURL             = "https://api.openai.com/v1"
 	completionsEndpoint = "/chat/completions"
+	ttsEndpoint         = "/audio/speech"
 )
 
 // SendRequest sends a request to the OpenAI API and decodes the response.
@@ -91,6 +93,47 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 				pterm.Error.Println("WebSocket write error:", err)
 				return err
 			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		pterm.Error.Println("Error reading stream:", err)
+		return err
+	}
+
+	return nil
+}
+
+// StreamTTSToFile streams TTS response to a file.
+func StreamTTSToFile(inputText, voice, apiKey, outputFilePath string) error {
+	payload := &AudioSpeechRequest{
+		Model: "tts-1",
+		Input: inputText,
+		Voice: voice,
+	}
+
+	resp, err := SendRequest(ttsEndpoint, payload, apiKey)
+	if err != nil {
+		pterm.Error.Println(err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the output file
+	file, err := os.Create(outputFilePath)
+	if err != nil {
+		pterm.Error.Println("Error creating file:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Stream the response to the file
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if _, err := file.Write(line); err != nil {
+			pterm.Error.Println("Error writing to file:", err)
+			return err
 		}
 	}
 
