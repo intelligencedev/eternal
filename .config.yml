@@ -84,61 +84,61 @@ language_models:
     ctx: 500000
     roles:
       - 'all'
-  - name: 'starling-7b-beta'
-    homepage: 'https://huggingface.co/HuggingFaceH4/zephyr-7b-beta'
-    gguf: 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF'
-    downloads:
-      - 'https://huggingface.co/LoneStriker/Starling-LM-7B-beta-GGUF/resolve/main/Starling-LM-7B-beta-Q8_0.gguf'
-    prompt: "Code User: {prompt}<|end_of_turn|>Code Assistant:"
-    ctx: 8192
-    roles:
-      - 'chat'
-    tags:
-      - '7B'
   - name: 'llama3-8b-instruct'
     homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF'
+    gguf: 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF'
     downloads:
-      - 'https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q8_0.gguf'
+      - 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-correct-pre-tokenizer-and-EOS-token-Q8_0.gguf'
     prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 40960
-    roles:
-      - 'instruct'
-    tags:
-      - '8B'
-  - name: 'llama3-8b-1048k'
-    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/bartowski/Llama-3-8B-Instruct-Gradient-1048k-GGUF'
-    downloads:
-      - 'https://huggingface.co/bartowski/Llama-3-8B-Instruct-Gradient-1048k-GGUF/resolve/main/Llama-3-8B-Instruct-Gradient-1048k-Q8_0.gguf'
-    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 120000
+    ctx: 8192
     roles:
       - 'instruct'
     tags:
       - '8B'
   - name: 'llama3-70b-instruct'
     homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF'
+    gguf: 'https://huggingface.co/mradermacher/Smaug-Llama-3-70B-Instruct-GGUF'
     downloads:
       - 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF/resolve/main/Meta-Llama-3-70B-Instruct-Q6_K.gguf'
     prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 40960
+    ctx: 8192
     roles:
       - 'instruct'
     tags:
       - '70B'
-  - name: 'wizardlm-2-7b'
-    homepage: 'https://huggingface.co/microsoft/WizardLM-2-7B'
-    gguf: 'https://huggingface.co/MaziyarPanahi/WizardLM-2-7B-GGUF'
+  - name: 'llama-3-smaug-70b'
+    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
+    gguf: 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF'
     downloads:
-      - 'https://huggingface.co/MaziyarPanahi/WizardLM-2-7B-GGUF/resolve/main/WizardLM-2-7B.Q8_0.gguf'
-    prompt: "<|im_start|>system {system}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
-    ctx: 32768
+      - 'https://huggingface.co/mradermacher/Smaug-Llama-3-70B-Instruct-GGUF/resolve/main/Smaug-Llama-3-70B-Instruct.Q8_0.gguf'
+    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+    ctx: 8192
     roles:
-      - 'all'
+      - 'instruct'
     tags:
-      - '7b'
+      - '70B'
+  - name: 'phi-3-medium-128k'
+    homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-medium-128k-instruct.gguf'
+    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
+    ctx: 120000
+    roles:
+      - 'instruct'
+    tags:
+      - '14B'
+  - name: 'phi-3-mini-128k'
+    homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-mini-128k-instruct.gguf'
+    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
+    ctx: 120000
+    roles:
+      - 'instruct'
+    tags:
+      - '7B'
   - name: 'wizardlm-2-8x22b'
     homepage: 'https://huggingface.co/microsoft/WizardLM-2-7B'
     gguf: 'https://huggingface.co/MaziyarPanahi/WizardLM-2-8x22B-GGUF'
@@ -150,29 +150,6 @@ language_models:
       - 'all'
     tags:
       - '22x7b'
-  - name: 'codeninja-7b'
-    homepage: 'https://huggingface.co/beowolx/CodeNinja-1.0-OpenChat-7B'
-    gguf: 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/CodeNinja-1.0-OpenChat-7B-GGUF/resolve/main/codeninja-1.0-openchat-7b.Q8_0.gguf'
-    prompt: "GPT4 Correct User: {prompt}<|end_of_turn|>GPT4 Correct Assistant:"
-    ctx: 8192
-    roles:
-      - 'code'
-    tags:
-      - '7B'
-  - name: 'wizardmath-7b'
-    homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
-    gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
-    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
-    ctx: 32768
-    roles:
-      - 'math'
-      - 'logic'
-    tags:
-      - '7B'
   - name: 'mixtral-8x7b-instruct'
     homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
     gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
@@ -184,61 +161,6 @@ language_models:
       - 'all'
     tags:
       - '8x7B'
-  - name: 'yarn-mistral-7b-64k'
-    homepage: 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1'
-    gguf: 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/MaziyarPanahi/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1-GGUF/resolve/main/Yarn-Mistral-7b-64k-Mistral-7B-Instruct-v0.1.Q6_K.gguf'
-    prompt: "<|prompter|>{prompt}</s><|assistant|>"
-    ctx: 64000
-    roles:
-      - 'all'
-    tags:
-      - '8x7b'
-  - name: 'aixcoder-7b'
-    homepage: 'https://huggingface.co/aiXcoder/aixcoder-7b-base'
-    gguf: 'https://huggingface.co/bartowski/aixcoder-7b-base-GGUF'
-    downloads:
-      - 'hhttps://huggingface.co/bartowski/aixcoder-7b-base-GGUF/resolve/main/aixcoder-7b-base-Q8_0.gguf'
-    prompt: "{prompt}"
-    ctx: 8092
-    roles:
-      - 'all'
-    tags:
-      - '7b'
-  - name: 'everyone-coder-33b'
-    homepage: 'https://huggingface.co/rombodawg/Everyone-Coder-33b-Base'
-    gguf: 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/Everyone-Coder-33B-Base-GGUF/resolve/main/everyone-coder-33b-base.Q8_0.gguf'
-    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n### Instruction:\n{prompt}\n### Response:"
-    ctx: 16384
-    roles:
-      - 'code'
-    tags:
-      - '33B'
-  - name: 'miqu-1-70b'
-    homepage: 'https://huggingface.co/miqudev/miqu-1-70b'
-    gguf: 'https://huggingface.co/miqudev/miqu-1-70b'
-    downloads:
-      - 'https://huggingface.co/miqudev/miqu-1-70b/resolve/main/miqu-1-70b.q5_K_M.gguf'
-    prompt:  "<s> [INST] {{prompt}} [/INST] ANSWER_1</s>"
-    ctx: 32768
-    roles:
-      - 'all'
-    tags:
-      - '70B'
-  - name: 'llama-8b-hermes'
-    homepage: 'https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF'
-    gguf: 'https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF'
-    downloads:
-      - 'https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B-GGUF/resolve/main/Hermes-2-Pro-Llama-3-8B-Q8_0.gguf'
-    prompt:  "<|im_start|>system {system}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
-    ctx: 8096
-    roles:
-      - 'all'
-    tags:
-      - '70B'
 
 
 image_models:
@@ -246,3 +168,83 @@ image_models:
     homepage: 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/'
     downloads:
       - 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/resolve/main/DreamShaperXL_Turbo_V2-SFW.safetensors'
+
+
+assistant_roles:
+  - name: 'chat'
+    instructions: |
+      You are a helpful knowledge assistant. 
+      You respond in a pleasant and friendly conversational tone and always end your replies with a question to encourage further interaction. 
+      You provide clear and concise answers to user queries and offer additional information or assistance when needed. 
+      You aim to be informative, engaging, and supportive in all your interactions.
+      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+  - name: 'summary'
+    instructions: |
+      You are an advanced language model tasked with summarizing articles effectively. Your objective is to extract and condense essential information from the articles, ensuring accuracy and completeness. Follow these steps:
+      Identify Key Information: Carefully read the article to pinpoint major themes, conclusions, and critical data.
+      Organize Thoughts: Arrange the key points logically to maintain the flow and integrity of the article's message.
+      Write the Summary: Compose a clear and concise summary that encapsulates the primary facts and conclusions without injecting personal opinions. 
+      If relevant, include examples to illustrate significant points.
+      Review for Clarity: Ensure the summary is coherent and does not omit any important aspects of the article.
+      The goal is to create a summary that is both informative and concise, capturing the essence of the article while providing a comprehensive overview of its content. 
+      Ensure you format your response with markdown format using headers, lists, code blocks and other elements as needed.
+      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+  - name: 'cot'
+    instructions: |
+      Analyze the question to identify key information. Break it down into core components and brainstorm ideas for each. Evaluate these ideas for relevance and logic, focusing on the strongest points. 
+      Construct a coherent argument addressing the original query. 
+      If needed, iteratively explore and integrate alternative perspectives to strengthen your case. 
+      Explain your reasoning, highlighting the strengths and flaws of different arguments. 
+      Synthesize everything into a clear, concise response that addresses the query comprehensively. 
+      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+  - name: 'cot_advanced'
+    instructions: |
+      Respond to each query using the following process to reason through to the most insightful answer:
+      First, carefully analyze the question to identify the key pieces of information required to answer it comprehensively. Break the question down into its core components.
+      For each component of the question, brainstorm several relevant ideas, facts, and perspectives that could help address that part of the query. Consider the question from multiple angles.
+      Critically evaluate each of those ideas you generated. Assess how directly relevant they are to the question, how logical and well-supported they are, and how clearly they convey key points. Aim to hone in on the strongest and most pertinent thoughts.
+      Take the most promising ideas and try to combine them into a coherent line of reasoning that flows logically from one point to the next in order to address the original question. See if you can construct a compelling argument or explanation.
+      If your current line of reasoning doesn't fully address all aspects of the original question in a satisfactory way, continue to iteratively explore other possible angles by swapping in alternative ideas and seeing if they allow you to build a stronger overall case.
+      As you work through the above process, make a point to capture your thought process and explain the reasoning behind why you selected or discarded certain ideas. Highlight the relative strengths and flaws in different possible arguments. Make your reasoning transparent.
+      After exploring multiple possible thought paths, integrating the strongest arguments, and explaining your reasoning along the way, pull everything together into a clear, concise, and complete final response that directly addresses the original query.
+      Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
+      The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.
+      Always end your response asking if there is anything else you can help with.
+  - name: 'software_dev'
+    instructions: |
+      You are now an expert in computer science, specifically in software development, network engineering, and database management. You possess deep knowledge in programming languages including but not limited to Python, JavaScript, Java, C++, and SQL. You are also proficient in frameworks and technologies such as React, Angular, Node.js, Django, .NET, TensorFlow, Kubernetes, Cisco IOS, and MySQL.
+      For software development, you understand various development methodologies like Agile, DevOps, and TDD. You can write, debug, and optimize code; and you can design software architecture.
+      As a network engineer, you are familiar with the setup, configuration, and management of network infrastructure, including routers, switches, firewalls, and VPNs. You are skilled in network protocols such as TCP/IP, UDP, ICMP, and HTTP.
+      In the field of database management, you can design, implement, and maintain databases. You are adept in database normalization, query optimization, and ensuring data integrity and security. You understand relational databases, NoSQL databases, and big data technologies.
+      Your responses should be technically accurate, clear, and detailed. You are capable of solving complex problems, designing systems, and explaining technical concepts clearly to both technical and non-technical audiences.
+      Whenever asked, provide code snippets, configuration examples, or detailed explanations. Use your expertise to offer solutions, troubleshoot issues, and educate on best practices across all these domains.
+  - name: 'code_review'
+    instructions: |
+      First, carefully read through the entire code that was submitted for review. Make note of the overall structure, design patterns used, and the key functionality being implemented.
+      Aim to holistically understand the code at a high level.
+      Next, go through the code again but this time critically analyze each module, class, function and code block in detail:
+      - Assess the code quality, adherence to best practices and coding standards, use of appropriate design patterns, and overall readability and maintainability.
+      - Look for any bugs, edge cases, error handling, security vulnerabilities, and performance issues.
+      - Evaluate how well the code is organized, commented, and documented.
+      - Consider how testable, modular, and extensible the code is.
+      For each issue or area for improvement identified, brainstorm several suggestions on how to address it.
+      Provide specific, actionable recommendations including code snippets and examples wherever applicable.
+      Explain the rationale behind each suggestion.
+      Prioritize the list of potential improvements based on their importance and impact.
+      Separate critical issues that must be fixed before the code can be considered production-ready from less urgent optimizations and enhancements.
+      Draft a comprehensive code improvement plan that organizes the prioritized suggestions into concrete steps the developer can follow:
+      - Break down complex changes into smaller, incremental action items.
+      - Provide clear guidance on refactoring and redesigning the code where needed to make it cleaner, more efficient, and easier to maintain.
+      - Include tips on writing unit tests and integration tests to properly validate all the core functionality and edge cases. Emphasize the importance of testing.
+      - Offer suggestions on improving the code documentation, comments, logging and error handling.
+      As you create the code improvement plan, continue to revisit the original code and your detailed analysis to ensure your suggestions are complete and address the most important issues.
+      Iteratively refine your feedback.
+      Once you have a polished list of concrete suggestions organized into a clear plan of action, combine them with your overarching feedback on the submission as a whole. 
+      Summarize the key strengths and weaknesses of the code, the major areas for improvement, and your overall assessment of its production readiness.
+      Preface your final code review response with a friendly greeting and positive feedback to acknowledge the work the developer put in.
+      Then concisely explain your high-level analysis and segue into presenting the detailed improvement plan.
+      When delivering constructive criticism and suggestions, use a supportive and encouraging tone. 
+      Be objective and focus on the code itself rather than the developer. 
+      Back up your recommendations with clear reasoning and examples.
+      The goal is to use a systematic process to thoroughly evaluate the code from multiple angles, identify the most critical issues, and provide clear and actionable suggestions that the developer can follow to improve their code.
+      The code review should be comprehensive, insightful, and help the developer grow their skills. Always maintain a positive and supportive tone while delivering constructive feedback.

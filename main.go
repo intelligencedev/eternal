@@ -46,9 +46,12 @@ var (
 	osFS  afero.Fs = afero.NewOsFs()
 	memFS afero.Fs = afero.NewMemMapFs()
 
-	chatTurn    = 1
-	sqliteDB    *SQLiteDB
+	chatTurn = 1
+	sqliteDB *SQLiteDB
+
 	searchIndex bleve.Index
+
+	assistantRole = "chat" // Default role
 )
 
 type WebSocketMessage struct {
@@ -606,24 +609,51 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.SendString(progressErr)
 	})
 
-	app.Post("/chattemplates", func(c *fiber.Ctx) error {
-		modelsFile := fmt.Sprintf("%v/chat-templates.json", config)
+	app.Post("/api/v1/role/:name", func(c *fiber.Ctx) error {
+		roleName := c.Params("name")
+		var foundRole *struct {
+			Name         string `yaml:"name"`
+			Instructions string `yaml:"instructions"`
+		} // Pointer to the role in the config
 
-		chatTemplates, err := os.ReadFile(modelsFile)
-		if err != nil {
-			log.Errorf(err.Error())
-			return c.Status(500).SendString("Server Error")
+		// Search for the role in the config slice
+		for i := range config.AssistantRoles {
+			if config.AssistantRoles[i].Name == roleName {
+				foundRole = &config.AssistantRoles[i]
+				break
+			}
 		}
 
-		var chatTemplate []llm.ChatPromptTemplate
-		err = json.Unmarshal(chatTemplates, &chatTemplate)
-
-		if err != nil {
-			log.Errorf(err.Error())
-			return c.Status(500).SendString("Server Error")
+		// If the role is not found, default to the first role or a predefined role
+		if foundRole == nil {
+			pterm.Warning.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
+			for i := range config.AssistantRoles {
+				if config.AssistantRoles[i].Name == "chat" {
+					foundRole = &config.AssistantRoles[i]
+					break
+				}
+			}
 		}
 
-		return c.Render("templates/chattemplates", fiber.Map{"templates": chatTemplate})
+		// Assuming 'chat' is always present as a fallback
+		if foundRole == nil && len(config.AssistantRoles) > 0 {
+			foundRole = &config.AssistantRoles[0]
+		}
+
+		// Print the role config if found
+		if foundRole != nil {
+			assistantRole = foundRole.Instructions
+			pterm.Info.Printf("Role set to: %s\n", foundRole.Name)
+			pterm.Info.Println(foundRole.Instructions)
+			return c.JSON(fiber.Map{
+				"message": fmt.Sprintf("Role set to %s", foundRole.Name),
+			})
+		}
+
+		// Handle case where no roles are configured
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No roles configured",
+		})
 	})
 
 	app.Post("/chatsubmit", func(c *fiber.Ctx) error {
@@ -805,7 +835,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			// Replace {system} with the system message
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", llm.AssistantDefault)
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -851,7 +881,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 					return err
 				}
 
-				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, llm.AssistantDefault)
+				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, assistantRole)
 
 				smodelOpts := &llm.GGUFOptions{
 					NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
