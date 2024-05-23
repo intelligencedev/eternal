@@ -138,36 +138,45 @@ type GGUFOptions struct {
 
 func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 	execPath := filepath.Join(cmdPath, "gguf/main")
-	//cachePath := filepath.Join(cmdPath, "cache")
 
-	ctxSize := fmt.Sprintf("%d", options.CtxSize)
+	// Extract the path without the filename
+	modelPath := filepath.Dir(options.Model)
+
+	// Create the cache in the model path
+	cache := fmt.Sprintf("%s/cache", modelPath)
+
+	pterm.Warning.Printfln("Cache path: %s", cache)
+
+	//ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
-	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
-	topP := fmt.Sprintf("%f", options.TopP)
-	topK := fmt.Sprintf("%d", options.TopK)
+	//repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
+	//topP := fmt.Sprintf("%f", options.TopP)
+	//topK := fmt.Sprintf("%d", options.TopK)
 
 	cmdArgs := []string{
 		"--no-display-prompt",
 		"-m", options.Model,
 		"-p", options.Prompt,
-		"-c", ctxSize, // 0 = loaded from model
-		"--n-predict", "-2", // -1 = infinity, -2 = until context filled
-		"--repeat-penalty", repeatPenalty,
-		"--top-p", topP,
-		"--top-k", topK,
-		"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
+		"-c", "0", // 0 = loaded from model
+		//"--n-predict", "-2", // -1 = infinity, -2 = until context filled
+		//"--repeat-penalty", repeatPenalty,
+		//"--top-p", topP,
+		//"--top-k", topK,
+		//"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
 		"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
 		"--flash-attn", // enable flash attention, default disabled
-		// "--mlock",
+		//"--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
-		//"--simple-io",
-		//"--keep", "2048",
-		//"--prompt-cache", cachePath,
+		"--simple-io",
+		"--keep", "-1",
+		"--prompt-cache", cache,
+		//"-cnv",
+		"-cb",
 		//"--prompt-cache-all",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
@@ -272,6 +281,12 @@ func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOption
 				return err
 			}
 
+			// Check for the end of the response, increment the turn counter and return
+			if strings.Contains(line, "eternal_eot") {
+				TurnCounter++
+				return nil
+			}
+
 			msgBuffer.WriteString(line)
 
 			// Convert the buffer content to HTML
@@ -330,6 +345,12 @@ func LMResponse(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath s
 
 				return err
 			}
+
+			// Check for the end of the response, increment the turn counter and return
+			// if strings.Contains(line, "<|eot_id|>") {
+			// 	TurnCounter++
+			// 	return nil
+			// }
 
 			msgBuffer.WriteString(line)
 
