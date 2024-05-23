@@ -84,7 +84,7 @@ func main() {
 				document += string(buf[:n])
 			}
 
-			embeddings.GenerateEmbeddingForTask("qa", document, "json", *chunkSize, *overlapSize, model)
+			embeddings.GenerateEmbeddingForTask("qa", document, "txt", *chunkSize, *overlapSize, ".")
 		}
 	case "retrieve":
 		retrieveCommand.Parse(flag.Args()[1:])

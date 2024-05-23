@@ -46,9 +46,12 @@ var (
 	osFS  afero.Fs = afero.NewOsFs()
 	memFS afero.Fs = afero.NewMemMapFs()
 
-	chatTurn    = 1
-	sqliteDB    *SQLiteDB
+	chatTurn = 1
+	sqliteDB *SQLiteDB
+
 	searchIndex bleve.Index
+
+	assistantRole = "chat" // Default role
 )
 
 type WebSocketMessage struct {
@@ -261,6 +264,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	app.Get("/config", func(c *fiber.Ctx) error {
 		// Return the app config as JSON
 		return c.JSON(config)
+	})
+
+	app.Get("/flow", func(c *fiber.Ctx) error {
+		return c.Render("templates/flow", fiber.Map{})
 	})
 
 	app.Post("/upload", func(c *fiber.Ctx) error {
@@ -602,24 +609,51 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return c.SendString(progressErr)
 	})
 
-	app.Post("/chattemplates", func(c *fiber.Ctx) error {
-		modelsFile := fmt.Sprintf("%v/chat-templates.json", config)
+	app.Post("/api/v1/role/:name", func(c *fiber.Ctx) error {
+		roleName := c.Params("name")
+		var foundRole *struct {
+			Name         string `yaml:"name"`
+			Instructions string `yaml:"instructions"`
+		} // Pointer to the role in the config
 
-		chatTemplates, err := os.ReadFile(modelsFile)
-		if err != nil {
-			log.Errorf(err.Error())
-			return c.Status(500).SendString("Server Error")
+		// Search for the role in the config slice
+		for i := range config.AssistantRoles {
+			if config.AssistantRoles[i].Name == roleName {
+				foundRole = &config.AssistantRoles[i]
+				break
+			}
 		}
 
-		var chatTemplate []llm.ChatPromptTemplate
-		err = json.Unmarshal(chatTemplates, &chatTemplate)
-
-		if err != nil {
-			log.Errorf(err.Error())
-			return c.Status(500).SendString("Server Error")
+		// If the role is not found, default to the first role or a predefined role
+		if foundRole == nil {
+			pterm.Warning.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
+			for i := range config.AssistantRoles {
+				if config.AssistantRoles[i].Name == "chat" {
+					foundRole = &config.AssistantRoles[i]
+					break
+				}
+			}
 		}
 
-		return c.Render("templates/chattemplates", fiber.Map{"templates": chatTemplate})
+		// Assuming 'chat' is always present as a fallback
+		if foundRole == nil && len(config.AssistantRoles) > 0 {
+			foundRole = &config.AssistantRoles[0]
+		}
+
+		// Print the role config if found
+		if foundRole != nil {
+			assistantRole = foundRole.Instructions
+			pterm.Info.Printf("Role set to: %s\n", foundRole.Name)
+			pterm.Info.Println(foundRole.Instructions)
+			return c.JSON(fiber.Map{
+				"message": fmt.Sprintf("Role set to %s", foundRole.Name),
+			})
+		}
+
+		// Handle case where no roles are configured
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No roles configured",
+		})
 	})
 
 	app.Post("/chatsubmit", func(c *fiber.Ctx) error {
@@ -799,20 +833,9 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// Replace {user} with the chat Message
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
-			sysPrompt := `Respond to each query using the following process to reason through to the most insightful answer:
-			First, carefully analyze the question to identify the key pieces of information required to answer it comprehensively. Break the question down into its core components.
-			For each component of the question, brainstorm several relevant ideas, facts, and perspectives that could help address that part of the query. Consider the question from multiple angles.
-			Critically evaluate each of those ideas you generated. Assess how directly relevant they are to the question, how logical and well-supported they are, and how clearly they convey key points. Aim to hone in on the strongest and most pertinent thoughts.
-			Take the most promising ideas and try to combine them into a coherent line of reasoning that flows logically from one point to the next in order to address the original question. See if you can construct a compelling argument or explanation.
-			If your current line of reasoning doesn't fully address all aspects of the original question in a satisfactory way, continue to iteratively explore other possible angles by swapping in alternative ideas and seeing if they allow you to build a stronger overall case.
-			As you work through the above process, make a point to capture your thought process and explain the reasoning behind why you selected or discarded certain ideas. Highlight the relative strengths and flaws in different possible arguments. Make your reasoning transparent.
-			After exploring multiple possible thought paths, integrating the strongest arguments, and explaining your reasoning along the way, pull everything together into a clear, concise, and complete final response that directly addresses the original query.
-			Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
-			The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.`
-
 			// Replace {system} with the system message
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", sysPrompt)
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -841,6 +864,39 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// }
 			// pterm.Info.Println(searchResults)
 
+			////////////////////////
+			// AGENT REPLIES
+			///////////////////////
+
+			advWorkflow := false
+			if advWorkflow {
+
+				res1 := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
+
+				var smodel ModelParams
+				newModel := "llama3-70b-instruct"
+				err = sqliteDB.First(newModel, &smodel)
+				if err != nil {
+					log.Errorf("Error getting model %s: %v", newModel, err)
+					return err
+				}
+
+				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, assistantRole)
+
+				smodelOpts := &llm.GGUFOptions{
+					NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
+					Model:         smodel.Options.Model,
+					Prompt:        nextPrompt,
+					CtxSize:       smodel.Options.CtxSize,
+					Temp:          0.1, // Prefer lower temperature for more controlled responses for now
+					RepeatPenalty: 1.1,
+					TopP:          1.0, // Prefer greedy decoding for now
+					TopK:          1.0, // Prefer greedy decoding for now
+				}
+
+				return llm.LMResponse(*c, chatTurn, smodelOpts, config.DataPath)
+			}
+
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
 	}))
@@ -856,7 +912,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// }
 
 			cpt := llm.GetSystemTemplate(chatMessage)
-			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4-turbo", cpt.Messages, 0.7, apiKey)
+			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4o", cpt.Messages, 0.3, apiKey)
 		})
 	}))
 
@@ -1068,7 +1124,7 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	// Generate embeddings
 	pterm.Warning.Println("Generating embeddings for chat...")
 
-	err := embeddings.GenerateEmbeddingForTask(searchIndex, "chat", response, "txt", 2048, 500, config.DataPath)
+	err := embeddings.GenerateEmbeddingForTask("chat", response, "txt", 2048, 500, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err

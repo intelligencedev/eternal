@@ -24,7 +24,11 @@ type AppConfig struct {
 	GoogleKey      string                            `yaml:"google_key"`
 	LanguageModels []llm.Model                       `yaml:"language_models"`
 	ImageModels    []sd.ImageModel                   `yaml:"image_models"`
-	Tools          struct {
+	AssistantRoles []struct {
+		Name         string `yaml:"name"`
+		Instructions string `yaml:"instructions"`
+	} `yaml:"assistant_roles"`
+	Tools struct {
 		Memory struct {
 			Enabled bool `yaml:"enabled"`
 			TopN    int  `yaml:"top_n"`
@@ -42,6 +46,7 @@ type AppConfig struct {
 	} `yaml:"tools"`
 }
 
+// BackendHost represents a local or remote backend host.
 type BackendHost struct {
 	ID            uint           `gorm:"primaryKey" yaml:"-"`
 	Host          string         `yaml:"host" gorm:"column:host"`

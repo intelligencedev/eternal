@@ -6,10 +6,8 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
-	"sync"
 )
 
 // Vector represents a vector of floats.
@@ -145,44 +143,58 @@ func (db *EmbeddingDB) RecreateDocument(embeddings []Embedding) string {
 }
 
 // CosineSimilarity calculates the cosine similarity between two vectors.
-func CosineSimilarity(a, b []float64) float64 {
-	var dotProduct, magnitudeA, magnitudeB float64
-	var wg sync.WaitGroup
+// func CosineSimilarity(a, b []float64) float64 {
+// 	if len(a) != len(b) {
+// 		log.Fatal("Vectors must be of the same length")
+// 	}
 
-	// Adjust the number of partitions based on the number of CPU cores.
-	partitions := runtime.NumCPU()
-	partSize := len(a) / partitions
+// 	var dotProduct, magnitudeA, magnitudeB float64
+// 	var wg sync.WaitGroup
 
-	results := make([]struct {
-		dotProduct, magnitudeA, magnitudeB float64
-	}, partitions)
+// 	// Adjust the number of partitions based on the number of CPU cores.
+// 	partitions := runtime.NumCPU()
+// 	partSize := len(a) / partitions
 
-	for i := 0; i < partitions; i++ {
-		wg.Add(1)
-		go func(partition int) {
-			defer wg.Done()
-			start := partition * partSize
-			end := start + partSize
-			if partition == partitions-1 {
-				end = len(a)
-			}
-			for j := start; j < end; j++ {
-				results[partition].dotProduct += a[j] * b[j]
-				results[partition].magnitudeA += a[j] * a[j]
-				results[partition].magnitudeB += b[j] * b[j]
-			}
-		}(i)
+// 	results := make([]struct {
+// 		dotProduct, magnitudeA, magnitudeB float64
+// 	}, partitions)
+
+// 	for i := 0; i < partitions; i++ {
+// 		wg.Add(1)
+// 		go func(partition int) {
+// 			defer wg.Done()
+// 			start := partition * partSize
+// 			end := start + partSize
+// 			if partition == partitions-1 {
+// 				end = len(a)
+// 			}
+// 			for j := start; j < end; j++ {
+// 				results[partition].dotProduct += a[j] * b[j]
+// 				results[partition].magnitudeA += a[j] * a[j]
+// 				results[partition].magnitudeB += b[j] * b[j]
+// 			}
+// 		}(i)
+// 	}
+
+// 	wg.Wait()
+
+// 	for _, result := range results {
+// 		dotProduct += result.dotProduct
+// 		magnitudeA += result.magnitudeA
+// 		magnitudeB += result.magnitudeB
+// 	}
+
+// 	return dotProduct / (math.Sqrt(magnitudeA) * math.Sqrt(magnitudeB))
+// }
+
+func CosineSimilarity(vecA, vecB []float64) float64 {
+	var dotProduct, normA, normB float64
+	for i, v := range vecA {
+		dotProduct += v * vecB[i]
+		normA += v * v
+		normB += vecB[i] * vecB[i]
 	}
-
-	wg.Wait()
-
-	for _, result := range results {
-		dotProduct += result.dotProduct
-		magnitudeA += result.magnitudeA
-		magnitudeB += result.magnitudeB
-	}
-
-	return dotProduct / (math.Sqrt(magnitudeA) * math.Sqrt(magnitudeB))
+	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
 
 // MostSimilarWord returns the word with the highest similarity value.
@@ -385,6 +397,9 @@ func FindTopNSimilarEmbeddings(targetEmbedding Embedding, embeddings map[string]
 	// Compute the cosine similarity for each embedding in the database and store it with its key.
 	for key, embedding := range embeddings {
 		similarity := CosineSimilarity(targetEmbedding.Vector, embedding.Vector)
+
+		fmt.Println("Similarity:", similarity)
+
 		similarityList = append(similarityList, SimilarityWithKey{similarity, key})
 	}
 
@@ -429,4 +444,29 @@ func Reranker(documents []Document, weightScore float64, weightLength float64) [
 	})
 
 	return rerankedDocuments
+}
+
+func preprocessText(text string) string {
+	// Example for natural language
+	text = strings.ToLower(text)
+	text = removeStopWords(text) // Assuming a function exists
+	text = stemText(text)        // Assuming a function exists
+	return text
+}
+
+func removeStopWords(text string) string {
+	// Remove common words like "the", "and", etc.
+	return text
+}
+
+func stemText(text string) string {
+	// Reduce words to their base form
+	return text
+}
+
+// SortEmbeddingsBySimilarity sorts a slice of Embeddings by similarity in descending order.
+func SortEmbeddingsBySimilarity(embeddings []Embedding) {
+	sort.Slice(embeddings, func(i, j int) bool {
+		return embeddings[i].Similarity > embeddings[j].Similarity
+	})
 }

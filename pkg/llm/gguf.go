@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"strings"
 
 	"eternal/pkg/web"
 	"fmt"
@@ -137,40 +138,49 @@ type GGUFOptions struct {
 
 func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 	execPath := filepath.Join(cmdPath, "gguf/main")
-	//cachePath := filepath.Join(cmdPath, "cache")
 
-	ctxSize := fmt.Sprintf("%d", options.CtxSize)
+	// Extract the path without the filename
+	modelPath := filepath.Dir(options.Model)
+
+	// Create the cache in the model path
+	cache := fmt.Sprintf("%s/cache", modelPath)
+
+	pterm.Warning.Printfln("Cache path: %s", cache)
+
+	//ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
-	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
-	topP := fmt.Sprintf("%f", options.TopP)
-	topK := fmt.Sprintf("%d", options.TopK)
+	//repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
+	//topP := fmt.Sprintf("%f", options.TopP)
+	//topK := fmt.Sprintf("%d", options.TopK)
 
 	cmdArgs := []string{
 		"--no-display-prompt",
 		"-m", options.Model,
 		"-p", options.Prompt,
-		"-c", ctxSize, // 0 = loaded from model
-		"--n-predict", "-2", // -1 = infinity, -2 = until context filled
-		"--repeat-penalty", repeatPenalty,
-		"--top-p", topP,
-		"--top-k", topK,
-		"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
+		"-c", "0", // 0 = loaded from model
+		//"--n-predict", "-2", // -1 = infinity, -2 = until context filled
+		//"--repeat-penalty", repeatPenalty,
+		//"--top-p", topP,
+		//"--top-k", topK,
+		//"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
 		"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
 		"--flash-attn", // enable flash attention, default disabled
-		// "--mlock",
+		//"--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
-		//"--simple-io",
-		//"--keep", "2048",
-		//"--prompt-cache", cachePath,
+		"--simple-io",
+		"--keep", "-1",
+		"--prompt-cache", cache,
+		//"-cnv",
+		"-cb",
 		//"--prompt-cache-all",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
-		"--override-kv", "tokenizer.ggml.pre=str:llama3",
+		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
 	}
 
 	return exec.Command(execPath, cmdArgs...)
@@ -238,6 +248,16 @@ func CompletionWebSocket(c *websocket.Conn, cmdPath string) {
 func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath string) error {
 	defer c.Close()
 	var msgBuffer bytes.Buffer // Buffer to accumulate messages
+
+	// // Get the model name from its file name
+	// modelPath := filepath.Base(modelOpts.Model)
+	// modelName := strings.TrimSuffix(modelPath, filepath.Ext(modelPath))
+
+	// responsePrefix := "### Response from " + modelName + "\n"
+
+	// // Store the prompt in the buffer
+	// msgBuffer.WriteString(responsePrefix)
+
 	for {
 		cmd := BuildCommand(dataPath, *modelOpts)
 
@@ -260,6 +280,77 @@ func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOption
 
 				return err
 			}
+
+			// Check for the end of the response, increment the turn counter and return
+			if strings.Contains(line, "eternal_eot") {
+				TurnCounter++
+				return nil
+			}
+
+			msgBuffer.WriteString(line)
+
+			// Convert the buffer content to HTML
+			htmlMsg := web.MarkdownToHTML(msgBuffer.Bytes())
+
+			// Convert chatID to string for formatting
+			turnIDStr := fmt.Sprint(chatID + TurnCounter)
+
+			// Send the accumulated content
+			// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet url='http://localhost:1313/v1/exec' sandbox='go' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
+			//formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg, turnIDStr)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1, rounded-2' hx-trigger='load'>%s</div><codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg)
+			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+				pterm.Error.Println("WebSocket write error:", err)
+				return err
+			}
+		}
+	}
+}
+
+func LMResponse(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath string) error {
+	defer c.Close()
+	var msgBuffer bytes.Buffer // Buffer to accumulate messages
+
+	// Remove the system instructions from the prompt
+	sprompt := strings.Split(modelOpts.Prompt, "New Instructions:")
+	sprompt = sprompt[:1]
+
+	// Join the prompt without the system instructions
+	prompt := strings.Join(sprompt, "\n")
+
+	//pterm.Error.Println(prompt)
+
+	// Store the prompt in the buffer
+	msgBuffer.WriteString(prompt + "\n")
+
+	for {
+		cmd := BuildCommand(dataPath, *modelOpts)
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
+		if err = cmd.Start(); err != nil {
+			return err
+		}
+
+		reader := bufio.NewReader(stdout)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err == io.EOF {
+					return fmt.Errorf("%s", msgBuffer.String())
+				}
+
+				return err
+			}
+
+			// Check for the end of the response, increment the turn counter and return
+			// if strings.Contains(line, "<|eot_id|>") {
+			// 	TurnCounter++
+			// 	return nil
+			// }
 
 			msgBuffer.WriteString(line)
 
