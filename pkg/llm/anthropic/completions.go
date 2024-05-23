@@ -75,7 +75,7 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(line)
+		//fmt.Println(line)
 		if strings.HasPrefix(line, "data: ") {
 			line = strings.TrimPrefix(line, "data: ")
 
