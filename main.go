@@ -13,6 +13,7 @@ import (
 	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
+	"eternal/pkg/search"
 	"eternal/pkg/web"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -849,10 +851,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			}
 
 			// Search the search index for the chat message
-			// searchResults, err := search.Search(searchIndex, chatMessage)
-			// if err != nil {
-			// 	log.Errorf("Error searching index: %v", err)
-			// }
+			searchResults, err := search.Search(searchIndex, chatMessage)
+			if err != nil {
+				log.Errorf("Error searching index: %v", err)
+			}
 
 			// search for some text
 			// query := bleve.NewMatchQuery(chatMessage)
@@ -862,7 +864,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// 	fmt.Println(err)
 			// 	return err
 			// }
-			// pterm.Info.Println(searchResults)
+			pterm.Info.Println(searchResults)
 
 			////////////////////////
 			// AGENT REPLIES
@@ -1042,6 +1044,12 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 			// Replace new lines with spaces
 			document = strings.ReplaceAll(document, "\n\n", "\n")
+
+			// Remove all special characters
+			document = regexp.MustCompile(`[^\w\s]`).ReplaceAllString(document, "")
+
+			// Print the document
+			pterm.Info.Println(document)
 		} else {
 			pterm.Info.Println("No memory content found...")
 		}
@@ -1113,11 +1121,18 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	//Remove http(s) links from the document so we do not retrieve them unintentionally
 	document = web.RemoveUrls(document)
 
-	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the following task or question:\n%s", document, chatMessage)
+	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
 
-	pterm.Error.Println("Tool workflow complete")
+	pterm.Info.Println("Tool workflow complete")
 
 	return chatMessage
+}
+
+type ChatTurnMessage struct {
+	ID       string `json:"id"`
+	Prompt   string `json:"prompt"`
+	Response string `json:"response"`
+	Model    string `json:"model"`
 }
 
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
@@ -1136,8 +1151,41 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 		return err
 	}
 
+	// Store chat message in Bleve
+	chatMessage := ChatTurnMessage{
+		ID:       fmt.Sprintf("%d", time.Now().UnixNano()), // Generate a unique ID
+		Prompt:   prompt,
+		Response: response,
+		Model:    modelName,
+	}
+
+	err = searchIndex.Index(chatMessage.ID, chatMessage)
+	if err != nil {
+		pterm.Error.Println("Error storing chat message in Bleve:", err)
+		return err
+	}
+
 	return nil
 }
+
+// func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
+// 	// Generate embeddings
+// 	pterm.Warning.Println("Generating embeddings for chat...")
+
+// 	err := embeddings.GenerateEmbeddingForTask("chat", response, "txt", 2048, 500, config.DataPath)
+// 	if err != nil {
+// 		pterm.Error.Println("Error generating embeddings:", err)
+// 		return err
+// 	}
+
+// 	pterm.Warning.Print("Storing chat in database...")
+// 	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
+// 		pterm.Error.Println("Error storing chat in database:", err)
+// 		return err
+// 	}
+
+// 	return nil
+// }
 
 func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 	// Read the initial message

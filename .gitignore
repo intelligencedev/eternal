@@ -31,3 +31,4 @@ examples/embeddings/cloudbox_api_schema.json
 examples/embeddings/embeddings.db
 examples/embeddings/*
 venv
+scripts/repoconcat/output.txt
