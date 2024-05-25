@@ -13,7 +13,6 @@ import (
 	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
-	"eternal/pkg/search"
 	"eternal/pkg/web"
 	"fmt"
 	"io"
@@ -21,7 +20,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -836,8 +834,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
 			// Replace {system} with the system message
-			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
+			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -851,10 +849,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			}
 
 			// Search the search index for the chat message
-			searchResults, err := search.Search(searchIndex, chatMessage)
-			if err != nil {
-				log.Errorf("Error searching index: %v", err)
-			}
+			// searchResults, err := search.Search(searchIndex, chatMessage)
+			// if err != nil {
+			// 	log.Errorf("Error searching index: %v", err)
+			// }
 
 			// search for some text
 			// query := bleve.NewMatchQuery(chatMessage)
@@ -864,40 +862,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// 	fmt.Println(err)
 			// 	return err
 			// }
-			pterm.Info.Println(searchResults)
-
-			////////////////////////
-			// AGENT REPLIES
-			///////////////////////
-
-			advWorkflow := false
-			if advWorkflow {
-
-				res1 := llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
-
-				var smodel ModelParams
-				newModel := "llama3-70b-instruct"
-				err = sqliteDB.First(newModel, &smodel)
-				if err != nil {
-					log.Errorf("Error getting model %s: %v", newModel, err)
-					return err
-				}
-
-				nextPrompt := fmt.Sprintf("%s\nNew Instructions:\n%s\n", res1, assistantRole)
-
-				smodelOpts := &llm.GGUFOptions{
-					NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
-					Model:         smodel.Options.Model,
-					Prompt:        nextPrompt,
-					CtxSize:       smodel.Options.CtxSize,
-					Temp:          0.1, // Prefer lower temperature for more controlled responses for now
-					RepeatPenalty: 1.1,
-					TopP:          1.0, // Prefer greedy decoding for now
-					TopK:          1.0, // Prefer greedy decoding for now
-				}
-
-				return llm.LMResponse(*c, chatTurn, smodelOpts, config.DataPath)
-			}
+			//pterm.Info.Println(searchResults)
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
@@ -1046,7 +1011,9 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			document = strings.ReplaceAll(document, "\n\n", "\n")
 
 			// Remove all special characters
-			document = regexp.MustCompile(`[^\w\s]`).ReplaceAllString(document, "")
+			//document = regexp.MustCompile(`[^\w\s]`).ReplaceAllString(document, "")
+
+			chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
 
 			// Print the document
 			pterm.Info.Println(document)
@@ -1119,9 +1086,9 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	//Remove http(s) links from the document so we do not retrieve them unintentionally
-	document = web.RemoveUrls(document)
+	//document = web.RemoveUrls(document)
 
-	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
+	//chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
 
 	pterm.Info.Println("Tool workflow complete")
 
@@ -1139,7 +1106,8 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	// Generate embeddings
 	pterm.Warning.Println("Generating embeddings for chat...")
 
-	err := embeddings.GenerateEmbeddingForTask("chat", response, "txt", 2048, 500, config.DataPath)
+	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
+	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err
