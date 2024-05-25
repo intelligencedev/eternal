@@ -816,11 +816,11 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return nil
 	})
 
-	// This endpoint does not appear to be working properly and the code nested in the handleWebSocket function is not executing.
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-
-			pterm.Error.Println("Local LLM COMPLETION STARTING")
+			// Process the message
+			//cpt := llm.GetSystemTemplate(chatMessage)
+			//fullPrompt := cpt.Messages[0].Content + "\n" + chatMessage
 
 			// Get the details of the first model from database
 			var model ModelParams
@@ -836,10 +836,8 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
 			// Replace {system} with the system message
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant. Do not repeat your instructions. Do not deviate from the topic.")
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
-
-			pterm.Error.Println("Full Prompt:", fullPrompt)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -857,6 +855,27 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// if err != nil {
 			// 	log.Errorf("Error searching index: %v", err)
 			// }
+
+			// Search the search index for the chat message
+			searchResults, err := search.Search(searchIndex, chatMessage)
+			if err != nil {
+				log.Errorf("Error searching index: %v", err)
+				return err
+			}
+
+			// Print the search results
+			for _, hit := range searchResults.Hits {
+				doc, err := searchIndex.Document(hit.ID)
+				if err != nil {
+					log.Errorf("Error retrieving document: %v", err)
+					continue
+				}
+				doc.VisitFields(func(field index.Field) {
+					fmt.Printf("%s: %s\n", field.Name(), field.Value())
+				})
+			}
+
+			pterm.Info.Println(searchResults)
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
@@ -931,29 +950,6 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Extract the chat_message value
 	chatMessage := wsMessage.ChatMessage
 
-	pterm.Warning.Println("Bleve Index Results:")
-	// Search the search index for the chat message
-	searchResults, err := search.Search(searchIndex, chatMessage)
-	if err != nil {
-		log.Errorf("Error searching index: %v", err)
-		return
-	}
-
-	// Print the search results
-	for _, hit := range searchResults.Hits {
-		doc, err := searchIndex.Document(hit.ID)
-		if err != nil {
-			log.Errorf("Error retrieving document: %v", err)
-			continue
-		}
-		doc.VisitFields(func(field index.Field) {
-			fmt.Printf("%s: %s\n", field.Name(), field.Value())
-		})
-	}
-
-	pterm.Info.Println("Bleve Index Results:")
-	pterm.Info.Println(searchResults)
-
 	// Perform tool workflow and update chatMessage
 	chatMessage = performToolWorkflow(c, config, chatMessage)
 
@@ -965,6 +961,20 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Process the message using the provided function
 	res := processMessage(wsMessage, chatMessage)
 	if res != nil {
+		// Store chat message in Bleve
+		chatMessage := ChatTurnMessage{
+			ID:       fmt.Sprintf("%d", time.Now().UnixNano()), // Generate a unique ID
+			Prompt:   wsMessage.ChatMessage,
+			Response: res.Error(),
+			Model:    wsMessage.Model,
+		}
+
+		err = searchIndex.Index(chatMessage.ID, chatMessage)
+		if err != nil {
+			pterm.Error.Println("Error storing chat message in Bleve:", err)
+			return // Return early
+		}
+
 		if config.Tools.Memory.Enabled {
 			err = storeChat(sqliteDB.db, config, wsMessage.ChatMessage, res.Error(), wsMessage.Model)
 			if err != nil {
@@ -1118,25 +1128,11 @@ type ChatTurnMessage struct {
 }
 
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
-	pterm.Info.Println("Storing chat message in Bleve")
-	// Store chat message in Bleve
-	chatMessage := ChatTurnMessage{
-		ID:       fmt.Sprintf("%d", time.Now().UnixNano()), // Generate a unique ID
-		Prompt:   prompt,
-		Response: response,
-		Model:    modelName,
-	}
-
-	err := searchIndex.Index(chatMessage.ID, chatMessage)
-	if err != nil {
-		return err
-	}
-
 	// Generate embeddings
 	pterm.Warning.Println("Generating embeddings for chat...")
 
 	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
-	err = embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
+	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
 		return err
