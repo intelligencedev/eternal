@@ -13,6 +13,7 @@ import (
 	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
+	"eternal/pkg/search"
 	"eternal/pkg/web"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/blevesearch/bleve/v2"
+	index "github.com/blevesearch/bleve_index_api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -51,7 +53,7 @@ var (
 
 	searchIndex bleve.Index
 
-	assistantRole = "chat" // Default role
+	assistantRole = "Summarize the information to ensure you understand it then respond to the question or query." // Default role
 )
 
 type WebSocketMessage struct {
@@ -814,11 +816,11 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		return nil
 	})
 
+	// This endpoint does not appear to be working properly and the code nested in the handleWebSocket function is not executing.
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			// Process the message
-			//cpt := llm.GetSystemTemplate(chatMessage)
-			//fullPrompt := cpt.Messages[0].Content + "\n" + chatMessage
+
+			pterm.Error.Println("Local LLM COMPLETION STARTING")
 
 			// Get the details of the first model from database
 			var model ModelParams
@@ -834,8 +836,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 
 			// Replace {system} with the system message
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant. Do not repeat your instructions. Do not deviate from the topic.")
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
+
+			pterm.Error.Println("Full Prompt:", fullPrompt)
 
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
@@ -853,16 +857,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			// if err != nil {
 			// 	log.Errorf("Error searching index: %v", err)
 			// }
-
-			// search for some text
-			// query := bleve.NewMatchQuery(chatMessage)
-			// search := bleve.NewSearchRequest(query)
-			// searchResults, err := searchIndex.Search(search)
-			// if err != nil {
-			// 	fmt.Println(err)
-			// 	return err
-			// }
-			//pterm.Info.Println(searchResults)
 
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
@@ -937,6 +931,29 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Extract the chat_message value
 	chatMessage := wsMessage.ChatMessage
 
+	pterm.Warning.Println("Bleve Index Results:")
+	// Search the search index for the chat message
+	searchResults, err := search.Search(searchIndex, chatMessage)
+	if err != nil {
+		log.Errorf("Error searching index: %v", err)
+		return
+	}
+
+	// Print the search results
+	for _, hit := range searchResults.Hits {
+		doc, err := searchIndex.Document(hit.ID)
+		if err != nil {
+			log.Errorf("Error retrieving document: %v", err)
+			continue
+		}
+		doc.VisitFields(func(field index.Field) {
+			fmt.Printf("%s: %s\n", field.Name(), field.Value())
+		})
+	}
+
+	pterm.Info.Println("Bleve Index Results:")
+	pterm.Info.Println(searchResults)
+
 	// Perform tool workflow and update chatMessage
 	chatMessage = performToolWorkflow(c, config, chatMessage)
 
@@ -948,10 +965,8 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 	// Process the message using the provided function
 	res := processMessage(wsMessage, chatMessage)
 	if res != nil {
-		//pterm.Warning.Println(res)
-
 		if config.Tools.Memory.Enabled {
-			err = storeChat(sqliteDB.db, config, chatMessage, res.Error(), wsMessage.Model)
+			err = storeChat(sqliteDB.db, config, wsMessage.ChatMessage, res.Error(), wsMessage.Model)
 			if err != nil {
 				pterm.PrintOnError(err)
 			}
@@ -1103,22 +1118,7 @@ type ChatTurnMessage struct {
 }
 
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
-	// Generate embeddings
-	pterm.Warning.Println("Generating embeddings for chat...")
-
-	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
-	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
-	if err != nil {
-		pterm.Error.Println("Error generating embeddings:", err)
-		return err
-	}
-
-	pterm.Warning.Print("Storing chat in database...")
-	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
-		pterm.Error.Println("Error storing chat in database:", err)
-		return err
-	}
-
+	pterm.Info.Println("Storing chat message in Bleve")
 	// Store chat message in Bleve
 	chatMessage := ChatTurnMessage{
 		ID:       fmt.Sprintf("%d", time.Now().UnixNano()), // Generate a unique ID
@@ -1127,9 +1127,24 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 		Model:    modelName,
 	}
 
-	err = searchIndex.Index(chatMessage.ID, chatMessage)
+	err := searchIndex.Index(chatMessage.ID, chatMessage)
 	if err != nil {
-		pterm.Error.Println("Error storing chat message in Bleve:", err)
+		return err
+	}
+
+	// Generate embeddings
+	pterm.Warning.Println("Generating embeddings for chat...")
+
+	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
+	err = embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
+	if err != nil {
+		pterm.Error.Println("Error generating embeddings:", err)
+		return err
+	}
+
+	pterm.Warning.Print("Storing chat in database...")
+	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
+		pterm.Error.Println("Error storing chat in database:", err)
 		return err
 	}
 
