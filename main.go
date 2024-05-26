@@ -13,7 +13,6 @@ import (
 	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
-	"eternal/pkg/search"
 	"eternal/pkg/web"
 	"fmt"
 	"io"
@@ -850,33 +849,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 				TopK:          1.0, // Prefer greedy decoding for now
 			}
 
-			// Search the search index for the chat message
-			// searchResults, err := search.Search(searchIndex, chatMessage)
-			// if err != nil {
-			// 	log.Errorf("Error searching index: %v", err)
-			// }
-
-			// Search the search index for the chat message
-			searchResults, err := search.Search(searchIndex, chatMessage)
-			if err != nil {
-				log.Errorf("Error searching index: %v", err)
-				return err
-			}
-
-			// Print the search results
-			for _, hit := range searchResults.Hits {
-				doc, err := searchIndex.Document(hit.ID)
-				if err != nil {
-					log.Errorf("Error retrieving document: %v", err)
-					continue
-				}
-				doc.VisitFields(func(field index.Field) {
-					fmt.Printf("%s: %s\n", field.Name(), field.Value())
-				})
-			}
-
-			pterm.Info.Println(searchResults)
-
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
 	}))
@@ -885,12 +857,6 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		apiKey := config.OAIKey
 
 		handleWebSocket(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			// Check if embeddings.db exists
-			// if _, err := os.Stat(filepath.Join(config.DataPath, "embeddings.db")); os.IsNotExist(err) {
-			// 	pterm.Warning.Println("embeddings.db does not exist. Generating embeddings...")
-			// 	embeddings.GenerateEmbeddingChat(chatMessage, config.DataPath)
-			// }
-
 			cpt := llm.GetSystemTemplate(chatMessage)
 			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4o", cpt.Messages, 0.3, apiKey)
 		})
@@ -975,12 +941,12 @@ func handleWebSocket(c *websocket.Conn, config *AppConfig, processMessage func(W
 			return // Return early
 		}
 
-		if config.Tools.Memory.Enabled {
-			err = storeChat(sqliteDB.db, config, wsMessage.ChatMessage, res.Error(), wsMessage.Model)
-			if err != nil {
-				pterm.PrintOnError(err)
-			}
-		}
+		// if config.Tools.Memory.Enabled {
+		// 	err = storeChat(sqliteDB.db, config, wsMessage.ChatMessage, res.Error(), wsMessage.Model)
+		// 	if err != nil {
+		// 		pterm.PrintOnError(err)
+		// 	}
+		// }
 
 		// Increment the chat turn counter
 		chatTurn = chatTurn + 1
@@ -1019,32 +985,63 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 	if config.Tools.Memory.Enabled {
 		topN := config.Tools.Memory.TopN // retrieve top N results. Adjust based on context size.
-		topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
 
-		var documents []string
-		var documentString string
-		if len(topEmbeddings) > 0 {
-			for _, topEmbedding := range topEmbeddings {
-				documents = append(documents, topEmbedding.Word)
-			}
-			documentString = strings.Join(documents, " ")
+		// Create a search query
+		query := bleve.NewQueryStringQuery(chatMessage)
 
-			pterm.Info.Println("Retrieving memory content...")
-			document = fmt.Sprintf("%s\n%s", document, documentString)
+		// Create a search request with the query and limit the results
+		searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
 
-			// Replace new lines with spaces
-			document = strings.ReplaceAll(document, "\n\n", "\n")
-
-			// Remove all special characters
-			//document = regexp.MustCompile(`[^\w\s]`).ReplaceAllString(document, "")
-
-			chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
-
-			// Print the document
-			pterm.Info.Println(document)
-		} else {
-			pterm.Info.Println("No memory content found...")
+		// Execute the search
+		searchResults, err := searchIndex.Search(searchRequest)
+		if err != nil {
+			log.Errorf("Error searching index: %v", err)
+			return chatMessage
 		}
+
+		// Print the search results
+		for _, hit := range searchResults.Hits {
+			doc, err := searchIndex.Document(hit.ID)
+			if err != nil {
+				log.Errorf("Error retrieving document: %v", err)
+				continue
+			}
+			doc.VisitFields(func(field index.Field) {
+				fmt.Printf("%s: %s\n", field.Name(), field.Value())
+
+				// Append the response field to the document
+				if field.Name() == "response" {
+					document = fmt.Sprintf("%s\n%s", document, field.Value())
+				}
+			})
+		}
+
+		pterm.Info.Println(searchResults)
+
+		chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
+
+		// topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
+
+		// var documents []string
+		// var documentString string
+		// if len(topEmbeddings) > 0 {
+		// 	for _, topEmbedding := range topEmbeddings {
+		// 		documents = append(documents, topEmbedding.Word)
+		// 	}
+		// 	documentString = strings.Join(documents, " ")
+
+		// 	pterm.Info.Println("Retrieving memory content...")
+		// 	document = fmt.Sprintf("%s\n%s", document, documentString)
+
+		// 	document = strings.ReplaceAll(document, "\n\n", "\n")
+
+		// 	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
+
+		// 	// Print the document
+		// 	pterm.Info.Println(document)
+		// } else {
+		// 	pterm.Info.Println("No memory content found...")
+		// }
 	}
 
 	if config.Tools.WebGet.Enabled {
@@ -1117,6 +1114,8 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 	pterm.Info.Println("Tool workflow complete")
 
+	pterm.Warning.Println("Chat message:\n", chatMessage)
+
 	return chatMessage
 }
 
@@ -1146,25 +1145,6 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 
 	return nil
 }
-
-// func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
-// 	// Generate embeddings
-// 	pterm.Warning.Println("Generating embeddings for chat...")
-
-// 	err := embeddings.GenerateEmbeddingForTask("chat", response, "txt", 2048, 500, config.DataPath)
-// 	if err != nil {
-// 		pterm.Error.Println("Error generating embeddings:", err)
-// 		return err
-// 	}
-
-// 	pterm.Warning.Print("Storing chat in database...")
-// 	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
-// 		pterm.Error.Println("Error storing chat in database:", err)
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 	// Read the initial message
