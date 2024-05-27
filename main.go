@@ -1017,31 +1017,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}
 
 		pterm.Info.Println(searchResults)
-
-		chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
-
-		// topEmbeddings := embeddings.Search(config.DataPath, "embeddings.db", chatMessage, topN)
-
-		// var documents []string
-		// var documentString string
-		// if len(topEmbeddings) > 0 {
-		// 	for _, topEmbedding := range topEmbeddings {
-		// 		documents = append(documents, topEmbedding.Word)
-		// 	}
-		// 	documentString = strings.Join(documents, " ")
-
-		// 	pterm.Info.Println("Retrieving memory content...")
-		// 	document = fmt.Sprintf("%s\n%s", document, documentString)
-
-		// 	document = strings.ReplaceAll(document, "\n\n", "\n")
-
-		// 	chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
-
-		// 	// Print the document
-		// 	pterm.Info.Println(document)
-		// } else {
-		// 	pterm.Info.Println("No memory content found...")
-		// }
 	}
 
 	if config.Tools.WebGet.Enabled {
@@ -1054,67 +1029,45 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.WebSearch.Enabled {
-
 		topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
 
 		pterm.Info.Println("Searching the web...")
 
-		urls := web.SearchDDG(chatMessage)
+		var urls []string
+		if config.Tools.WebSearch.Name == "ddg" {
+			urls = web.SearchDDG(chatMessage)
+		} else if config.Tools.WebSearch.Name == "sxng" {
+			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
+		}
 
-		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+		pterm.Warning.Printf("URLs to fetch: %v\n", urls)
 
-		if len(urls) > 0 {
-			pagesRetrieved := 0
+		pagesRetrieved := 0
+		for _, url := range urls {
+			if pagesRetrieved >= topN {
+				break
+			}
+			pterm.Info.Printf("Fetching URL: %s\n", url)
 
-			for {
-				// Check if we have collected topN pages
-				if pagesRetrieved >= topN {
-					break
+			page, err := web.WebGetHandler(url)
+			if err != nil {
+				if errors.Is(err, context.DeadlineExceeded) {
+					pterm.Warning.Printf("Timeout exceeded for URL: %s\n", url)
+					continue
 				}
-
-				// Iterate over URLs
-				for _, url := range urls {
-					pterm.Info.Printf("Fetching URL: %s\n", url)
-
-					page, err := web.WebGetHandler(url)
-					if err != nil {
-						if errors.Is(err, context.DeadlineExceeded) {
-							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", url)
-
-							// Remove the URL from the list, do not use the web package
-							urls = urls[1:]
-
-							pterm.Warning.Printf("URL list: %s\n", urls)
-
-							// Increase the timeout for the next request to avoid spamming the same URL
-							time.Sleep(5 * time.Second)
-
-							continue
-						}
-						pterm.PrintOnError(err)
-					} else {
-						// Page successfully retrieved, update document and increment pagesRetrieved
-						document = fmt.Sprintf("%s\n%s", document, page)
-						pagesRetrieved++
-
-						// Check if we have collected topN pages
-						if pagesRetrieved >= topN {
-							break
-						}
-					}
-				}
+				pterm.PrintOnError(err)
+			} else {
+				document = fmt.Sprintf("%s\n%s", document, page)
+				pagesRetrieved++
 			}
 		}
 	}
 
-	//Remove http(s) links from the document so we do not retrieve them unintentionally
-	//document = web.RemoveUrls(document)
-
-	//chatMessage = fmt.Sprintf("%s Reference the previous information and respond to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query:\n%s", document, chatMessage)
+	chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
 
 	pterm.Info.Println("Tool workflow complete")
 
-	pterm.Warning.Println("Chat message:\n", chatMessage)
+	//pterm.Warning.Println("Chat message:\n", chatMessage)
 
 	return chatMessage
 }

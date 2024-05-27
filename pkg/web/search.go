@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"golang.org/x/net/html"
 )
 
@@ -74,24 +75,21 @@ func extractURLs(htmlContent string) ([]string, error) {
 	return urls, nil
 }
 
-func main() {
-	endpoint := "https://search.intelligence.dev/search"
-	queryParam := "golang best practices"
-
-	htmlContent, err := postRequest(endpoint, queryParam)
+func GetSearXNGResults(endpoint string, query string) []string {
+	htmlContent, err := postRequest(endpoint, query)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
+		pterm.Error.Sprintf("Error: %v\n", err)
+		return nil
 	}
 
 	urls, err := extractURLs(htmlContent)
 	if err != nil {
-		fmt.Printf("Error extracting URLs: %v\n", err)
-		return
+		pterm.Error.Sprintf("Error extracting URLs: %v\n", err)
+		return nil
 	}
 
-	fmt.Println("Extracted URLs:")
-	for _, url := range urls {
-		fmt.Println(url)
-	}
+	// Remove unwanted URLs
+	urls = RemoveUnwantedURLs(urls)
+
+	return urls
 }
