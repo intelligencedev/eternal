@@ -21,6 +21,7 @@ import (
 
 var (
 	unwantedURLs = []string{
+		"web.archive.org",
 		"www.youtube.com",
 		"www.youtube.com/watch",
 		"www.wired.com",
@@ -65,7 +66,7 @@ func WebGetHandler(url string) (string, error) {
 	defer cancel()
 
 	// Set a timeout for the entire operation
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	// Retrieve and sanitize the page
