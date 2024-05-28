@@ -838,6 +838,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant that responds in well structured markdown format. Do not repeat your instructions. Do not deviate from the topic. Begin all responses with 'Sure thing!' and end with 'Is there anything else I can help you with?'")
 			//fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
 
+			// Temperature (Temp): Lowering to 0.2 can make responses more deterministic, which is often desirable in coding.
+			// Repeat Penalty (RepeatPenalty): Increasing to 1.2 helps to avoid repetitive code.
+			// TopP and TopK: Adjusting TopP to 0.9 and TopK to 50 allows for some diversity in token selection while still
+			// maintaining a focus on likely tokens, which can help in generating more coherent and useful code.
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
 				Model:         model.Options.Model,
