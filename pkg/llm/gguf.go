@@ -148,9 +148,9 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 
 	//ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
-	//repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
-	//topP := fmt.Sprintf("%f", options.TopP)
-	//topK := fmt.Sprintf("%d", options.TopK)
+	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
+	topP := fmt.Sprintf("%f", options.TopP)
+	topK := fmt.Sprintf("%d", options.TopK)
 
 	cmdArgs := []string{
 		"--no-display-prompt",
@@ -158,16 +158,16 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"-p", options.Prompt,
 		"-c", "0", // 0 = loaded from model
 		//"--n-predict", "-2", // -1 = infinity, -2 = until context filled
-		//"--repeat-penalty", repeatPenalty,
-		//"--top-p", topP,
-		//"--top-k", topK,
+		"--repeat-penalty", repeatPenalty,
+		"--top-p", topP,
+		"--top-k", topK,
 		//"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
 		//"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
 		"--flash-attn", // enable flash attention, default disabled
-		//"--mlock",
+		"--mlock",
 		"--seed", "-1",
 		//"--ignore-eos",
 		//"--no-mmap",
