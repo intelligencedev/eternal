@@ -176,7 +176,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--prompt-cache", cache,
 		//"-cnv",
 		"-cb",
-		//"--prompt-cache-all",
+		"--prompt-cache-all",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
