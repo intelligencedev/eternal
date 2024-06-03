@@ -1,3 +1,5 @@
+// eternal/main.go - Main entry point for the Eternal application
+
 package main
 
 import (
@@ -26,24 +28,26 @@ import (
 	"github.com/spf13/afero"
 )
 
+// Embed static files and binaries
+//
+//go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
+var embedfs embed.FS
+
 var (
-	//go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
-	embedfs embed.FS
-
-	osFS afero.Fs = afero.NewOsFs()
-
-	chatTurn = 1
-	sqliteDB *SQLiteDB
-
+	osFS        afero.Fs = afero.NewOsFs()
+	chatTurn             = 1
+	sqliteDB    *SQLiteDB
 	searchIndex bleve.Index
 )
 
+// WebSocketMessage represents the structure of a WebSocket message
 type WebSocketMessage struct {
 	ChatMessage string                 `json:"chat_message"`
 	Model       string                 `json:"model"`
 	Headers     map[string]interface{} `json:"HEADERS"`
 }
 
+// Tool represents a tool with its name and enabled status
 type Tool struct {
 	Name    string `json:"name"`
 	Enabled bool   `json:"enabled"`
@@ -52,41 +56,49 @@ type Tool struct {
 func main() {
 	displayBanner()
 
+	// Load configuration
 	config, err := loadConfig()
 	if err != nil {
 		pterm.Error.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
+	// Initialize tools based on config
 	tools := initializeTools(config)
 	log.Infof("Enabled tools: %v", tools)
 
+	// Create data directory if it doesn't exist
 	if err := createDataDirectory(config.DataPath); err != nil {
 		pterm.Error.Println("Error creating data directory:", err)
 		os.Exit(1)
 	}
 
+	// Initialize server
 	if err := initializeServer(config.DataPath); err != nil {
 		pterm.Error.Println("Error initializing server:", err)
 		os.Exit(1)
 	}
 
+	// Initialize database
 	if err := initializeDatabase(config.DataPath); err != nil {
 		pterm.Error.Println("Failed to initialize database:", err)
 		os.Exit(1)
 	}
 
+	// Initialize search index
 	if err := initializeSearchIndex(config.DataPath); err != nil {
 		pterm.Error.Println("Failed to initialize search index:", err)
 		os.Exit(1)
 	}
 
+	// Load model parameters
 	modelParams, err := loadModelParams(config)
 	if err != nil {
 		pterm.Error.Println("Failed to load model data to database:", err)
 		os.Exit(1)
 	}
 
+	// Load image models
 	imageModels, err := loadImageModels(config)
 	if err != nil {
 		pterm.Error.Println("Failed to load image model data to database:", err)
@@ -95,22 +107,26 @@ func main() {
 
 	log.Infof("Loaded %d language models and %d image models", len(modelParams), len(imageModels))
 
+	// Setup context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	pterm.Info.Printf("Serving frontend on: %s:%s\n", config.ControlHost, config.ControlPort)
 	pterm.Info.Println("Press Ctrl+C to stop")
 
+	// Run frontend server
 	runFrontendServer(ctx, config, modelParams)
 
 	pterm.Warning.Println("Shutdown signal received")
 	os.Exit(0)
 }
 
+// displayBanner displays the application banner
 func displayBanner() {
 	_ = pterm.DefaultBigText.WithLetters(putils.LettersFromString("ETERNAL")).Render()
 }
 
+// loadConfig loads the application configuration from a file
 func loadConfig() (*AppConfig, error) {
 	currentPath, err := os.Getwd()
 	if err != nil {
@@ -123,6 +139,7 @@ func loadConfig() (*AppConfig, error) {
 	return LoadConfig(osFS, configPath)
 }
 
+// initializeTools initializes the tools based on the configuration
 func initializeTools(config *AppConfig) []Tool {
 	var tools []Tool
 	if config.Tools.WebGet.Enabled {
@@ -134,6 +151,7 @@ func initializeTools(config *AppConfig) []Tool {
 	return tools
 }
 
+// createDataDirectory creates the data directory if it doesn't exist
 func createDataDirectory(dataPath string) error {
 	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
 		return os.Mkdir(dataPath, 0755)
@@ -141,11 +159,13 @@ func createDataDirectory(dataPath string) error {
 	return nil
 }
 
+// initializeServer initializes the server
 func initializeServer(dataPath string) error {
 	_, err := InitServer(dataPath)
 	return err
 }
 
+// initializeDatabase initializes the SQLite database
 func initializeDatabase(dataPath string) error {
 	var err error
 	sqliteDB, err = NewSQLiteDB(dataPath)
@@ -156,6 +176,7 @@ func initializeDatabase(dataPath string) error {
 	return sqliteDB.AutoMigrate(&ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
 }
 
+// initializeSearchIndex initializes the search index
 func initializeSearchIndex(dataPath string) error {
 	searchDB := fmt.Sprintf("%s/search.bleve", dataPath)
 
@@ -174,6 +195,7 @@ func initializeSearchIndex(dataPath string) error {
 	return nil
 }
 
+// loadModelParams loads the model parameters from the configuration
 func loadModelParams(config *AppConfig) ([]ModelParams, error) {
 	var modelParams []ModelParams
 	for _, model := range config.LanguageModels {
@@ -208,6 +230,7 @@ func loadModelParams(config *AppConfig) ([]ModelParams, error) {
 	return modelParams, nil
 }
 
+// loadImageModels loads the image models from the configuration
 func loadImageModels(config *AppConfig) ([]ImageModel, error) {
 	var imageModels []ImageModel
 	for _, model := range config.ImageModels {
@@ -239,6 +262,7 @@ func loadImageModels(config *AppConfig) ([]ImageModel, error) {
 	return imageModels, nil
 }
 
+// runFrontendServer runs the frontend server
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
 	basePath := filepath.Join(config.DataPath, "web")
 	baseFs := afero.NewBasePathFs(afero.NewOsFs(), basePath)
@@ -256,11 +280,13 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 		StreamRequestBody:     true,
 	})
 
+	// Setup CORS middleware
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowHeaders: "*",
 	}))
 
+	// Serve static files
 	app.Use("/public", filesystem.New(filesystem.Config{
 		Root:   httpFs,
 		Index:  "index.html",
@@ -269,8 +295,10 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 	app.Static("/", "public")
 
+	// Setup routes
 	setupRoutes(app, config, modelParams)
 
+	// Handle graceful shutdown
 	go func() {
 		<-ctx.Done() // Wait for the context to be cancelled
 		if err := app.Shutdown(); err != nil {
@@ -286,6 +314,7 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	pterm.Info.Println("Server gracefully shutdown")
 }
 
+// setupRoutes sets up the routes for the application
 func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.Render("templates/index", fiber.Map{})
@@ -299,47 +328,43 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 		return c.Render("templates/flow", fiber.Map{})
 	})
 
-	app.Post("/upload", handleUpload(config))
+	// Chat session routes
+	app.Post("/chatsubmit", handleChatSubmit(config))
+	app.Post("/chat/role/:name", handleRoleSelection(config))
 
-	app.Post("/tool/:toolName", handleToolToggle(config))
-
-	app.Get("/openai/models", handleOpenAIModels(config))
-
-	app.Get("/modeldata/:modelName", handleModelData())
-
-	app.Put("/modeldata/:modelName/downloaded", handleModelDownloadUpdate())
-
+	// Model management routes
 	app.Post("/modelcards", handleModelCards(modelParams))
-
 	app.Post("/model/select", handleModelSelect())
-
 	app.Get("/models/selected", handleSelectedModels())
-
 	app.Post("/model/download", handleModelDownload(config))
-
 	app.Post("/imgmodel/download", handleImgModelDownload(config))
 
-	app.Post("/api/v1/role/:name", handleRoleSelection(config))
+	// Model - Database routes
+	app.Get("/modeldata/:modelName", handleModelData())
+	app.Put("/modeldata/:modelName/downloaded", handleModelDownloadUpdate())
 
-	app.Post("/chatsubmit", handleChatSubmit(config))
-
+	// Chat - Database routes
 	app.Get("/chats", handleGetChats())
-
 	app.Get("/chats/:id", handleGetChatByID())
-
 	app.Put("/chats/:id", handleUpdateChat())
-
 	app.Delete("/chats/:id", handleDeleteChat())
 
+	// Tool routes
+	app.Post("/tool/:toolName", handleToolToggle(config))
 	app.Get("/dpsearch", handleDPSearch())
 
+	// Utility routes
+	app.Post("/upload", handleUpload(config))
 	app.Get("/sseupdates", handleSSEUpdates())
-
 	app.Get("/ws", websocket.New(handleWebSocket(config)))
 
+	// OpenAI routes
+	app.Get("/openai/models", handleOpenAIModels(config))
 	app.Get("/wsoai", websocket.New(handleOpenAIWebSocket(config)))
 
+	// Anthropic routes
 	app.Get("/wsanthropic", websocket.New(handleAnthropicWebSocket(config)))
 
+	// Google routes
 	app.Get("/wsgoogle", websocket.New(handleGoogleWebSocket(config)))
 }
