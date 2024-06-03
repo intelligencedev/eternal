@@ -30,15 +30,12 @@ var (
 	//go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 	embedfs embed.FS
 
-	osFS  afero.Fs = afero.NewOsFs()
-	memFS afero.Fs = afero.NewMemMapFs()
+	osFS afero.Fs = afero.NewOsFs()
 
 	chatTurn = 1
 	sqliteDB *SQLiteDB
 
 	searchIndex bleve.Index
-
-	assistantRole = "Summarize the information to ensure you understand it then respond to the question or query." // Default role
 )
 
 type WebSocketMessage struct {

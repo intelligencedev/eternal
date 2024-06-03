@@ -166,7 +166,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
 		"--flash-attn", // enable flash attention, default disabled
-		"--mlock",
+		//"--mlock",
 		"--seed", "-1",
 		//"--no-mmap",
 		"--simple-io",
