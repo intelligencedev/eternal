@@ -157,29 +157,24 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"-m", options.Model,
 		"-p", options.Prompt,
 		"-c", "0", // 0 = loaded from model
-		//"--n-predict", "-2", // -1 = infinity, -2 = until context filled
+		"--n-predict", "-2", // -1 = infinity, -2 = until context filled
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
 		//"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
-		//"--reverse-prompt", "<|eot_id|>",
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
 		"--flash-attn", // enable flash attention, default disabled
 		"--mlock",
 		"--seed", "-1",
-		//"--ignore-eos",
 		//"--no-mmap",
 		"--simple-io",
 		"--keep", "-1",
 		"--prompt-cache", cache,
-		//"-cnv",
-		"-cb",
 		"--prompt-cache-all",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
-		//"--override-kv", "tokenizer.ggml.pre=str:llama3",
 	}
 
 	return exec.Command(execPath, cmdArgs...)
@@ -211,28 +206,50 @@ func CompletionWebSocket(c *websocket.Conn, cmdPath string) {
 		return
 	}
 
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Println("Failed to set up command input:", err)
+		c.WriteJSON(fiber.Map{"error": "Failed to set up command input"})
+		return
+	}
+
 	if err := cmd.Start(); err != nil {
 		log.Println("Error starting command:", err)
 		c.WriteJSON(fiber.Map{"error": "Error starting command"})
 		return
 	}
 
-	buf := make([]byte, 1024)
-	for {
-		n, err := stdout.Read(buf)
-		if err != nil {
-			log.Println("Error reading command output:", err)
-			c.WriteJSON(fiber.Map{"error": "Error reading command output"})
-			return
-		}
-		if n > 0 {
-			data := CommandOutput{Output: string(buf[:n])}
-			if err := c.WriteJSON(data); err != nil {
-				log.Println("Error encoding JSON:", err)
-				c.WriteJSON(fiber.Map{"error": "Error encoding JSON"})
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := stdout.Read(buf)
+			if err != nil {
+				log.Println("Error reading command output:", err)
+				c.WriteJSON(fiber.Map{"error": "Error reading command output"})
 				return
 			}
-		} else {
+			if n > 0 {
+				data := CommandOutput{Output: string(buf[:n])}
+				if err := c.WriteJSON(data); err != nil {
+					log.Println("Error encoding JSON:", err)
+					c.WriteJSON(fiber.Map{"error": "Error encoding JSON"})
+					return
+				}
+			}
+		}
+	}()
+
+	for {
+		var input struct {
+			Text string `json:"text"`
+		}
+		if err := c.ReadJSON(&input); err != nil {
+			log.Println("Error reading input:", err)
+			break
+		}
+
+		if _, err := stdin.Write([]byte(input.Text + "\n")); err != nil {
+			log.Println("Error writing to command input:", err)
 			break
 		}
 	}

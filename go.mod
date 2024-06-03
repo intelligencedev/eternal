@@ -18,6 +18,7 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/nlpodyssey/cybertron v0.2.1
 	github.com/pterm/pterm v0.12.74
+	github.com/sashabaranov/go-openai v1.24.1
 	github.com/serpapi/google-search-results-golang v0.0.0-20230616000151-95707d993dc6
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/afero v1.11.0
