@@ -650,7 +650,7 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 
 		err = processMessage(wsMessage, chatMessage)
 		if err != nil {
-			handleError(c, wsMessage, err)
+			handleError(wsMessage, err)
 			return
 		}
 
