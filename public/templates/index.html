@@ -60,7 +60,7 @@
       <div id="chat-view" class="col-6">
         <div id="chat" class="row chat-container fs-5"></div>
       </div>
-      <div id="info" class="col-3 mt-2 pt-1">
+      <div id="info" class="col-3">
       </div>
     </div>
 
@@ -178,7 +178,7 @@
               </div>
               <div class="col-auto">
                 <!-- MODELS -->
-                <button class="btn" hx-post="/modelcards" hx-target="#chat" hx-preserve="#chat"
+                <button class="btn" hx-post="/modelcards" hx-target="#info" hx-preserve="#chat"
                   hx-swap="innerHTML transition:true" data-bs-toggle="tooltip" data-bs-title="Language Models">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none">
@@ -290,7 +290,7 @@
     });
 
     function setRole(role) {
-      fetch(`/api/v1/role/${role}`, {
+      fetch(`/chat/${role}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

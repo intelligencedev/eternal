@@ -1,11 +1,11 @@
 <div id="models-container" class="fade-it">
-  <div id="content" class="mt-3 mb-4 pb-3">
-    <button class="btn btn-danger btn-lg mb-2 w-100" style="background-color: var(--et-red);" hx-get="/"
+  <div id="content">
+    <button class="btn btn-danger btn-lg w-25 mt-3" style="background-color: var(--et-red);" hx-get="/"
       hx-target="#models-container" hx-select="#chat" hx-preserve="#chat" hx-swap="delete transition:true">Back</button>
   </div>
   <div class="row">
     {{range .models}}
-    <div class="col-6 gy-3">
+    <div class="col-3 w-100 gy-3">
       <div class="card h-100" data-model-name="{{.Name}}">
         <!-- If .Downloaded is false, add button to call download link -->
         {{if not .Downloaded}}

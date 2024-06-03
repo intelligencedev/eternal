@@ -5,14 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"eternal/pkg/embeddings"
-	"eternal/pkg/hfutils"
-	"eternal/pkg/llm"
-	"eternal/pkg/llm/anthropic"
-	"eternal/pkg/llm/google"
-	"eternal/pkg/llm/openai"
-	"eternal/pkg/sd"
-	"eternal/pkg/web"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +22,15 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
 	"gorm.io/gorm"
+
+	"eternal/pkg/embeddings"
+	"eternal/pkg/hfutils"
+	"eternal/pkg/llm"
+	"eternal/pkg/llm/anthropic"
+	"eternal/pkg/llm/google"
+	"eternal/pkg/llm/openai"
+	"eternal/pkg/sd"
+	"eternal/pkg/web"
 )
 
 var assistantRole = "You are a helpful AI assistant that responds in well-structured markdown format. Do not repeat your instructions. Do not deviate from the topic."
@@ -41,6 +42,7 @@ type ChatTurnMessage struct {
 	Model    string `json:"model"`
 }
 
+// handleUpload handles file uploads and saves them to the specified directory.
 func handleUpload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		pterm.Warning.Println("Uploads route hit")
@@ -66,6 +68,7 @@ func handleUpload(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleToolToggle toggles the state of various tools based on the provided tool name.
 func handleToolToggle(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		toolName := c.Params("toolName")
@@ -86,6 +89,7 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleOpenAIModels retrieves and returns a list of OpenAI models.
 func handleOpenAIModels(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		client := openai.NewClient(config.OAIKey)
@@ -110,6 +114,7 @@ func handleOpenAIModels(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleModelData retrieves and returns data for a specific model.
 func handleModelData() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var model ModelParams
@@ -127,6 +132,7 @@ func handleModelData() fiber.Handler {
 	}
 }
 
+// handleModelDownloadUpdate updates the download status of a model.
 func handleModelDownloadUpdate() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		modelName := c.Params("modelName")
@@ -150,6 +156,7 @@ func handleModelDownloadUpdate() fiber.Handler {
 	}
 }
 
+// handleModelCards retrieves and renders model cards.
 func handleModelCards(modelParams []ModelParams) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		err := sqliteDB.Find(&modelParams)
@@ -163,6 +170,7 @@ func handleModelCards(modelParams []ModelParams) fiber.Handler {
 	}
 }
 
+// handleModelSelect handles the selection of models for use.
 func handleModelSelect() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var selection SelectedModels
@@ -185,6 +193,7 @@ func handleModelSelect() fiber.Handler {
 	}
 }
 
+// handleSelectedModels retrieves and returns the list of selected models.
 func handleSelectedModels() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		selectedModels, err := GetSelectedModels(sqliteDB.db)
@@ -203,6 +212,7 @@ func handleSelectedModels() fiber.Handler {
 	}
 }
 
+// handleModelDownload handles the download of a specified model.
 func handleModelDownload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		modelName := c.Query("model")
@@ -261,6 +271,7 @@ func handleModelDownload(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleImgModelDownload handles the download of image generation models.
 func handleImgModelDownload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		config.Tools.ImgGen.Enabled = true
@@ -360,6 +371,7 @@ func handleImgModelDownload(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleRoleSelection handles the selection of assistant roles.
 func handleRoleSelection(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		roleName := c.Params("name")
@@ -404,6 +416,7 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleChatSubmit handles the submission of chat messages.
 func handleChatSubmit(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userPrompt := c.FormValue("userprompt")
@@ -445,6 +458,7 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 	}
 }
 
+// handleGetChats retrieves and returns all chat records.
 func handleGetChats() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		chats, err := GetChats(sqliteDB.db)
@@ -455,6 +469,7 @@ func handleGetChats() fiber.Handler {
 	}
 }
 
+// handleGetChatByID retrieves and returns a chat record by its ID.
 func handleGetChatByID() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.ParseInt(c.Params("id"), 10, 64)
@@ -470,6 +485,7 @@ func handleGetChatByID() fiber.Handler {
 	}
 }
 
+// handleUpdateChat updates a chat record by its ID.
 func handleUpdateChat() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := strconv.ParseInt(c.Params("id"), 10, 64)
@@ -490,56 +506,73 @@ func handleUpdateChat() fiber.Handler {
 	}
 }
 
+// handleDeleteChat handles the deletion of a chat by its ID.
 func handleDeleteChat() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Parse the chat ID from the request parameters.
 		id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 		if err != nil {
+			// Return a bad request status if the ID is invalid.
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
 		}
 
+		// Attempt to delete the chat from the database.
 		err = DeleteChat(sqliteDB.db, id)
 		if err != nil {
+			// Return an internal server error status if the deletion fails.
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not delete chat"})
 		}
+		// Return a no content status if the deletion is successful.
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 }
 
+// handleDPSearch handles search requests using DuckDuckGo.
 func handleDPSearch() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Retrieve the search query from the request.
 		query := c.Query("q")
 		res := web.SearchDDG(query)
 
+		// Return an internal server error status if no results are found.
 		if len(res) == 0 {
 			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving search results")
 		}
 
+		// Return the search results as a JSON response.
 		urls := res
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"urls": urls})
 	}
 }
 
+// handleSSEUpdates handles Server-Sent Events (SSE) for updates.
 func handleSSEUpdates() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Set the necessary headers for SSE.
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
 		c.Set("Connection", "keep-alive")
 		c.Set("Transfer-Encoding", "chunked")
 
+		// Write updates to the response stream.
 		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 			for {
+				// Get the current download progress.
 				progress := llm.GetDownloadProgress("sse-progress")
 				msg := fmt.Sprintf("data: <div class='progress specific-h-25 m-4' role='progressbar' aria-label='download' aria-valuenow='%s' aria-valuemin='0' aria-valuemax='100'><div class='progress-bar progress-bar-striped progress-bar-animated' style='width: %s;'></div></div><div class='text-center fs-6'>Please refresh this page when the download completes.</br> Downloading...%s</div>\n\n", progress, progress, progress)
 
+				// Write the progress message to the stream.
 				if _, err := w.WriteString(msg); err != nil {
 					pterm.Printf("Error writing to stream: %v", err)
 					break
 				}
+				// Flush the writer to ensure the message is sent.
 				if err := w.Flush(); err != nil {
 					pterm.Printf("Error flushing writer: %v", err)
 					break
 				}
 
+				// Sleep for 2 seconds before sending the next update.
 				time.Sleep(2 * time.Second)
 			}
 		}))
@@ -548,20 +581,24 @@ func handleSSEUpdates() fiber.Handler {
 	}
 }
 
+// handleWebSocket handles WebSocket connections for general use.
 func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
 			var model ModelParams
+			// Retrieve the model parameters from the database.
 			err := sqliteDB.First(wsMessage.Model, &model)
 			if err != nil {
 				log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
 				return err
 			}
 
+			// Prepare the full prompt for the model.
 			promptTemplate := model.Options.Prompt
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
 			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
 
+			// Set the model options.
 			modelOpts := &llm.GGUFOptions{
 				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
 				Model:         model.Options.Model,
@@ -573,29 +610,34 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 				TopK:          1.0,
 			}
 
+			// Make a completion request to the model and send the response over WebSocket.
 			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
 		})
 	}
 }
 
+// handleOpenAIWebSocket handles WebSocket connections for OpenAI.
 func handleOpenAIWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			// Get the system template for the chat message.
 			cpt := llm.GetSystemTemplate(chatMessage)
+			// Stream the completion response from OpenAI to the WebSocket.
 			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey)
 		})
 	}
 }
 
+// handleAnthropicWS handles WebSocket connections for Anthropic.
 func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
-	// Read the initial message
+	// Read the initial message from the WebSocket.
 	_, message, err := c.ReadMessage()
 	if err != nil {
 		pterm.PrintOnError(err)
 		return
 	}
 
-	// Unmarshal the JSON message
+	// Unmarshal the JSON message.
 	var wsMessage WebSocketMessage
 	err = json.Unmarshal(message, &wsMessage)
 	if err != nil {
@@ -603,21 +645,25 @@ func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 		return
 	}
 
-	// Extract the chat_message value
+	// Extract the chat message value.
 	chatMessage := wsMessage.ChatMessage
 
+	// Prepare the messages for the completion request.
 	messages := []anthropic.Message{
 		{Role: "user", Content: chatMessage},
 	}
 
+	// Stream the completion response from Anthropic to the WebSocket.
 	res := anthropic.StreamCompletionToWebSocket(c, chatID, "claude-3-opus-20240229", messages, 0.5, apiKey)
 	if res != nil {
 		pterm.Error.Println("Error in anthropic completion:", res)
 	}
 
+	// Increment the chat turn counter.
 	chatTurn = chatTurn + 1
 }
 
+// handleAnthropicWebSocket handles WebSocket connections for Anthropic.
 func handleAnthropicWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
 		apiKey := config.AnthropicKey
@@ -625,18 +671,22 @@ func handleAnthropicWebSocket(config *AppConfig) func(*websocket.Conn) {
 	}
 }
 
+// handleGoogleWebSocket handles WebSocket connections for Google.
 func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
 		apiKey := config.GoogleKey
 
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+			// Stream the Gemini response from Google to the WebSocket.
 			return google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey)
 		})
 	}
 }
 
+// handleWebSocketConnection handles the common logic for WebSocket connections.
 func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMessage func(WebSocketMessage, string) error) {
 	for {
+		// Read and unmarshal the WebSocket message.
 		wsMessage, err := readAndUnmarshalMessage(c)
 		if err != nil {
 			log.Errorf("Error reading or unmarshalling message: %v", err)
@@ -645,9 +695,11 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 
 		log.Infof("Received WebSocket message: %+v", wsMessage)
 
+		// Perform the tool workflow on the chat message.
 		chatMessage := performToolWorkflow(c, config, wsMessage.ChatMessage)
 		log.Infof("Processed chat message: %s", chatMessage)
 
+		// Process the WebSocket message.
 		err = processMessage(wsMessage, chatMessage)
 		if err != nil {
 			handleError(wsMessage, err)
@@ -658,12 +710,15 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 	}
 }
 
+// readAndUnmarshalMessage reads and unmarshals a WebSocket message.
 func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
+	// Read the message from the WebSocket.
 	_, messageBytes, err := c.ReadMessage()
 	if err != nil {
 		return WebSocketMessage{}, err
 	}
 
+	// Unmarshal the JSON message.
 	var wsMessage WebSocketMessage
 	err = json.Unmarshal(messageBytes, &wsMessage)
 	if err != nil {
@@ -673,10 +728,11 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 	return wsMessage, nil
 }
 
+// handleError handles errors that occur during message processing.
 func handleError(message WebSocketMessage, err error) {
 	log.Errorf("Error processing message: %v", err)
 
-	// Store chat message in Bleve
+	// Store the chat message in Bleve.
 	chatMessage := ChatTurnMessage{
 		ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
 		Prompt:   message.ChatMessage,
@@ -689,24 +745,24 @@ func handleError(message WebSocketMessage, err error) {
 		log.Errorf("Error storing chat message in Bleve: %v", err)
 	}
 
-	// Increment the chat turn counter
+	// Increment the chat turn counter.
 	chatTurn++
 }
 
+// performToolWorkflow performs the tool workflow on a chat message.
 func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
-	// Begin tool workflow. Tools will add context to the submitted message for
-	// the model to use. Document is the abstraction that will hold that context.
+	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
 	var document string
 
 	if config.Tools.ImgGen.Enabled {
 		pterm.Info.Println("Generating image...")
 		sdParams := &sd.SDParams{Prompt: chatMessage}
 
-		// Call the sd tool
+		// Call the sd tool.
 		sd.Text2Image(config.DataPath, sdParams)
 
-		// Return the image to the client
-		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds
+		// Return the image to the client.
+		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds.
 		imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/img/sd_out.png?%d' />", timestamp)
 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
@@ -714,30 +770,30 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			return chatMessage
 		}
 
-		// Increment the chat turn counter
+		// Increment the chat turn counter.
 		chatTurn = chatTurn + 1
 
-		// End the tool workflow
+		// End the tool workflow.
 		return chatMessage
 	}
 
 	if config.Tools.Memory.Enabled {
-		topN := config.Tools.Memory.TopN // retrieve top N results. Adjust based on context size.
+		topN := config.Tools.Memory.TopN // Retrieve top N results. Adjust based on context size.
 
-		// Create a search query
+		// Create a search query.
 		query := bleve.NewQueryStringQuery(chatMessage)
 
-		// Create a search request with the query and limit the results
+		// Create a search request with the query and limit the results.
 		searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
 
-		// Execute the search
+		// Execute the search.
 		searchResults, err := searchIndex.Search(searchRequest)
 		if err != nil {
 			log.Errorf("Error searching index: %v", err)
 			return chatMessage
 		}
 
-		// Print the search results
+		// Print the search results.
 		for _, hit := range searchResults.Hits {
 			doc, err := searchIndex.Document(hit.ID)
 			if err != nil {
@@ -747,7 +803,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			doc.VisitFields(func(field index.Field) {
 				fmt.Printf("%s: %s\n", field.Name(), field.Value())
 
-				// Append the response field to the document
+				// Append the response field to the document.
 				if field.Name() == "response" {
 					document = fmt.Sprintf("%s\n%s", document, field.Value())
 				}
@@ -767,7 +823,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.WebSearch.Enabled {
-		topN := config.Tools.WebSearch.TopN // retrieve top N results. Adjust based on context size.
+		topN := config.Tools.WebSearch.TopN // Retrieve top N results. Adjust based on context size.
 
 		pterm.Info.Println("Searching the web...")
 
@@ -805,13 +861,12 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 	pterm.Info.Println("Tool workflow complete")
 
-	//pterm.Warning.Println("Chat message:\n", chatMessage)
-
 	return chatMessage
 }
 
+// storeChat stores a chat in the database and generates embeddings for it.
 func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
-	// Generate embeddings
+	// Generate embeddings for the chat.
 	pterm.Warning.Println("Generating embeddings for chat...")
 
 	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
