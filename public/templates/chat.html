@@ -1,8 +1,17 @@
 <div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
   <div class="row">
-    <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3">
+    <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3" style="background-color: var(--et-card-bg);">
       <div>
-        <span class="badge my-3 mx-1" style="background-color: var(--et-red);">{{.username}}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M12 2.75a9.25 9.25 0 1 0 0 18.5a9.25 9.25 0 0 0 0-18.5ZM1.25 12C1.25 6.063 6.063 1.25 12 1.25S22.75 6.063 22.75 12S17.937 22.75 12 22.75S1.25 17.937 1.25 12Zm7.147 3.553a.75.75 0 0 1 1.05-.155c.728.54 1.607.852 2.553.852s1.825-.313 2.553-.852a.75.75 0 1 1 .894 1.204A5.766 5.766 0 0 1 12 17.75a5.766 5.766 0 0 1-3.447-1.148a.75.75 0 0 1-.156-1.049Z"
+              clip-rule="evenodd" />
+            <path
+              d="M16 10.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5s.448-1.5 1-1.5s1 .672 1 1.5Zm-6 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S8.448 9 9 9s1 .672 1 1.5Z" />
+          </g>
+        </svg>
+        <span class="badge my-3 mx-1 bg-gradient" style="background-color: var(--et-galactic-accent);">{{.username}}</span>
       </div>
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
         <input type="hidden" name="model" value="{{.model}}">
@@ -14,11 +23,21 @@
     </div>
   </div>
   <div class="row">
-    <div id="response-{{.turnID}}" class="response rounded-2 mt-3 pb-3 overflow-y-auto">
+    <div id="response-{{.turnID}}" class="response rounded-2 mt-3 pb-3" style="background-color: var(--et-card-bg);">
       <div>
-        <span class="badge my-3 mx-1" style="background-color: var(--et-purple);">{{.assistant}}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+          <g fill="currentColor">
+            <path
+              d="M16 10.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5s.448-1.5 1-1.5s1 .672 1 1.5Zm-6 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S8.448 9 9 9s1 .672 1 1.5Z" />
+            <path fill-rule="evenodd"
+              d="M11.943 1.25h.114c2.309 0 4.118 0 5.53.19c1.444.194 2.584.6 3.479 1.494c.895.895 1.3 2.035 1.494 3.48c.19 1.411.19 3.22.19 5.529v.114c0 2.309 0 4.118-.19 5.53c-.194 1.444-.6 2.584-1.494 3.479c-.895.895-2.035 1.3-3.48 1.494c-1.411.19-3.22.19-5.529.19h-.114c-2.309 0-4.118 0-5.53-.19c-1.444-.194-2.584-.6-3.479-1.494c-.895-.895-1.3-2.035-1.494-3.48c-.19-1.411-.19-3.22-.19-5.529v-.114c0-2.309 0-4.118.19-5.53c.194-1.444.6-2.584 1.494-3.479c.895-.895 2.035-1.3 3.48-1.494c1.411-.19 3.22-.19 5.529-.19Zm-5.33 1.676c-1.278.172-2.049.5-2.618 1.069c-.57.57-.897 1.34-1.069 2.619c-.174 1.3-.176 3.008-.176 5.386s.002 4.086.176 5.386c.172 1.279.5 2.05 1.069 2.62c.57.569 1.34.896 2.619 1.068c1.3.174 3.008.176 5.386.176s4.086-.002 5.386-.176c1.279-.172 2.05-.5 2.62-1.069c.569-.57.896-1.34 1.068-2.619c.174-1.3.176-3.008.176-5.386s-.002-4.086-.176-5.386c-.172-1.279-.5-2.05-1.069-2.62c-.57-.569-1.34-.896-2.619-1.068c-1.3-.174-3.008-.176-5.386-.176s-4.086.002-5.386.176Zm1.784 12.627a.75.75 0 0 1 1.05-.155c.728.54 1.607.852 2.553.852s1.825-.313 2.553-.852a.75.75 0 1 1 .894 1.204A5.766 5.766 0 0 1 12 17.75a5.766 5.766 0 0 1-3.447-1.148a.75.75 0 0 1-.156-1.049Z"
+              clip-rule="evenodd" />
+          </g>
+        </svg>
+        <span class="badge my-3 mx-1 bg-gradient end-0" style="background-color: var(--et-galactic-accent);">{{.assistant}}</span>
       </div>
-      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream" hx-on:load="highlight()">
+      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
+        hx-on:load="highlight()">
         <div class="loadership_JTACT">
           <div></div>
           <div></div>
@@ -66,11 +85,11 @@
   }
 
   htmx.on("htmx:wsAfterMessage", function (evt) {
-    const box = document.querySelector(".box");
-    const newRotation = chatRotation();
-    box.style.transition = "transform 0.2s ease";
-    box.style.transform = newRotation;
-    setViewHeight("prompt-view");
+    // const box = document.querySelector(".box");
+    // const newRotation = chatRotation();
+    // box.style.transition = "transform 0.2s ease";
+    // box.style.transform = newRotation;
+    // setViewHeight("prompt-view");
     highlight();
     scrollToBottom();
   });
@@ -102,7 +121,7 @@
         const wrapper = document.createElement('div');
         wrapper.setAttribute('id', 'snippet-wrapper');
         wrapper.classList.add('rounded-2', 'mb-3');
-        wrapper.style.backgroundColor = '#272822';
+        wrapper.style.backgroundColor = '#252525';
         wrapper.appendChild(snippet);
         wrapper.appendChild(copyButton);
         block.parentNode.insertAdjacentElement('afterend', wrapper);

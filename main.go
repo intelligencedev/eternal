@@ -22,7 +22,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/template/html/v2"
-	"github.com/gofiber/websocket/v2"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/afero"
@@ -56,6 +55,25 @@ type Tool struct {
 func main() {
 	displayBanner()
 
+	// Print host information as pterm table
+	hostInfo, err := GetHostInfo()
+	if err != nil {
+		pterm.Error.Println("Error getting host information:", err)
+	} else {
+		// Convert memory to GB
+		hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
+		// Convert ints to strings for pterm table
+		pterm.DefaultTable.WithData(pterm.TableData{
+			{"OS", hostInfo.OS},
+			{"Architecture", hostInfo.Arch},
+			{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
+			{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
+			{"GPU Model", hostInfo.GPUs[0].Model},
+			{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
+			{"Metal Support", hostInfo.GPUs[0].MetalSupport},
+		}).Render()
+	}
+
 	// Load configuration
 	config, err := loadConfig()
 	if err != nil {
@@ -65,7 +83,13 @@ func main() {
 
 	// Initialize tools based on config
 	tools := initializeTools(config)
-	log.Infof("Enabled tools: %v", tools)
+
+	// If the tool is enabled, print the tool name
+	for _, tool := range tools {
+		if tool.Enabled {
+			pterm.Info.Println("Enabled tool:", tool.Name)
+		}
+	}
 
 	// Create data directory if it doesn't exist
 	if err := createDataDirectory(config.DataPath); err != nil {
@@ -98,6 +122,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Prepare data for the pterm table including headers
+	tableData := pterm.TableData{
+		{"Model Name", "Context Size", "Downloaded"},
+	}
+
+	// Loop through model parameters and add each to the table
+	for _, param := range modelParams {
+		tableData = append(tableData, []string{param.Name, fmt.Sprintf("%d", param.Options.CtxSize), fmt.Sprintf("%t", param.Downloaded)})
+	}
+
+	// Print the model parameters as a pterm table
+	pterm.DefaultTable.WithData(tableData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
+
 	// Load image models
 	imageModels, err := loadImageModels(config)
 	if err != nil {
@@ -105,7 +142,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Infof("Loaded %d language models and %d image models", len(modelParams), len(imageModels))
+	// Print the name of the image model
+	for _, model := range imageModels {
+		pterm.Info.Println("Image model:", model.Name)
+	}
 
 	// Setup context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -312,59 +352,4 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	}
 
 	pterm.Info.Println("Server gracefully shutdown")
-}
-
-// setupRoutes sets up the routes for the application
-func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("templates/index", fiber.Map{})
-	})
-
-	app.Get("/config", func(c *fiber.Ctx) error {
-		return c.JSON(config)
-	})
-
-	app.Get("/flow", func(c *fiber.Ctx) error {
-		return c.Render("templates/flow", fiber.Map{})
-	})
-
-	// Chat session routes
-	app.Post("/chatsubmit", handleChatSubmit(config))
-	app.Post("/chat/role/:name", handleRoleSelection(config))
-
-	// Model management routes
-	app.Post("/modelcards", handleModelCards(modelParams))
-	app.Post("/model/select", handleModelSelect())
-	app.Get("/models/selected", handleSelectedModels())
-	app.Post("/model/download", handleModelDownload(config))
-	app.Post("/imgmodel/download", handleImgModelDownload(config))
-
-	// Model - Database routes
-	app.Get("/modeldata/:modelName", handleModelData())
-	app.Put("/modeldata/:modelName/downloaded", handleModelDownloadUpdate())
-
-	// Chat - Database routes
-	app.Get("/chats", handleGetChats())
-	app.Get("/chats/:id", handleGetChatByID())
-	app.Put("/chats/:id", handleUpdateChat())
-	app.Delete("/chats/:id", handleDeleteChat())
-
-	// Tool routes
-	app.Post("/tool/:toolName", handleToolToggle(config))
-	app.Get("/dpsearch", handleDPSearch())
-
-	// Utility routes
-	app.Post("/upload", handleUpload(config))
-	app.Get("/sseupdates", handleSSEUpdates())
-	app.Get("/ws", websocket.New(handleWebSocket(config)))
-
-	// OpenAI routes
-	app.Get("/openai/models", handleOpenAIModels(config))
-	app.Get("/wsoai", websocket.New(handleOpenAIWebSocket(config)))
-
-	// Anthropic routes
-	app.Get("/wsanthropic", websocket.New(handleAnthropicWebSocket(config)))
-
-	// Google routes
-	app.Get("/wsgoogle", websocket.New(handleGoogleWebSocket(config)))
 }

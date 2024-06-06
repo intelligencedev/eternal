@@ -3,12 +3,14 @@ module eternal
 go 1.21.1
 
 require (
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/anthonynsimon/bild v0.13.0
 	github.com/blevesearch/bleve/v2 v2.3.10
 	github.com/blevesearch/bleve_index_api v1.0.6
 	github.com/chromedp/cdproto v0.0.0-20240116100315-4a0ec5e4c400
 	github.com/chromedp/chromedp v0.9.3
 	github.com/go-git/go-git/v5 v5.11.0
+	github.com/go-shiori/go-readability v0.0.0-20240530203707-15a31cd77abf
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gofiber/template/html/v2 v2.0.5
 	github.com/gofiber/websocket/v2 v2.2.1
@@ -18,15 +20,14 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/nlpodyssey/cybertron v0.2.1
 	github.com/pterm/pterm v0.12.74
-	github.com/sashabaranov/go-openai v1.24.1
 	github.com/serpapi/google-search-results-golang v0.0.0-20230616000151-95707d993dc6
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.8.4
 	github.com/unidoc/unioffice v1.31.0
 	github.com/valyala/fasthttp v1.50.0
-	golang.org/x/crypto v0.19.0
-	golang.org/x/net v0.21.0
+	golang.org/x/crypto v0.22.0
+	golang.org/x/net v0.24.0
 	golang.org/x/text v0.14.0
 	google.golang.org/api v0.152.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -49,6 +50,8 @@ require (
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/cascadia v1.3.2 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/blevesearch/geo v0.1.18 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
@@ -76,11 +79,13 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-shiori/dom v0.0.0-20210627111528-4e4722cd0d65 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.3.0 // indirect
 	github.com/gofiber/template v1.8.2 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
+	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -131,8 +136,8 @@ require (
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
