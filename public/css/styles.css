@@ -1,28 +1,28 @@
 :root {
     /* Default Accents */
-    --et-purple: #7f5af0;
-    --et-green: #2cb67d;
-    --et-blue: #2d68f0;
-    --et-red: #e45858;
-    --et-yellow: #f3d672;
-    --et-light: #d9d9d9;
-
+    --et-purple: #BB29BB; /* Medium Purple */
+    --et-green: #66cdaa; /* Medium Aquamarine */
+    --et-blue: #87cefa; /* Light Sky Blue */
+    --et-red: #ff6347; /* Tomato */
+    --et-yellow: #ffd700; /* Gold (unchanged) */
+    --et-light: #d3d3d3; /* Light Gray */
+    --et-card-bg: #252525; /* Dark Gray */
 
     /* Galactic Gray Theme */
-    --et-galactic-primary: #cccccc;
-    --et-galactic-secondary: #808080;
-    --et-galactic-accent: #333333;
-    --et-galactic-background: #101010;
-    --et-galactic-border-highlight: #ffffff;
+    --et-galactic-primary: #b0b0b0;
+    --et-galactic-secondary: #707070;
+    --et-galactic-accent: #505050;
+    --et-galactic-background: #121212;
+    --et-galactic-border-highlight: #d0d0d0;
 
-    /*  Aurora Theme */
+    /* Aurora Theme */
     --et-aurora-primary: #00ffa3; /* Bright Aqua */
     --et-aurora-secondary: #00875f; /* Deep Aqua Green */
-    --et-aurora-accent: #004d39; /* Dark Teal */
-    --et-aurora-background: #00231c; /* Very Dark Green */
+    --et-aurora-accent: #191919; /* Dark Teal */
+    --et-aurora-background: #0F0F0F; /* Very Dark Green */
     --et-aurora-border-highlight: #00ffc4; /* Bright Teal */
 
-    /*  Celestial Theme */
+    /* Celestial Theme */
     --et-celestial-primary: #4b8f8c; /* Teal Blue */
     --et-celestial-secondary: #32717a; /* Sea Green Blue */
     --et-celestial-accent: #1b3a41; /* Dark Cyan */
@@ -30,9 +30,40 @@
     --et-celestial-border-highlight: #6cbfbf; /* Soft Cyan */
 }
 
+::-webkit-scrollbar {
+    display: none;
+}
+
+html {
+    scrollbar-width: none;  /* Firefox */
+}
+
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--et-galactic-background);
+    -ms-overflow-style: none;  /* IE and Edge */
+    overflow: hidden; /* Ensure no scrollbars on body */
+}
+
+.bg-primary {
+    --bs-bg-opacity: 1;
+    background-color: hsla(var(--bs-primary-hsl), var(--bs-bg-opacity)) !important;
+}
+
+.bg-secondary {
+    background-color: #007BFF;
+}
+
+#tools,
+#chat-view,
+#info {
+    height: 100%;
+    overflow-y: hidden; /* Hide scrollbars */
+}
+
+.main-content {
+    flex: 1;
+    overflow-y: hidden; /* Hide scrollbars */
 }
 
 @font-face {
@@ -82,12 +113,15 @@ codapi-toolbar button {
     display: inline-block;
     width: 48px;
     height: 48px;
-    /* background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><g fill="currentColor" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" d="M11 14H3m8 4H3"/><path d="M18.875 14.118c1.654.955 2.48 1.433 2.602 2.121a1.5 1.5 0 0 1 0 .521c-.121.69-.948 1.167-2.602 2.121c-1.654.955-2.48 1.433-3.138 1.194a1.499 1.499 0 0 1-.451-.261c-.536-.45-.536-1.404-.536-3.314c0-1.91 0-2.865.536-3.314a1.5 1.5 0 0 1 .451-.26c.657-.24 1.484.238 3.138 1.192Z"/><path stroke-linecap="round" d="M3 6h10.5M20 6h-2.25M20 10H9.5M3 10h2.25"/></g></svg>'); */
     border: none;
 }
 
 codapi-toolbar a {
     display: none;
+}
+
+codapi-toolbar button {
+    border-radius: 6px;
 }
 
 .fade-it {
@@ -111,30 +145,19 @@ codapi-toolbar a {
 
 .message-content {
     white-space: pre-wrap;
-    /* Preserves spaces and line breaks */
     word-wrap: break-word;
-    /* Ensures long words do not break the layout */
-
 }
 
 .user-prompt {
-    background-color: var(--et-galactic-accent);
-    border-left: 3px solid var(--et-red);
-    /* padding: 8px 12px;
-    margin-top: 20px;
-    margin-bottom: 10px; */
+    border-left: 3px solid var(--et-green);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     max-height: min-content;
 }
 
 .response {
-    background-color: var(--et-galactic-accent);
     border-left: 3px solid var(--et-purple);
-    /* padding: 8px 12px;
-    margin-bottom: 10px;
-    border-radius: 4px; */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 pre code {
@@ -143,20 +166,6 @@ pre code {
 
 .card-selected {
     border: 2px solid var(--et-blue);
-    /* or any other styling to depict selection */
-}
-
-/* .chat-container {
-    overflow-y: auto;
-} */
-
-.dark-blur {
-    /* Apply a blur effect to the background */
-    backdrop-filter: blur(7px) brightness(100%);
-    --webkit-backface-visibility: hidden;
-    --moz-backface-visibility: hidden;
-    --webkit-transform: translate3d(0, 0, 0);
-    --moz-transform: translate3d(0, 0, 0);
 }
 
 .hljs {
@@ -169,24 +178,15 @@ pre.hljs {
     padding: 0.5em;
 }
 
-/* Base background color for code blocks */
 code.hljs {
     display: block;
-
     padding: 0.5em;
-    background: #272822;
-    /* Monokai background color */
+    background: #171717;
     color: #f8f8f2;
-    /* Monokai main text color */
 }
 
-/* Color of the code itself */
 span.hljs {
     color: #f8f8f2;
-    white-space: pre-wrap;
-}
-
-.preserve-format {
     white-space: pre-wrap;
 }
 
@@ -236,7 +236,6 @@ span.hljs-template-variable {
     color: #f92672;
 }
 
-/* Color of class names */
 span.hljs-type,
 span.hljs-builtin-name {
     color: #66d9ef;

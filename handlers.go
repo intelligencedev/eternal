@@ -23,6 +23,8 @@ import (
 	"github.com/valyala/fasthttp"
 	"gorm.io/gorm"
 
+	"eternal/internal/python"
+	"eternal/pkg/documents"
 	"eternal/pkg/embeddings"
 	"eternal/pkg/hfutils"
 	"eternal/pkg/llm"
@@ -166,7 +168,9 @@ func handleModelCards(modelParams []ModelParams) fiber.Handler {
 			return c.Status(500).SendString("Server Error")
 		}
 
-		return c.Render("templates/model", fiber.Map{"models": modelParams})
+		//return c.Render("templates/model", fiber.Map{"models": modelParams})
+
+		return c.JSON(modelParams)
 	}
 }
 
@@ -702,7 +706,7 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		// Process the WebSocket message.
 		err = processMessage(wsMessage, chatMessage)
 		if err != nil {
-			handleError(wsMessage, err)
+			handleError(config, wsMessage, err)
 			return
 		}
 
@@ -729,20 +733,45 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 }
 
 // handleError handles errors that occur during message processing.
-func handleError(message WebSocketMessage, err error) {
+func handleError(config *AppConfig, message WebSocketMessage, err error) {
 	log.Errorf("Error processing message: %v", err)
 
-	// Store the chat message in Bleve.
-	chatMessage := ChatTurnMessage{
-		ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
-		Prompt:   message.ChatMessage,
-		Response: err.Error(),
-		Model:    message.Model,
-	}
+	if config.Tools.Memory.Enabled {
 
-	err = searchIndex.Index(chatMessage.ID, chatMessage)
-	if err != nil {
-		log.Errorf("Error storing chat message in Bleve: %v", err)
+		// Split the chat message into chunks 500 characters long with a 200 character overlap.
+		chunks := documents.SplitTextByCount(message.ChatMessage, 500)
+
+		// Store the chunk in Bleve.
+		for _, chunk := range chunks {
+			chatMessage := ChatTurnMessage{
+				ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
+				Prompt:   message.ChatMessage,
+				Response: chunk,
+				Model:    message.Model,
+			}
+
+			err = searchIndex.Index(chatMessage.ID, chatMessage)
+			if err != nil {
+				log.Errorf("Error storing chat message in Bleve: %v", err)
+			}
+		}
+
+		// Store the chat message in Bleve.
+		// chatMessage := ChatTurnMessage{
+		// 	ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
+		// 	Prompt:   message.ChatMessage,
+		// 	Response: err.Error(),
+		// 	Model:    message.Model,
+		// }
+
+		// err = searchIndex.Index(chatMessage.ID, chatMessage)
+		// if err != nil {
+		// 	log.Errorf("Error storing chat message in Bleve: %v", err)
+		// }
+
+		chatTurn++
+
+		return
 	}
 
 	// Increment the chat turn counter.
@@ -855,6 +884,15 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 				pagesRetrieved++
 			}
 		}
+
+		webResults, err := handleTextSplitAndIndex(chatMessage, document, 10, 1000, "avsolatorio/GIST-small-Embedding-v0", "None")
+		if err != nil {
+			log.Errorf("Error handling text split and index: %v", err)
+		}
+
+		document = webResults
+
+		pterm.Warning.Printf("Web search results: %s\n", document)
 	}
 
 	chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
@@ -883,4 +921,71 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	}
 
 	return nil
+}
+
+// handleTextSplitAndIndex handles the splitting and indexing of text.
+func handleTextSplitAndIndex(prompt string, inputText string, topN int, chunkSize int, modelName string, revision string) (string, error) {
+	// Split the input text into chunks.
+	chunks := documents.SplitTextByCount(inputText, chunkSize)
+
+	// Index each chunk in Bleve.
+	for _, chunk := range chunks {
+		docID := fmt.Sprintf("%d", time.Now().UnixNano())
+		doc := ChatTurnMessage{
+			ID:       docID,
+			Prompt:   inputText,
+			Response: chunk,
+			Model:    "text-splitter",
+		}
+		if err := searchIndex.Index(docID, doc); err != nil {
+			log.Errorf("Error indexing chunk in Bleve: %v", err)
+			return "", fmt.Errorf("error indexing chunk: %w", err)
+		}
+	}
+
+	// Retrieve the top N relevant chunks from the Bleve index.
+	query := bleve.NewQueryStringQuery(prompt)
+	searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
+	searchResults, err := searchIndex.Search(searchRequest)
+	if err != nil {
+		log.Errorf("Error searching index: %v", err)
+		return "", fmt.Errorf("error searching index: %w", err)
+	}
+
+	// Concatenate the top N chunks into a single string.
+	var result string
+	for _, hit := range searchResults.Hits {
+		doc, err := searchIndex.Document(hit.ID)
+		if err != nil {
+			log.Errorf("Error retrieving document: %v", err)
+			continue
+		}
+		doc.VisitFields(func(field index.Field) {
+			if field.Name() == "response" {
+				result = fmt.Sprintf("%s\n%s", result, field.Value())
+
+				// Execute the Python script to get vector embeddings.
+				vecs, err := python.ExecuteScript(
+					"/Users/arturoaquino/Documents/eternal/scripts/python/embed.py",
+					"--model_name", modelName,
+					"--revision", revision,
+					"--texts", result,
+					"--chunk_size", fmt.Sprintf("%d", chunkSize),
+					"--chunk_overlap", "0", // Adjust this as needed
+				)
+				if err != nil {
+					log.Errorf("Error executing Python script: %v", err)
+				}
+
+				// Print the vector embeddings
+				fmt.Println("Vector embeddings:", vecs)
+			}
+		})
+	}
+
+	// Remove empty lines from the result.
+	result = strings.ReplaceAll(result, "\n\n", " ")
+
+	// Return the concatenated result.
+	return result, nil
 }
