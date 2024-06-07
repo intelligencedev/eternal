@@ -97,12 +97,14 @@
                 <input type="range" class="form-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
                 <span id="temp-value">${modelData.Options.temp}</span>
               </p>
-              <p><strong>Repetition Penalty:</strong> ${modelData.Options.repeat_penalty}</p>
+              <p><strong>Repetition Penalty:</strong> 
+                <input type="range" class="form-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
+                <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span>
+              </p>
               <p><strong>Prompt Template:</strong> ${modelData.Options.prompt}</p>
             </div>
             <button id="saveModelParamsBtn" class="btn btn-primary bg-gradient" onclick="saveModelParams('${modelData.Name}')">Save</button>
-          </div>
-        `;
+          </div>`;
         }
 
         // Add event listeners to update the displayed value as the slider is moved
