@@ -237,7 +237,7 @@
             this.data = await response.json();
             console.log('Data fetched:', this.data);
 
-            response = await fetch('/models/selected');
+            response = await fetch('/model/selected');
             let modelName = await response.json();
             console.log('Selected model:', modelName);
 

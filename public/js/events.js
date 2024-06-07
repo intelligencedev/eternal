@@ -25,7 +25,7 @@ async function highlightSelectedModels() {
   console.log("Highlighting selected models...")
   try {
     // Fetch the selected model names from the server
-    const response = await fetch('/models/selected');
+    const response = await fetch('/model/selected');
     if (!response.ok) {
       throw new Error('Failed to fetch selected models');
     }
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function getSelectedModels() {
   try {
     // Fetch the selected model names from the server
-    const response = await fetch('/models/selected');
+    const response = await fetch('/model/selected');
     if (!response.ok) {
       throw new Error('Failed to fetch selected models');
     }
