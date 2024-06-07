@@ -1,7 +1,7 @@
 <div id="models-container" class="row">
   <div class="h-auto">
-    <div class="my-3 h-auto dropdown dropdown-center mx-2">
-      <button class="btn btn-secondary bg-gradient dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
+    <div class="h-auto dropdown dropdown-center mx-2">
+      <button class="btn btn-secondary bg-gradient dropdown-toggle mt-3 w-100" type="button" data-bs-toggle="dropdown"
         aria-expanded="false">
         Language Models
       </button>
@@ -62,14 +62,63 @@
             <div class="card-header">${modelData.Name}</div>
             <div class="card-body tab-content mh-100">
               <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
-              <p><strong>Context:</strong> ${modelData.Options.ctx_size}</p>
-              <p><strong>Temperature:</strong> ${modelData.Options.temp}</p>
+              <p><strong>Context:</strong> 
+                <input type="range" class="form-range" min="2048" max="${modelData.Options.ctx_size}" step="1024" value="${modelData.Options.ctx_size}" id="ctx-size-slider">
+                <span id="ctx-size-value">${modelData.Options.ctx_size}</span>
+              </p>
+              <p><strong>Temperature:</strong> 
+                <input type="range" class="form-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
+                <span id="temp-value">${modelData.Options.temp}</span>
+              </p>
               <p><strong>Repetition Penalty:</strong> ${modelData.Options.repeat_penalty}</p>
-
               <p><strong>Prompt Template:</strong> ${modelData.Options.prompt}</p>
             </div>
+            <button id="saveModelParamsBtn" class="btn btn-primary bg-gradient" onclick="saveModelParams('${modelData.Name}')">Save</button>
           </div>
         `;
+
+        // Add event listeners to update the displayed value as the slider is moved
+        document.getElementById('ctx-size-slider').addEventListener('input', function () {
+          document.getElementById('ctx-size-value').textContent = this.value;
+        });
+
+        document.getElementById('temp-slider').addEventListener('input', function () {
+          document.getElementById('temp-value').textContent = this.value;
+        });
+
+        // Add event listener to save the model parameters
+        const saveButton = document.getElementById('saveModelParamsBtn');
+        saveButton.addEventListener('click', async () => {
+          try {
+            const ctxSize = parseInt(document.getElementById('ctx-size-slider').value);
+            const temp = parseFloat(document.getElementById('temp-slider').value);
+
+            const modelParams = {
+              Name: modelData.Name,
+              Options: {
+                ctx_size: ctxSize,
+                temp: temp,
+                // Include other options if necessary
+              },
+            };
+
+            const response = await fetch('/model/set/params', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(modelParams),
+            });
+
+            if (response.ok) {
+              console.log('Settings saved successfully');
+            } else {
+              console.error('Error saving settings');
+            }
+          } catch (error) {
+            console.error('Error sending request:', error);
+          }
+        });
       }
     } catch (error) {
       console.error('Error fetching model data:', error);
