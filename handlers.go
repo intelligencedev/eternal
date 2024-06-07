@@ -175,20 +175,19 @@ func handleModelCards(modelParams []ModelParams) fiber.Handler {
 // handleModelSelect handles the selection of models for use.
 func handleModelSelect() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var selection SelectedModels
+		modelName := c.Params("name")
+		action := c.Params("action")
 
-		if err := c.BodyParser(&selection); err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Bad request")
-		}
-
-		if selection.Action == "add" {
-			if err := AddSelectedModel(sqliteDB.db, selection.ModelName); err != nil {
+		if action == "add" {
+			if err := AddSelectedModel(sqliteDB.db, modelName); err != nil {
 				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
 			}
-		} else if selection.Action == "remove" {
-			if err := RemoveSelectedModel(sqliteDB.db, selection.ModelName); err != nil {
+		} else if action == "remove" {
+			if err := RemoveSelectedModel(sqliteDB.db, modelName); err != nil {
 				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
 			}
+		} else {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid action")
 		}
 
 		return c.SendStatus(fiber.StatusOK)

@@ -27,8 +27,8 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 
 	// Model management routes
 	app.Post("/modelcards", handleModelCards(modelParams))
-	app.Post("/model/select", handleModelSelect())
-	app.Get("/models/selected", handleSelectedModels())
+	app.Post("/model/select/:name/:action", handleModelSelect())
+	app.Get("/model/selected", handleSelectedModels())
 	app.Post("/model/download", handleModelDownload(config))
 	app.Post("/imgmodel/download", handleImgModelDownload(config))
 

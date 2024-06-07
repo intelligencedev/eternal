@@ -38,6 +38,14 @@
 <script>
   async function selectModel(modelName) {
     try {
+      // Set the selected model in the database
+      const seelectedModelResponse = await fetch(`/model/select/${modelName}/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
       const response = await fetch(`/modeldata/${modelName}`, {
         method: 'GET',
         headers: {
