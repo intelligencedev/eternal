@@ -44,6 +44,7 @@
   <script src="https://unpkg.com/htmx.org@2.0.0-beta1/dist/htmx.min.js"></script>
   <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.0.0/sse.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   <style>
     #tools,
@@ -77,14 +78,14 @@
 </head>
 
 <body>
-  <div id="content" class="container-fluid">
+  <div id="content" class="container-fluid p-0 m-0">
     <div class="main-content">
-      <div class="row mt-2 h-100">
-        <div id="tools" class="col"></div>
+      <div class="row h-100">
+        <div id="tools" class="col-3"></div>
         <div id="chat-view" class="col-6">
           <div id="chat" class="row chat-container fs-5"></div>
         </div>
-        <div id="info" class="col"></div>
+        <div id="info" class="col-3"></div>
       </div>
     </div>
 
@@ -178,38 +179,7 @@
                 </div>
               </div>
               <div class="col-auto">
-                <div class="mb-3 h-auto dropup dropup-center position-absolute bottom-0">
-                  <button class="btn btn-primary dropdown-toggle position-absolute start-50 translate-middle"
-                    hx-post="/modelcards" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Language Models
-                  </button>
-                  <ul id="models-list" class="dropdown-menu">
-                    <li>
-                      <h6 class="dropdown-header">Public Models</h6>
-                    </li>
-                    {{range .models}}
-                    {{if (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name
-                    "anthropic-claude-opus"))}}
-                    <li><a href="#" class="dropdown-item">{{.Name}}</a></li>
-                    {{else}}
-                    {{end}}
-                    {{end}}
-                    <li>
-                      <hr class="dropdown-divider">
-                    </li>
-                    <li>
-                      <h6 class="dropdown-header">Local Models</h6>
-                    </li>
-                    {{range .models}}
-                    {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name
-                    "anthropic-claude-opus"))}}
-                    <li><a href="#" class="dropdown-item">{{.Name}}</a></li>
-                    {{else}}
-                    {{end}}
-                    {{end}}
-                  </ul>
-                </div>
-                <!-- <button class="btn" hx-post="/modelcards" hx-target="#info" hx-preserve="#chat"
+                <button class="btn" hx-post="/modelcards" hx-target="#info" hx-preserve="#chat"
                   hx-swap="innerHTML transition:true" data-bs-toggle="tooltip" data-bs-title="Language Models">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none">
@@ -221,7 +191,7 @@
                         d="M22 14c0 3.771 0 5.657-1.172 6.828C19.657 22 17.771 22 14 22m-4 0c-3.771 0-5.657 0-6.828-1.172C2 19.657 2 17.771 2 14m8-12C6.229 2 4.343 2 3.172 3.172C2 4.343 2 6.229 2 10m12-8c3.771 0 5.657 0 6.828 1.172C22 4.343 22 6.229 22 10" />
                     </g>
                   </svg>
-                </button> -->
+                </button>
               </div>
               <!-- SETTINGS -->
               <div class="col-auto">
@@ -235,6 +205,10 @@
                   </svg>
                 </button>
               </div>
+              <!-- <div x-data="dataStore">
+                <button @click="fetchData">Fetch Data</button>
+                <pre x-text="JSON.stringify(data, null, 2)"></pre>
+              </div> -->
             </div>
           </div>
         </div>
@@ -243,7 +217,7 @@
   </div>
 
   <script src="js/marked/marked.min.js"></script>
-  <script src="js/events.js"></script>
+  <!-- <script src="js/events.js"></script> -->
   <script src="js/workflows.js"></script>
   <script src="https://unpkg.com/@antonz/runno@0.6.1/dist/runno.js"></script>
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/engine/wasi.js"></script>
@@ -251,6 +225,38 @@
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/settings.js"></script>
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dataStore', {
+        init() {
+          this.fetchData();
+        },
+        data: {},
+        async fetchData() {
+          try {
+            let response = await fetch('/config');
+            this.data = await response.json();
+            console.log('Data fetched:', this.data);
+
+            response = await fetch('/models/selected');
+            let modelName = await response.json();
+            console.log('Selected model:', modelName);
+
+            // Print the keys of the data object
+            console.log('Data keys:', Object.keys(this.data));
+
+          } catch (error) {
+            console.error('Error fetching data:', error);
+          }
+        }
+      });
+    });
+
+
+    function dataStore() {
+      return Alpine.store('dataStore');
+    }
+
+
     const textarea = document.getElementById('message');
     const maxRows = 8;
 
@@ -333,47 +339,6 @@
           console.error('Error:', error);
         });
     }
-
-    // getModels retrieves the models data from the server
-    function getModels() {
-      fetch('/models')
-        .then(response => response.json())
-        .then(data => {
-          console.log('Success:', data);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      const modelButton = document.querySelector('[hx-post="/modelcards"]');
-      modelButton.addEventListener('click', function () {
-        fetch('/modelcards')
-          .then(response => response.json())
-          .then(data => {
-            const modelsList = document.getElementById('models-list');
-            modelsList.innerHTML = '<li><h6 class="dropdown-header">Public Models</h6></li>'; // Reset and add header
-
-            data.forEach(model => {
-              if (["openai-gpt", "google-gemini-1.5", "anthropic-claude-opus"].includes(model.name)) {
-                modelsList.innerHTML += `<li><a href="#" class="dropdown-item">${model.name}</a></li>`;
-              }
-            });
-
-            modelsList.innerHTML += '<li><hr class="dropdown-divider"></li>';
-            modelsList.innerHTML += '<li><h6 class="dropdown-header">Local Models</h6></li>';
-
-            data.forEach(model => {
-              if (!["openai-gpt", "google-gemini-1.5", "anthropic-claude-opus"].includes(model.name)) {
-                modelsList.innerHTML += `<li><a href="#" class="dropdown-item">${model.name}</a></li>`;
-              }
-            });
-          })
-          .catch(error => console.error('Error loading the model data:', error));
-      });
-    });
-
   </script>
 </body>
 

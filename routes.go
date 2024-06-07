@@ -47,6 +47,11 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Get("/dpsearch", handleDPSearch())
 
 	// Utility routes
+
+	// return the app config
+	app.Post("/config", func(c *fiber.Ctx) error {
+		return c.JSON(config)
+	})
 	app.Post("/upload", handleUpload(config))
 	app.Get("/sseupdates", handleSSEUpdates())
 	app.Get("/ws", websocket.New(handleWebSocket(config)))

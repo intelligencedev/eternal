@@ -1,25 +1,70 @@
-<div id="models-container" class="row h-100 position-relative">
-  <div class="row"></div>
-  <div class="mb-3 h-auto dropup dropup-center position-absolute bottom-0">
-    <button class="btn btn-primary dropdown-toggle position-absolute start-50 translate-middle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-      Language Models
-    </button>
-    <ul class="dropdown-menu">
-      <li><h6 class="dropdown-header">Public Models</h6></li>
-      {{range .models}}
-      {{if (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
-      <li><a href="#" class="dropdown-item">{{.Name}}</a></li>
-      {{else}}
-      {{end}}
-      {{end}}
-      <li><hr class="dropdown-divider"></li>
-      <li><h6 class="dropdown-header">Local Models</h6></li>
-      {{range .models}}
-      {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
-      <li><a href="#" class="dropdown-item">{{.Name}}</a></li>
-      {{else}}
-      {{end}}
-      {{end}}
-    </ul>
+<div id="models-container" class="row">
+  <div class="h-auto">
+    <div class="my-3 h-auto dropdown dropdown-center mx-2">
+      <button class="btn btn-secondary bg-gradient dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
+        aria-expanded="false">
+        Language Models
+      </button>
+      <ul class="dropdown-menu w-100" style="background-color: var(--et-card-bg);">
+        <li>
+          <h6 class="dropdown-header">Public Models</h6>
+        </li>
+        {{range .models}}
+        {{if (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
+        <li><a href="/modelcards" hx-get="/modelcards" class="dropdown-item"
+            onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
+        {{end}}
+        {{end}}
+        <li>
+          <hr class="dropdown-divider">
+        </li>
+        <li>
+          <h6 class="dropdown-header">Local Models</h6>
+        </li>
+        {{range .models}}
+        {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
+        <li><a href="#" class="dropdown-item" onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
+        {{end}}
+        {{end}}
+      </ul>
+    </div>
   </div>
 </div>
+
+<!-- Container to display selected model information -->
+<div id="model-info-container">
+</div>
+
+<script>
+  async function selectModel(modelName) {
+    try {
+      const response = await fetch(`/modeldata/${modelName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const modelData = await response.json();
+      console.log(modelData);
+
+      if (modelData) {
+        const modelInfoContainer = document.getElementById('model-info-container');
+        modelInfoContainer.innerHTML = `
+          <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
+            <div class="card-header">${modelData.Name}</div>
+            <div class="card-body tab-content mh-100">
+              <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
+              <p><strong>Context:</strong> ${modelData.Options.ctx_size}</p>
+              <p><strong>Temperature:</strong> ${modelData.Options.temp}</p>
+              <p><strong>Repetition Penalty:</strong> ${modelData.Options.repeat_penalty}</p>
+
+              <p><strong>Prompt Template:</strong> ${modelData.Options.prompt}</p>
+            </div>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error fetching model data:', error);
+    }
+  }
+</script>
