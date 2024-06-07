@@ -85,10 +85,10 @@
   }
 
   htmx.on("htmx:wsAfterMessage", function (evt) {
-    // const box = document.querySelector(".box");
-    // const newRotation = chatRotation();
-    // box.style.transition = "transform 0.2s ease";
-    // box.style.transform = newRotation;
+    const box = document.querySelector(".box");
+    const newRotation = chatRotation();
+    box.style.transition = "transform 0.2s ease";
+    box.style.transform = newRotation;
     // setViewHeight("prompt-view");
     highlight();
     scrollToBottom();

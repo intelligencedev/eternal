@@ -78,9 +78,11 @@
 </head>
 
 <body>
+  <!-- Add header template -->
+   {{template "templates/header" .}}
   <div id="content" class="container-fluid p-0 m-0">
     <div class="main-content">
-      <div class="row h-100">
+      <div class="row h-100 mt-5">
         <div id="tools" class="col-3"></div>
         <div id="chat-view" class="col-6">
           <div id="chat" class="row chat-container fs-5"></div>
