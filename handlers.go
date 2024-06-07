@@ -158,6 +158,23 @@ func handleModelDownloadUpdate() fiber.Handler {
 	}
 }
 
+// handleModelUpdate updates the model data in the database.
+func handleModelUpdate() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var model ModelParams
+		if err := c.BodyParser(&model); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Cannot parse JSON")
+		}
+
+		err := sqliteDB.UpdateByName(model.Name, model)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
+		}
+
+		return c.JSON(model)
+	}
+}
+
 // handleModelCards retrieves and renders model cards.
 func handleModelCards(modelParams []ModelParams) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -605,7 +622,7 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 				Model:         model.Options.Model,
 				Prompt:        fullPrompt,
 				CtxSize:       model.Options.CtxSize,
-				Temp:          0.1,
+				Temp:          0.2,
 				RepeatPenalty: 1.1,
 				TopP:          1.0,
 				TopK:          1.0,

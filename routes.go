@@ -31,6 +31,7 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Get("/model/selected", handleSelectedModels())
 	app.Post("/model/download", handleModelDownload(config))
 	app.Post("/imgmodel/download", handleImgModelDownload(config))
+	app.Post("/model/set/params", handleModelUpdate())
 
 	// Model - Database routes
 	app.Get("/modeldata/:modelName", handleModelData())
