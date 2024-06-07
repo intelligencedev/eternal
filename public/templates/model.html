@@ -1,148 +1,155 @@
-<div id="models-container" class="fade-it">
-  <div id="content" class="mt-3 mb-4 pb-3">
-    <button class="btn btn-danger btn-lg mb-2 w-100" style="background-color: var(--et-red);" hx-get="/"
-      hx-target="#models-container" hx-select="#chat" hx-preserve="#chat" hx-swap="delete transition:true">Back</button>
-  </div>
-  <div class="row">
-    {{range .models}}
-    <div class="col-6 gy-3">
-      <div class="card h-100" data-model-name="{{.Name}}">
-        <!-- If .Downloaded is false, add button to call download link -->
-        {{if not .Downloaded}}
+<div id="models-container" class="row">
+  <div class="h-auto">
+    <div class="h-auto dropdown dropdown-center mx-2">
+      <button class="btn btn-secondary bg-gradient dropdown-toggle mt-3 w-100" type="button" data-bs-toggle="dropdown"
+        aria-expanded="false">
+        Language Models
+      </button>
+      <ul class="dropdown-menu w-100" style="background-color: var(--et-card-bg);">
+        <li>
+          <h6 class="dropdown-header">Public Models</h6>
+        </li>
+        {{range .models}}
+        {{if (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
+        <li><a href="/modelcards" hx-get="/modelcards" class="dropdown-item"
+            onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
+        {{end}}
+        {{end}}
+        <li>
+          <hr class="dropdown-divider">
+        </li>
+        <li>
+          <h6 class="dropdown-header">Local Models</h6>
+        </li>
+        {{range .models}}
         {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
-        <div class="card-header col">{{.Name}}</div>
-        <div class="row h-100">
-          <div name="progress-download" id="progress-download-{{.Name}}"></div>
-          <button id="btn-download-{{.Name}}" class="btn fw-medium" style="min-height: 228px;"
-            data-model-name="{{.Name}}" hx-post="/model/download?model={{.Name}}" hx-trigger="click">
-            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path fill="currentColor" fill-rule="evenodd"
-                d="M12 15.25a.75.75 0 0 1 .75.75v4.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V16a.75.75 0 0 1 .75-.75"
-                clip-rule="evenodd" />
-              <path fill="currentColor"
-                d="M12.226 3.5c-2.75 0-4.964 2.2-4.964 4.897c0 .462.065.909.185 1.331c.497.144.963.36 1.383.64a.75.75 0 1 1-.827 1.25a3.54 3.54 0 0 0-1.967-.589c-1.961 0-3.536 1.57-3.536 3.486C2.5 16.43 4.075 18 6.036 18a.75.75 0 0 1 0 1.5C3.263 19.5 1 17.276 1 14.515c0-2.705 2.17-4.893 4.864-4.983a6.366 6.366 0 0 1-.102-1.135C5.762 4.856 8.664 2 12.226 2c3.158 0 5.796 2.244 6.355 5.221c2.3.977 3.919 3.238 3.919 5.882c0 3.074-2.188 5.631-5.093 6.253a.75.75 0 0 1-.314-1.467c2.24-.48 3.907-2.446 3.907-4.786c0-2.137-1.39-3.962-3.338-4.628a5.018 5.018 0 0 0-1.626-.27c-.583 0-1.14.1-1.658.28a.75.75 0 0 1-.494-1.416a6.517 6.517 0 0 1 3.024-.305A4.962 4.962 0 0 0 12.226 3.5" />
-            </svg>
-          </button>
-        </div>
-        {{else}}
-        <div id="card-header-{{.Name}}" class="card-header" onclick="selectModel('{{.Name}}')">{{.Name}}</div>
-        <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
-          <!-- Tabs -->
-          <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
-            <li class="nav-item">
-              <a class="nav-link active" id="settings-tab-{{.Name}}" data-bs-toggle="tab"
-                data-bs-target="#settings-tab-pane-{{.Name}}" role="tab" aria-controls="settings-tab-pane-{{.Name}}"
-                aria-selected="true" style="background-color: unset;">Settings</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" id="template-tab-{{.Name}}" data-bs-toggle="tab"
-                data-bs-target="#template-tab-pane-{{.Name}}" role="tab" aria-controls="template-tab-pane-{{.Name}}"
-                aria-selected="false" style="background-color: unset;">Prompt Template</a>
-            </li>
-          </ul>
-          <!-- Settings Tab Content -->
-          <div class="tab-pane fade show active" id="settings-tab-pane-{{.Name}}" role="tabpanel"
-            aria-labelledby="settings-tab-{{.Name}}">
-            <p><a href="{{.GGUFInfo}}" target="_blank">Model Info</a></p>
-            <p><strong>Context:</strong> {{.Options.CtxSize}}</p>
-            <p><strong>Temperature:</strong> {{.Options.Temp}}</p>
-            <p><strong>Repetition Penalty:</strong> {{.Options.RepeatPenalty}}</p>
-          </div>
-          <!-- Prompt Template Tab Content -->
-          <div class="tab-pane fade" id="template-tab-pane-{{.Name}}" role="tabpanel"
-            aria-labelledby="template-tab-{{.Name}}">
-            <p><strong>Prompt Template:</strong> {{.Options.Prompt}}</p>
-          </div>
-        </div>
+        <li><a href="#" class="dropdown-item" onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
         {{end}}
-        {{else}}
-        <div class="card-header" onclick="selectModel('{{.Name}}')">{{.Name}}</div>
-        <div class="card-body tab-content mh-100" id="js-tabs-content-{{.Name}}">
-          <!-- Tabs -->
-          <ul class="nav nav-underline nav-fill mb-3 justify-content-center" id="js-tabs-{{.Name}}" role="tablist">
-            <li class="nav-item">
-              <a class="nav-link active" id="settings-tab-{{.Name}}" data-bs-toggle="tab"
-                data-bs-target="#settings-tab-pane-{{.Name}}" role="tab" aria-controls="settings-tab-pane-{{.Name}}"
-                aria-selected="true" style="background-color: unset;">Settings</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" id="template-tab-{{.Name}}" data-bs-toggle="tab"
-                data-bs-target="#template-tab-pane-{{.Name}}" role="tab" aria-controls="template-tab-pane-{{.Name}}"
-                aria-selected="false" style="background-color: unset;">Prompt Template</a>
-            </li>
-          </ul>
-          <!-- Settings Tab Content -->
-          <div class="tab-pane fade show active" id="settings-tab-pane-{{.Name}}" role="tabpanel"
-            aria-labelledby="settings-tab-{{.Name}}">
-            <p><a href="{{.GGUFInfo}}" target="_blank">Model Info</a></p>
-            <p><strong>Context:</strong> {{.Options.CtxSize}}</p>
-            <p><strong>Temperature:</strong> {{.Options.Temp}}</p>
-            <p><strong>Repetition Penalty:</strong> {{.Options.RepeatPenalty}}</p>
-          </div>
-          <!-- Prompt Template Tab Content -->
-          <div class="tab-pane fade" id="template-tab-pane-{{.Name}}" role="tabpanel"
-            aria-labelledby="template-tab-{{.Name}}">
-            <p><strong>Prompt Template:</strong> {{.Options.Prompt}}</p>
-          </div>
-        </div>
         {{end}}
-      </div>
+      </ul>
     </div>
-    {{end}}
   </div>
 </div>
 
+<!-- Container to display selected model information -->
+<div id="model-info-container">
+</div>
+
 <script>
-  async function downloadModel(modelName) {
-
-    // Append 
-
-    console.log("Downloading model: ", modelName);
-
-    // Fetch the download route
-    fetch(`/model/download?model=${modelName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ modelName }),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to download model');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-      });
-  }
-
   async function selectModel(modelName) {
-    // Deselect all cards
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => card.classList.remove('card-selected'));
-
-    // Get the clicked card element
-    const cardElement = document.querySelector(`div[data-model-name="${modelName}"]`);
-
-    // Select the clicked card
-    cardElement.classList.add('card-selected');
-
-    // Send request to update model selection in the backend
-    fetch(`/model/select`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ modelName, action: 'add' }), // Always 'add' as we deselect all others
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to update model selection');
+    try {
+      // Set the selected model in the database
+      const seelectedModelResponse = await fetch(`/model/select/${modelName}/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      })
-      .catch(error => {
-        console.error('Error:', error);
       });
+
+      const response = await fetch(`/modeldata/${modelName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const modelData = await response.json();
+      console.log(modelData);
+
+      if (modelData) {
+        const modelInfoContainer = document.getElementById('model-info-container');
+
+        // <!-- If .Downloaded is false, add button to call download link -->
+        if (!modelData.Downloaded && !['openai-gpt', 'google-gemini-1.5', 'anthropic-claude-opus'].includes(modelData.Name)) {
+          modelInfoContainer.innerHTML = `
+          <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
+            <div class="card-header">${modelData.Name}</div>
+            <div class="card-body tab-content mh-100">
+              <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
+              <div name="progress-download" id="progress-download-${modelData.Name}"></div>
+              <div>
+                <button id="btn-download-${modelData.Name}" class="w-100 btn fw-medium" style="min-height: 228px;"
+                  data-model-name="${modelData.Name}" hx-post="/model/download?model=${modelData.Name}" hx-trigger="click">
+                  <p class="fs-4">Download</p>
+                  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="currentColor" fill-rule="evenodd"
+                      d="M12 15.25a.75.75 0 0 1 .75.75v4.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V16a.75.75 0 0 1 .75-.75"
+                      clip-rule="evenodd" />
+                    <path fill="currentColor"
+                      d="M12.226 3.5c-2.75 0-4.964 2.2-4.964 4.897c0 .462.065.909.185 1.331c.497.144.963.36 1.383.64a.75.75 0 1 1-.827 1.25a3.54 3.54 0 0 0-1.967-.589c-1.961 0-3.536 1.57-3.536 3.486C2.5 16.43 4.075 18 6.036 18a.75.75 0 0 1 0 1.5C3.263 19.5 1 17.276 1 14.515c0-2.705 2.17-4.893 4.864-4.983a6.366 6.366 0 0 1-.102-1.135C5.762 4.856 8.664 2 12.226 2c3.158 0 5.796 2.244 6.355 5.221c2.3.977 3.919 3.238 3.919 5.882c0 3.074-2.188 5.631-5.093 6.253a.75.75 0 0 1-.314-1.467c2.24-.48 3.907-2.446 3.907-4.786c0-2.137-1.39-3.962-3.338-4.628a5.018 5.018 0 0 0-1.626-.27c-.583 0-1.14.1-1.658.28a.75.75 0 0 1-.494-1.416a6.517 6.517 0 0 1 3.024-.305A4.962 4.962 0 0 0 12.226 3.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          // <!-- If .Downloaded is true, display model information -->
+
+          modelInfoContainer.innerHTML = `
+          <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
+            <div class="card-header">${modelData.Name}</div>
+            <div class="card-body tab-content mh-100">
+              <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
+              <p><strong>Context:</strong> 
+                <input type="range" class="form-range" min="2048" max="${modelData.Options.ctx_size}" step="1024" value="${modelData.Options.ctx_size}" id="ctx-size-slider">
+                <span id="ctx-size-value">${modelData.Options.ctx_size}</span>
+              </p>
+              <p><strong>Temperature:</strong> 
+                <input type="range" class="form-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
+                <span id="temp-value">${modelData.Options.temp}</span>
+              </p>
+              <p><strong>Repetition Penalty:</strong> ${modelData.Options.repeat_penalty}</p>
+              <p><strong>Prompt Template:</strong> ${modelData.Options.prompt}</p>
+            </div>
+            <button id="saveModelParamsBtn" class="btn btn-primary bg-gradient" onclick="saveModelParams('${modelData.Name}')">Save</button>
+          </div>
+        `;
+        }
+
+        // Add event listeners to update the displayed value as the slider is moved
+        document.getElementById('ctx-size-slider').addEventListener('input', function () {
+          document.getElementById('ctx-size-value').textContent = this.value;
+        });
+
+        document.getElementById('temp-slider').addEventListener('input', function () {
+          document.getElementById('temp-value').textContent = this.value;
+        });
+
+        // Add event listener to save the model parameters
+        const saveButton = document.getElementById('saveModelParamsBtn');
+        saveButton.addEventListener('click', async () => {
+          try {
+            const ctxSize = parseInt(document.getElementById('ctx-size-slider').value);
+            const temp = parseFloat(document.getElementById('temp-slider').value);
+
+            const modelParams = {
+              Name: modelData.Name,
+              Options: {
+                ctx_size: ctxSize,
+                temp: temp,
+                // Include other options if necessary
+              },
+            };
+
+            const response = await fetch('/model/set/params', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(modelParams),
+            });
+
+            if (response.ok) {
+              console.log('Settings saved successfully');
+            } else {
+              console.error('Error saving settings');
+            }
+          } catch (error) {
+            console.error('Error sending request:', error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching model data:', error);
+    }
   }
 </script>
