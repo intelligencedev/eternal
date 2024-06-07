@@ -720,6 +720,13 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		// Process the WebSocket message.
 		err = processMessage(wsMessage, chatMessage)
 		if err != nil {
+
+			// Store the chat turn in the sqlite db.
+			if _, err := CreateChat(sqliteDB.db, chatMessage, wsMessage.ChatMessage, wsMessage.Model); err != nil {
+				pterm.Error.Println("Error storing chat in database:", err)
+				return
+			}
+
 			handleError(config, wsMessage, err)
 			return
 		}
@@ -748,7 +755,7 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 
 // handleError handles errors that occur during message processing.
 func handleError(config *AppConfig, message WebSocketMessage, err error) {
-	log.Errorf("Error processing message: %v", err)
+	log.Errorf("Chat turn finished: %v", err)
 
 	if config.Tools.Memory.Enabled {
 
@@ -925,12 +932,6 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
 	if err != nil {
 		pterm.Error.Println("Error generating embeddings:", err)
-		return err
-	}
-
-	pterm.Warning.Print("Storing chat in database...")
-	if _, err := CreateChat(db, prompt, response, modelName); err != nil {
-		pterm.Error.Println("Error storing chat in database:", err)
 		return err
 	}
 
