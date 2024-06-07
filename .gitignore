@@ -47,3 +47,6 @@ public/js/node_modules/@antonz/codapi/dist/engine/pglite.js
 public/js/node_modules/@antonz/codapi/dist/engine/pglite.mjs
 public/js/node_modules/@antonz/codapi/dist/engine/wasi.js
 public/js/node_modules/@antonz/codapi/dist/engine/wasi.mjs
+examples/web/search.bleve/index_meta.json
+examples/web/search.bleve/store/*
+examples/web/search.bleve/store/root.bolt
