@@ -22,12 +22,12 @@ endif
 ifeq ($(OS),Darwin) # macOS
 	LLAMA_BUILD_CMD = make -C $(LLAMA_DIR)
 	COPY_LLAMA_CMD = cp $(addprefix $(LLAMA_DIR)/, $(LLAMA_BUILD_TARGETS)) $(ARTIFACTS_DIR)
-	SD_BUILD_CMD = cmake -S $(SD_DIR) -B $(SD_BUILD_DIR) -DSD_METAL=ON && cmake --build $(SD_BUILD_DIR) --config Release
+	SD_BUILD_CMD = cmake -S $(SD_DIR) -B $(SD_BUILD_DIR) -DSD_METAL=ON -DSD_FLASH_ATTN=ON && cmake --build $(SD_BUILD_DIR) --config Release
 else ifeq ($(OS),Linux)
 	LLAMA_BUILD_CMD = cmake -S $(LLAMA_DIR) -B $(LLAMA_BUILD_DIR) -DLLAMA_CUBLAS=ON -DCMAKE_CUDA_COMPILER:PATH=/usr/local/cuda/bin/nvcc && cmake --build $(LLAMA_BUILD_DIR) --config Release
     FILTERED_LLAMA_BUILD_TARGETS := $(filter-out libllava.a ggml-metal.metal ggml-common.h benchmark-matmult,$(LLAMA_BUILD_TARGETS))
     COPY_LLAMA_CMD = cp $(addprefix $(LLAMA_BUILD_DIR)/bin/,$(FILTERED_LLAMA_BUILD_TARGETS)) $(ARTIFACTS_DIR)
-	SD_BUILD_CMD = cmake -S $(SD_DIR) -B $(SD_BUILD_DIR) -DSD_CUBLAS=ON -DCMAKE_CUDA_COMPILER:PATH=/usr/local/cuda/bin/nvcc && cmake --build $(SD_BUILD_DIR) --config Release
+	SD_BUILD_CMD = cmake -S $(SD_DIR) -B $(SD_BUILD_DIR) -DSD_FLASH_ATTN=ON -DSD_CUBLAS=ON -DCMAKE_CUDA_COMPILER:PATH=/usr/local/cuda/bin/nvcc && cmake --build $(SD_BUILD_DIR) --config Release
 else
 	$(error Unsupported operating system)
 endif
