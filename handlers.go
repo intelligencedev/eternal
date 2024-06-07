@@ -720,13 +720,6 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		// Process the WebSocket message.
 		err = processMessage(wsMessage, chatMessage)
 		if err != nil {
-
-			// Store the chat turn in the sqlite db.
-			if _, err := CreateChat(sqliteDB.db, chatMessage, wsMessage.ChatMessage, wsMessage.Model); err != nil {
-				pterm.Error.Println("Error storing chat in database:", err)
-				return
-			}
-
 			handleError(config, wsMessage, err)
 			return
 		}
@@ -757,12 +750,21 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 func handleError(config *AppConfig, message WebSocketMessage, err error) {
 	log.Errorf("Chat turn finished: %v", err)
 
+	// Store the chat turn in the sqlite db.
+	if _, err := CreateChat(sqliteDB.db, message.ChatMessage, err.Error(), message.Model); err != nil {
+		pterm.Error.Println("Error storing chat in database:", err)
+		return
+	}
+
 	if config.Tools.Memory.Enabled {
 
+		// Two examples of how to store chat messages in the Bleve index.
+		// 1. Split the text and store each chunk in the index.
+		// 2. Store the entire chat message in the index.
 		// Split the chat message into chunks 500 characters long with a 200 character overlap.
 		chunks := documents.SplitTextByCount(message.ChatMessage, 500)
 
-		// Store the chunk in Bleve.
+		// 1. Store the chunk in Bleve.
 		for _, chunk := range chunks {
 			chatMessage := ChatTurnMessage{
 				ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -776,8 +778,7 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 				log.Errorf("Error storing chat message in Bleve: %v", err)
 			}
 		}
-
-		// Store the chat message in Bleve.
+		// 2. Store the entire chat message in Bleve.
 		// chatMessage := ChatTurnMessage{
 		// 	ID:       fmt.Sprintf("%d", time.Now().UnixNano()),
 		// 	Prompt:   message.ChatMessage,
