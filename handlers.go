@@ -168,9 +168,7 @@ func handleModelCards(modelParams []ModelParams) fiber.Handler {
 			return c.Status(500).SendString("Server Error")
 		}
 
-		//return c.Render("templates/model", fiber.Map{"models": modelParams})
-
-		return c.JSON(modelParams)
+		return c.Render("templates/model", fiber.Map{"models": modelParams})
 	}
 }
 
