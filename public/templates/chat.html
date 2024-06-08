@@ -11,7 +11,8 @@
               d="M16 10.5c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5s.448-1.5 1-1.5s1 .672 1 1.5Zm-6 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S8.448 9 9 9s1 .672 1 1.5Z" />
           </g>
         </svg>
-        <span class="badge my-3 mx-1 bg-gradient" style="background-color: var(--et-galactic-accent);">{{.username}}</span>
+        <span class="badge my-3 mx-1 bg-gradient"
+          style="background-color: var(--et-galactic-accent);">{{.username}}</span>
       </div>
       <form id="hidden-form-{{.turnID}}" style="display:none;" hx-trigger="load" ws-send>
         <input type="hidden" name="model" value="{{.model}}">
@@ -34,7 +35,8 @@
               clip-rule="evenodd" />
           </g>
         </svg>
-        <span class="badge my-3 mx-1 bg-gradient end-0" style="background-color: var(--et-galactic-accent);">{{.assistant}}</span>
+        <span class="badge my-3 mx-1 bg-gradient end-0"
+          style="background-color: var(--et-galactic-accent);">{{.assistant}}</span>
       </div>
       <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
         hx-on:load="highlight()">
@@ -59,6 +61,42 @@
 
 <script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
+  document.getElementById("chat-view").addEventListener("scroll", function () {
+    const chatView = document.getElementById("chat-view");
+    const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
+
+    userHasScrolled = chatView.scrollHeight - chatView.scrollTop > chatView.clientHeight + 1;
+
+    if (userHasScrolled) {
+      scrollToBottomBtn.style.display = 'block';
+    } else {
+      scrollToBottomBtn.style.display = 'none';
+    }
+  });
+
+  document.getElementById("scroll-to-bottom-btn").addEventListener("click", function () {
+    const chatView = document.getElementById("chat-view");
+    chatView.scrollTop = chatView.scrollHeight;
+    userHasScrolled = false;
+    this.style.display = 'none';
+  });
+
+  htmx.on("htmx:wsAfterMessage", function (evt) {
+    const box = document.querySelector(".box");
+    const newRotation = chatRotation();
+    box.style.transition = "transform 0.2s ease";
+    box.style.transform = newRotation;
+    highlight();
+
+    const chatView = document.getElementById("chat-view");
+    const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
+
+    if (!userHasScrolled) {
+      chatView.scrollTop = chatView.scrollHeight;
+      scrollToBottomBtn.style.display = 'none';
+    }
+  });
+
   htmx.on("htmx:wsOpen", function (evt) {
     console.log("WebSocket opened");
     const box = document.querySelector(".box");
@@ -66,7 +104,6 @@
       box.style.transition = "transform 0.5s ease";
       box.style.transform = "rotateX(45deg) rotateY(45deg) rotateZ(-180deg)";
     }
-    scrollToBottom();
   });
 
   htmx.on("htmx:wsOnClose", function (evt) {
@@ -76,22 +113,6 @@
     const newRotation = getRandomRotation();
     box.style.transition = "transform 0.5s ease";
     box.style.transform = newRotation;
-  });
-
-  function scrollToBottom() {
-    setTimeout(function () {
-      window.scrollTo(0, document.body.scrollHeight);
-    }, 0);
-  }
-
-  htmx.on("htmx:wsAfterMessage", function (evt) {
-    const box = document.querySelector(".box");
-    const newRotation = chatRotation();
-    box.style.transition = "transform 0.2s ease";
-    box.style.transform = newRotation;
-    // setViewHeight("prompt-view");
-    highlight();
-    scrollToBottom();
   });
 
   function highlight() {
