@@ -55,24 +55,25 @@ type Tool struct {
 func main() {
 	displayBanner()
 
+	// DISABLED due to bug in CUDA
 	// Print host information as pterm table
-	hostInfo, err := GetHostInfo()
-	if err != nil {
-		pterm.Error.Println("Error getting host information:", err)
-	} else {
-		// Convert memory to GB
-		hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
-		// Convert ints to strings for pterm table
-		pterm.DefaultTable.WithData(pterm.TableData{
-			{"OS", hostInfo.OS},
-			{"Architecture", hostInfo.Arch},
-			{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
-			{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
-			{"GPU Model", hostInfo.GPUs[0].Model},
-			{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
-			{"Metal Support", hostInfo.GPUs[0].MetalSupport},
-		}).Render()
-	}
+	// hostInfo, err := GetHostInfo()
+	// if err != nil {
+	// 	pterm.Error.Println("Error getting host information:", err)
+	// } else {
+	// 	// Convert memory to GB
+	// 	hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
+	// 	// Convert ints to strings for pterm table
+	// 	pterm.DefaultTable.WithData(pterm.TableData{
+	// 		{"OS", hostInfo.OS},
+	// 		{"Architecture", hostInfo.Arch},
+	// 		{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
+	// 		{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
+	// 		{"GPU Model", hostInfo.GPUs[0].Model},
+	// 		{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
+	// 		{"Metal Support", hostInfo.GPUs[0].MetalSupport},
+	// 	}).Render()
+	// }
 
 	// Load configuration
 	config, err := loadConfig()
