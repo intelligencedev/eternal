@@ -73,7 +73,7 @@
 
 <body>
   <!-- Add header template -->
-   {{template "templates/header" .}}
+  {{template "templates/header" .}}
   <div id="content" class="container-fluid p-0 m-0">
     <div class="main-content">
       <div class="row h-100 mt-5">
@@ -83,6 +83,18 @@
         </div>
         <div id="info" class="col-3"></div>
       </div>
+    </div>
+
+    <div id="scroll-to-bottom-btn" class="btn btn-primary bg-gradient"
+      style="display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: var(--et-btn-info);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <g fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M4.43 10.512a.75.75 0 0 1 1.058-.081L12 16.012l6.512-5.581a.75.75 0 1 1 .976 1.138l-7 6a.75.75 0 0 1-.976 0l-7-6a.75.75 0 0 1-.081-1.057Z"
+            clip-rule="evenodd" />
+          <path d="M5 6.25a.75.75 0 0 0-.488 1.32l7 6c.28.24.695.24.976 0l7-6A.75.75 0 0 0 19 6.25H5Z" />
+        </g>
+      </svg>
     </div>
 
     <div class="mt-2 bottom-bar shadow-lg" style="background-color: var(--et-card-bg);">
@@ -133,7 +145,7 @@
               <input type="file" id="file-input" style="display: none;" />
               <textarea id="message" name="userprompt" class="col form-control shadow-none"
                 placeholder="Type your message..." rows="2"
-                style="outline: none;">Write a complete and executable Hello World in JavaScript.</textarea>
+                style="outline: none;">Write a comprehensive tutorial on how to code a neural network using golang.</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
                 hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend show:bottom"
@@ -221,6 +233,8 @@
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/settings.js"></script>
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
+    var userHasScrolled = false;
+    
     document.addEventListener('alpine:init', () => {
       Alpine.store('dataStore', {
         init() {

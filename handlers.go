@@ -871,7 +871,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 				pterm.PrintOnError(err)
 			}
 
-			err = handleTextSplitAndIndex(config, chatMessage, page, 10, 500, "avsolatorio/GIST-small-Embedding-v0", "v0")
+			err = handleTextSplitAndIndex(config, page, 1024, "avsolatorio/GIST-small-Embedding-v0", "v0")
 			if err != nil {
 				pterm.PrintOnError(err)
 			}
@@ -892,6 +892,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	return chatMessage
 }
 
+// handleChatMemory retrieves and returns chat memory.
 func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	var document string
 
@@ -929,7 +930,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	}
 
 	modelPath := filepath.Join(config.DataPath, "models/HF/avsolatorio/GIST-small-Embedding-v0/avsolatorio/GIST-small-Embedding-v0")
-	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 500, 100, modelPath)
+	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 1024, 256, modelPath)
 
 	searchRes := searchSimilarEmbeddings(config, "GIST-small-Embedding-v0", modelPath, chatMessage, topN)
 
@@ -937,7 +938,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	for _, res := range searchRes {
 
 		similarity := res.Similarity
-		if similarity > 0.5 {
+		if similarity > 0.7 {
 			pterm.Info.Println("Most similar chunk of text:")
 			pterm.Info.Println(res.Word)
 			document = fmt.Sprintf("%s\n%s", document, res.Word)
@@ -963,7 +964,7 @@ func storeChat(config *AppConfig, prompt string, response string) error {
 }
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
-func handleTextSplitAndIndex(config *AppConfig, prompt string, inputText string, topN int, chunkSize int, modelName string, revision string) error {
+func handleTextSplitAndIndex(config *AppConfig, inputText string, chunkSize int, modelName string, revision string) error {
 	// Split the input text into chunks.
 	chunks := documents.SplitTextByCount(inputText, chunkSize)
 
@@ -985,6 +986,7 @@ func handleTextSplitAndIndex(config *AppConfig, prompt string, inputText string,
 	return nil
 }
 
+// searchSimilarEmbeddings searches for similar embeddings in the database.
 func searchSimilarEmbeddings(config *AppConfig, modelName string, modelPath string, prompt string, topN int) []vecstore.Embedding {
 	db := vecstore.NewEmbeddingDB()
 	dbPath := fmt.Sprintf("%s/embeddings.db", config.DataPath)
