@@ -7,12 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sync/atomic"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
 	"github.com/spf13/afero"
 )
 
@@ -87,22 +84,6 @@ func InitServer(configPath string) (string, error) {
 	}
 
 	return configPath, nil
-}
-
-func GetServerInfo() {
-	// Basic OS and Architecture information
-	fmt.Println("OS:", runtime.GOOS)
-	fmt.Println("Arch:", runtime.GOARCH)
-
-	// CPU information
-	cpuInfos, _ := cpu.Info()
-	for _, ci := range cpuInfos {
-		fmt.Printf("CPU: %+v\n", ci)
-	}
-
-	// Memory information
-	vmStat, _ := mem.VirtualMemory()
-	fmt.Printf("Virtual Memory: %+v\n", vmStat)
 }
 
 func EnsureDataPath(config *AppConfig) error {
