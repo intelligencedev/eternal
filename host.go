@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	// Package for hardware information
+	"github.com/jaypipes/ghw"        // Package for hardware information
 	"github.com/shirou/gopsutil/mem" // Package for system memory information
 )
 
@@ -55,19 +55,18 @@ func GetHostInfo() (HostInfo, error) {
 		}
 
 	case "linux", "windows":
-		// Disabling since this needs more work
 		// Linux and Windows GPU information retrieval
-		// gpu, err := ghw.GPU()
-		// if err != nil {
-		// 	fmt.Printf("Error getting GPU info: %v\n", err)
-		// } else {
-		// 	for _, card := range gpu.GraphicsCards {
-		// 		gpuInfo := GPUInfo{
-		// 			Model: card.DeviceInfo.Product.Name, // Fetching GPU model
-		// 		}
-		// 		hostInfo.GPUs = append(hostInfo.GPUs, gpuInfo)
-		// 	}
-		// }
+		gpu, err := ghw.GPU()
+		if err != nil {
+			fmt.Printf("Error getting GPU info: %v\n", err)
+		} else {
+			for _, card := range gpu.GraphicsCards {
+				gpuInfo := GPUInfo{
+					Model: card.DeviceInfo.Product.Name, // Fetching GPU model
+				}
+				hostInfo.GPUs = append(hostInfo.GPUs, gpuInfo)
+			}
+		}
 	}
 
 	return hostInfo, nil
