@@ -1,3 +1,5 @@
+// db.go
+
 package main
 
 import (
@@ -94,6 +96,27 @@ type Chat struct {
 	ModelName string
 }
 
+type Project struct {
+	gorm.Model
+	Name  string
+	Tools []ProjectTool `gorm:"foreignKey:ProjectID"`
+	Files []File        `gorm:"foreignKey:ProjectID"`
+}
+
+type ProjectTool struct {
+	gorm.Model
+	Name      string
+	Enable    bool
+	ProjectID uint // Foreign key that refers to Project
+}
+
+type File struct {
+	gorm.Model
+	Path      string
+	Content   string
+	ProjectID uint // Foreign key that refers to Project
+}
+
 func NewSQLiteDB(dataPath string) (*SQLiteDB, error) {
 
 	// Silence gorm logs during this step
@@ -116,6 +139,23 @@ func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
 		}
 	}
 	return nil
+}
+
+// CreateProject inserts a new project into the database.
+func (sqldb *SQLiteDB) CreateProject(project *Project) error {
+	return sqldb.db.Create(project).Error
+}
+
+// DeleteProject removes a project from the database.
+func (sqldb *SQLiteDB) DeleteProject(name string) error {
+	return sqldb.db.Where("name = ?", name).Delete(&Project{}).Error
+}
+
+// ListProjects retrieves all projects from the database.
+func (sqldb *SQLiteDB) ListProjects() ([]Project, error) {
+	var projects []Project
+	err := sqldb.db.Find(&projects).Error
+	return projects, err
 }
 
 func (sqldb *SQLiteDB) Create(record interface{}) error {

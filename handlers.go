@@ -48,6 +48,17 @@ type ChatTurnMessage struct {
 	Model    string `json:"model"`
 }
 
+// handleListProjects retrieves and returns a list of projects from the database.
+func handleListProjects() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projects, err := sqliteDB.ListProjects()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get projects"})
+		}
+		return c.Status(fiber.StatusOK).JSON(projects)
+	}
+}
+
 // handleUpload handles file uploads and saves them to the specified directory.
 func handleUpload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -92,6 +103,13 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 
 		return c.JSON(fiber.Map{
 			"message": fmt.Sprintf("Tool %s is now %t", toolName, config.Tools.ImgGen.Enabled)})
+	}
+}
+
+// handleToolList retrieves and returns a list of tools from the configuration with all parameters.
+func handleToolList(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(config.Tools)
 	}
 }
 
@@ -237,6 +255,7 @@ func handleSelectedModels() fiber.Handler {
 // handleModelDownload handles the download of a specified model.
 func handleModelDownload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		pterm.Error.Println("Download route hit")
 		modelName := c.Query("model")
 
 		if modelName == "" {
