@@ -1,0 +1,75 @@
+<div id="tools-container" class="row">
+  <div class="col">
+    <!-- Memory Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <div class="form-check-reverse form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="memory-switch">
+          <label class="form-check-label" for="memory-switch">
+            Chat Memory
+          </label>
+        </div>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <div>
+          <p class="mb-0"><strong>TopN:</strong> 
+            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider">
+            <span id="memory-topn-value">1</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Web Retrieval Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <div class="form-check-reverse form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="webrag-switch">
+          <label class="form-check-label" for="webrag-switch">
+            Web Retrieval
+          </label>
+        </div>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <div>
+          <p class="mb-0">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as reference for an LLM response.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Web Search Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <div class="form-check-reverse form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch">
+          <label class="form-check-label" for="websearch-switch">
+            Web Search
+          </label>
+        </div>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <div>
+          <p class="mb-0">Web Search fetches search results as reference for LLM response.</p>
+          <br>
+          <label class="form-label">Search Backend</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" value="backend" name="radio-group-search" id="ddg-radio">
+            <label class="form-check-label" for="ddg-radio">
+              DDG
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" value="frontend" name="radio-group-search" id="sxng-radio" checked>
+            <label class="form-check-label" for="sxng-radio">
+              SXNG
+            </label>
+          </div>
+          <p class="mb-0"><strong>TopN - Number of web search results to retrieve:</strong> 
+            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider">
+            <span id="websearch-topn-value">1</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

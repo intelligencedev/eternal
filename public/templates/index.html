@@ -72,16 +72,23 @@
 </head>
 
 <body>
-  <!-- Add header template -->
   {{template "templates/header" .}}
   <div id="content" class="container-fluid p-0 m-0">
     <div class="main-content">
       <div class="row h-100 mt-5">
-        <div id="tools" class="col-3"></div>
+
+        <div id="tool-view" class="col-3">
+          <!-- <div class='w-100' id='progress-download-everyone-coder-33b' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div> -->
+          {{template "templates/tools" .}}
+        </div>
+
         <div id="chat-view" class="col-6">
           <div id="chat" class="row chat-container fs-5"></div>
         </div>
-        <div id="info" class="col-3"></div>
+
+        <div id="info" class="col-3">
+        </div>
+        
       </div>
     </div>
 
@@ -101,7 +108,7 @@
       <form>
         <div class="py-1" id="prompt-view">
           <div class="row">
-            <button class="btn fw-medium" data-bs-toggle="/">
+            <button class="btn fw-medium position-relative" data-bs-toggle="/">
               <span class="fs-4">Et<svg class="" width="16" height="16" viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg">
                   <path fill="#ffffff"
@@ -113,15 +120,31 @@
           </div>
           <div class="hstack">
             <div class="row ms-auto w-25">
+
+              <!-- Tool Config -->
+              <div class="col">
+                <button id="toolBtn" class="btn" onclick="getTools()" data-bs-toggle="tooltip" data-bs-title="Tool Settings">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M10 6v12c0 1.4 0 2.1-.272 2.635a2.5 2.5 0 0 1-1.093 1.092C8.1 22 7.4 22 6 22c-1.4 0-2.1 0-2.635-.273a2.5 2.5 0 0 1-1.093-1.092C2 20.1 2 19.4 2 18V6c0-1.4 0-2.1.272-2.635a2.5 2.5 0 0 1 1.093-1.093C3.9 2 4.6 2 6 2c1.4 0 2.1 0 2.635.272a2.5 2.5 0 0 1 1.093 1.093C10 3.9 10 4.6 10 6ZM7 19.75a.75.75 0 0 0 0-1.5H5a.75.75 0 0 0 0 1.5h2Z"
+                        clip-rule="evenodd" />
+                      <path
+                        d="m19.06 10.614l-5.838 6.09c-.73.761-1.095 1.142-1.409 1.016c-.313-.126-.313-.653-.313-1.708V7.774a2.5 2.5 0 0 1 .73-1.76l1.054-1.055l.43-.33c1.004-.767 1.506-1.15 2.053-1.269a2.5 2.5 0 0 1 1.353.085c.528.184.979.627 1.88 1.514c1 1 1.5 1.5 1.685 2.072a2.5 2.5 0 0 1 .011 1.503c-.176.575-.663 1.077-1.636 2.08ZM12.79 22h5.11c1.4 0 2.1 0 2.634-.273a2.5 2.5 0 0 0 1.093-1.092c.272-.535.272-1.235.272-2.635c0-1.4 0-2.1-.272-2.635a2.5 2.5 0 0 0-1.093-1.092C20 14 19.3 14 17.9 14h-.22l-5.801 5.798a1.224 1.224 0 0 0-.378.883c0 .713.577 1.319 1.29 1.319Z" />
+                    </g>
+                  </svg>
+                </button>
+              </div>
+
+
               <div class="col">
               </div>
-              <div class="col">
-              </div>
+
               <!-- Image Generation -->
               <div class="col" id="txt2img">
                 <button id="imgGenBtn" class="btn" data-model-name="128713"
                   onclick="downloadImageModel('dreamshaper-8-turbo-sdxl')" hx-target="#imgstatus"
-                  data-bs-toggle="tooltip">
+                  data-bs-toggle="tooltip" data-bs-title="Image Generation">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#FFFFFF"
                       d="M17.29 11.969a1.33 1.33 0 0 1-1.322 1.337a1.33 1.33 0 0 1-1.323-1.337a1.33 1.33 0 0 1 1.323-1.338c.73 0 1.323.599 1.323 1.338Z" />
@@ -134,6 +157,8 @@
                 </button>
               </div>
             </div>
+
+            <!-- PROMPT BAR -->
             <div class="w-50 input-group mx-1">
               <button class="btn btn-secondary bg-gradient" id="upload">
                 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -186,6 +211,8 @@
                   </ul>
                 </div>
               </div>
+
+              <!-- Models Config -->
               <div class="col-auto">
                 <button class="btn" hx-post="/modelcards" hx-target="#info" hx-preserve="#chat"
                   hx-swap="innerHTML transition:true" data-bs-toggle="tooltip" data-bs-title="Language Models">
@@ -201,6 +228,7 @@
                   </svg>
                 </button>
               </div>
+
               <!-- SETTINGS -->
               <div class="col-auto">
                 <button class="btn" data-bs-target="#modal-settings" data-bs-toggle="tooltip" data-bs-title="Settings">
@@ -234,7 +262,7 @@
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
     var userHasScrolled = false;
-    
+
     document.addEventListener('alpine:init', () => {
       Alpine.store('dataStore', {
         init() {
@@ -335,7 +363,7 @@
     });
 
     function setRole(role) {
-      fetch(`/chat/${role}`, {
+      fetch(`/chat/role/${role}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -347,7 +375,85 @@
         })
         .catch((error) => {
           console.error('Error:', error);
+        })
+    }
+
+    async function getTools() {
+      try {
+        const response = await fetch('/tools/list');
+        const tools = await response.json();
+        const toolView = document.getElementById('tool-view'); // Corrected id
+        toolView.innerHTML = ''; // Clear any existing content
+
+        tools.forEach(tool => {
+          const toolCard = document.createElement('div');
+          toolCard.className = 'card h-100 mx-2';
+          toolCard.style.backgroundColor = 'var(--et-card-bg)';
+          toolCard.dataset.toolName = tool.Name;
+
+          toolCard.innerHTML = `
+        <div class="card-header">${tool.Name}</div>
+        <div class="card-body tab-content mh-100">
+          <p><strong>Enabled:</strong>
+            <input type="checkbox" class="form-check-input" id="enabled-toggle-${tool.Name}" ${tool.Enabled ? 'checked' : ''}>
+          </p>
+          ${tool.TopN ? `
+          <p><strong>Top N:</strong>
+            <input type="number" class="form-control" min="1" max="100" value="${tool.TopN}" id="top-n-input-${tool.Name}">
+          </p>` : ''}
+          ${tool.Endpoint ? `
+          <p><strong>Endpoint:</strong>
+            <input type="text" class="form-control" value="${tool.Endpoint}" id="endpoint-input-${tool.Name}">
+          </p>` : ''}
+          ${tool.Name === 'websearch' ? `
+          <p><strong>Search Engine:</strong>
+            <select class="form-select" id="search-engine-select-${tool.Name}">
+              <option value="ddg" ${tool.Engine === 'ddg' ? 'selected' : ''}>DDG</option>
+              <option value="sxng" ${tool.Engine === 'sxng' ? 'selected' : ''}>SearxNG</option>
+            </select>
+          </p>` : ''}
+        </div>
+        <button class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);" onclick="saveToolParams('${tool.Name}')">Save</button>
+      `;
+
+          toolView.appendChild(toolCard);
         });
+      } catch (error) {
+        console.error('Error fetching tools:', error);
+      }
+    }
+
+    async function saveToolParams(toolName) {
+      try {
+        const enabled = document.getElementById(`enabled-toggle-${toolName}`).checked;
+        const topNInput = document.getElementById(`top-n-input-${toolName}`);
+        const endpointInput = document.getElementById(`endpoint-input-${toolName}`);
+        const searchEngineSelect = document.getElementById(`search-engine-select-${toolName}`);
+
+        const toolParams = {
+          Name: toolName,
+          Enabled: enabled,
+          TopN: topNInput ? parseInt(topNInput.value) : undefined,
+          Endpoint: endpointInput ? endpointInput.value : undefined,
+          Engine: searchEngineSelect ? searchEngineSelect.value : undefined
+        };
+
+        const response = await fetch('/tool/set/params', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(toolParams),
+        });
+
+        if (response.ok) {
+          console.log('Settings saved successfully');
+        } else {
+          console.error('Error saving settings');
+        }
+      } catch (error) {
+        console.error('Error sending request:', error);
+      }
     }
   </script>
 </body>
