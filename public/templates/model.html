@@ -29,6 +29,7 @@
       </ul>
     </div>
   </div>
+  <div class="w-100 d-none" id="progress-download" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div>
 </div>
 
 <!-- Container to display selected model information -->
@@ -60,83 +61,19 @@
 
         if (!modelData.Downloaded && !['openai-gpt', 'google-gemini-1.5', 'anthropic-claude-opus'].includes(modelData.Name)) {
           modelInfoContainer.innerHTML = `
-          <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
-            <div class="card-header">${modelData.Name}</div>
-            <div class="card-body tab-content mh-100">
-              <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
-              <div>
-                <button id="btn-download-${modelData.Name}" class="btn fw-medium" style="min-height: 228px;" data-model-name="${modelData.Name}" hx-post="/model/download?model=${modelData.Name}" hx-trigger="click">
-                  <p class="fs-4">Download</p>
-                  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="currentColor" fill-rule="evenodd"
-                      d="M12 15.25a.75.75 0 0 1 .75.75v4.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V16a.75.75 0 0 1 .75-.75"
-                      clip-rule="evenodd" />
-                    <path fill="currentColor"
-                      d="M12.226 3.5c-2.75 0-4.964 2.2-4.964 4.897c0 .462.065.909.185 1.331c.497.144.963.36 1.383.64a.75.75 0 1 1-.827 1.25a3.54 3.54 0 0 0-1.967-.589c-1.961 0-3.536 1.57-3.536 3.486C2.5 16.43 4.075 18 6.036 18a.75.75 0 0 1 0 1.5C3.263 19.5 1 17.276 1 14.515c0-2.705 2.17-4.893 4.864-4.983a6.366 6.366 0 0 1-.102-1.135C5.762 4.856 8.664 2 12.226 2c3.158 0 5.796 2.244 6.355 5.221c2.3.977 3.919 3.238 3.919 5.882c0 3.074-2.188 5.631-5.093 6.253a.75.75 0 0 1-.314-1.467c2.24-.48 3.907-2.446 3.907-4.786c0-2.137-1.39-3.962-3.338-4.628a5.018 5.018 0 0 0-1.626-.27c-.583 0-1.14.1-1.658.28a.75.75 0 0 1-.494-1.416a6.517 6.517 0 0 1 3.024-.305A4.962 4.962 0 0 0 12.226 3.5" />
-                  </svg>
-                </button>
-              </div>
-                <div class="w-100" id="progress-download-${modelData.Name}" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'>
+        <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
+          <div class="card-header">${modelData.Name}</div>
+          <div class="card-body tab-content mh-100">
+            <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
+            <div id="model-download">
+              <button id="model-download-btn" class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);" onclick="downloadModel('${modelData.Name}')">Download</button>
+              </button>
               </div>
             </div>
+            </div>
           </div>
-          `;
-
-          async function downloadModel() {
-            const response = await fetch(`/model/download?model=${modelData.Name}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-          }
-
-          var startDownloadListener = htmx.on(`#btn-download-${modelData.Name}`, "click", function (evt) { console.log(evt); downloadModel() })
-
-          if (startDownloadListener) {
-            console.log("Download started")
-            // event listener to update the progress bar
-            const progressDownload = document.getElementById(`progress-download-${modelData.Name}`);
-
-            progressDownload.addEventListener('message', function (event) {
-              const data = JSON.parse(event.data);
-              console.log(data);
-              if (data.progress) {
-                progressDownload.innerHTML = `
-                <div class="progress">
-                  <div class="progress-bar bg-gradient" role="progressbar" style="width: ${data.progress}%;" aria-valuenow="${data.progress}" aria-valuemin="0" aria-valuemax="100">${data.progress}%</div>
-                </div>
-                `;
-              } else {
-                progressDownload.innerHTML = `
-                <div class="progress">
-                  <div class="progress-bar bg-gradient" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">100%</div>
-                </div>
-                `;
-              }
-            });
-          } else {
-            console.log("Download failed")
-          }
-
-
-
-          // htmx.on("htmx:wsAfterMessage", function (evt) {
-          //   const box = document.querySelector(".box");
-          //   const newRotation = chatRotation();
-          //   box.style.transition = "transform 0.2s ease";
-          //   box.style.transform = newRotation;
-          //   highlight();
-
-          //   const chatView = document.getElementById("chat-view");
-          //   const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn");
-
-          //   if (!userHasScrolled) {
-          //     chatView.scrollTop = chatView.scrollHeight;
-          //     scrollToBottomBtn.style.display = 'none';
-          //   }
-          // });
-
+        </div>
+        `;
         } else {
           // Handle already downloaded models
           modelInfoContainer.innerHTML = `
@@ -213,10 +150,23 @@
     }
   }
 
-  async function downloadModel(modelName) {
+  function downloadModel(modelName) {
+    // Display the progress bar
+    const buttonDownload = document.getElementById(`model-download-btn`);
+    const progressContainer = document.getElementById(`progress-download`);
+    const downloadContainer = document.getElementById(`model-download`);
 
-    // Append 
 
+
+    // Move the downloadContainer to the progressContainer
+    downloadContainer.appendChild(progressContainer);
+
+    // Delete the download button
+    buttonDownload.remove();
+
+    progressContainer.classList.remove('d-none');
+
+    // Send a request to download the model
     console.log("Downloading model: ", modelName);
 
     // Fetch the download route
@@ -236,4 +186,5 @@
         console.error('Error:', error);
       });
   }
+
 </script>
