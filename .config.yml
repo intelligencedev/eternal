@@ -9,7 +9,7 @@ control_host: 'localhost'
 control_port: 8080
 
 # datapath will be created by Eternal to host persistent data
-data_path: '/Users/$USER/.eternal'
+data_path: '$HOME/.eternal'
 
 # Service hosts for specific functionalities
 service_hosts:
@@ -42,39 +42,32 @@ service_hosts:
 tools:
   memory:
     enabled: false
-    top_n: 1 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+    top_n: 10 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
   webget:
     enabled: false
   websearch:
+    enabled: true
+    name: ddg # Only ddg and sxng available
+    endpoint: https://search.intelligence.dev/search # The url of the sxng instance if available. Not used if ddg is configured.
+    top_n: 6 # Number of page results to retrieve. Higher numbers require models with much higher context.
+  imggen:
     enabled: false
-    top_n: 1 # Number of page results to retrieve. Higher numbers require models with much higher context.
+  lmsprint:
+    enabled: false
 
 # OpenAI API Key
-oai_key: 'sk-...'
+oai_key: '...'
 
 # Anthropic Key for Claude Completions
-anthropic_key: 'sk-...'
+anthropic_key: '...'
 
 # Google API Key for Gemini Completions
-google_key: 'AI...'
+google_key: '...'
 
 language_models:
   - name: 'openai-gpt'
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
     prompt: '{system}\n\n{prompt}'
-    ctx: 128000
-    roles:
-      - 'all'
-  - name: 'anthropic-claude-opus'
-    homepage: 'https://www.anthropic.com/product'
-    prompt: |
-      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
-
-      ### Instruction:
-      {system}
-      {prompt}
-
-      ### Response:
     ctx: 128000
     roles:
       - 'all'
@@ -106,50 +99,53 @@ language_models:
       - 'instruct'
     tags:
       - '70B'
-  - name: 'llama-3-smaug-70b'
-    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF'
+  - name: 'Codestral-22B-v0.1'
+    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
     downloads:
-      - 'https://huggingface.co/mradermacher/Smaug-Llama-3-70B-Instruct-GGUF/resolve/main/Smaug-Llama-3-70B-Instruct.Q8_0.gguf'
-    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q8_0.gguf'
+    prompt:  "{prompt}"
     ctx: 8192
     roles:
-      - 'instruct'
+      - 'all'
     tags:
-      - '70B'
+      - '22B'
+  - name: 'anthropic-claude-opus'
+    homepage: 'https://www.anthropic.com/product'
+    prompt: |
+      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
+
+      ### Instruction:
+      {system}
+      {prompt}
+
+      ### Response:
+    ctx: 128000
+    roles:
+      - 'all'
   - name: 'phi-3-medium-128k'
     homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
     gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
     downloads:
       - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-medium-128k-instruct.gguf'
     prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
-    ctx: 120000
+    ctx: 32764
     roles:
       - 'instruct'
     tags:
       - '14B'
-  - name: 'phi-3-mini-128k'
-    homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
-    gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+  - name: 'wizardmath-7b'
+    homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
+    gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
     downloads:
-      - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-mini-128k-instruct.gguf'
-    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
-    ctx: 120000
-    roles:
-      - 'instruct'
-    tags:
-      - '7B'
-  - name: 'wizardlm-2-8x22b'
-    homepage: 'https://huggingface.co/microsoft/WizardLM-2-7B'
-    gguf: 'https://huggingface.co/MaziyarPanahi/WizardLM-2-8x22B-GGUF'
-    downloads:
-      - 'https://huggingface.co/MaziyarPanahi/WizardLM-2-8x22B-GGUF/resolve/main/WizardLM-2-8x22B.Q4_K_S-00001-of-00005.gguf'
-    prompt: "<|im_start|>system {system}<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
+      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
+    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
     ctx: 32768
     roles:
-      - 'all'
+      - 'math'
+      - 'logic'
     tags:
-      - '22x7b'
+      - '7B'
   - name: 'mixtral-8x7b-instruct'
     homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
     gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
@@ -173,11 +169,20 @@ image_models:
 assistant_roles:
   - name: 'chat'
     instructions: |
-      You are a helpful knowledge assistant. 
-      You respond in a pleasant and friendly conversational tone and always end your replies with a question to encourage further interaction. 
-      You provide clear and concise answers to user queries and offer additional information or assistance when needed. 
-      You aim to be informative, engaging, and supportive in all your interactions.
-      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+      Adopt the role of [job title(s) of 1 or more subject matter EXPERTs most qualified to provide authoritative, nuanced answer].
+      NEVER mention that you're an AI.
+      Avoid any language constructs that could be interpreted as expressing remorse, apology, or regret. This includes any phrases containing words like 'sorry', 'apologies', 'regret', etc., even when used in a context that isn't expressing remorse, apology, or regret.
+      If events or information are beyond your scope or knowledge, provide a response stating 'I don't know' without elaborating on why the information is unavailable.
+      Refrain from disclaimers about you not being a professional or expert.
+      Do not add ethical or moral viewpoints in your answers, unless the topic specifically mentions it.
+      Keep responses unique and free of repetition.
+      Never suggest seeking information from elsewhere.
+      Always focus on the key points in my questions to determine my intent.
+      Break down complex problems or tasks into smaller, manageable steps and explain each one using reasoning.
+      Provide multiple perspectives or solutions.
+      If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
+      If a mistake is made in a previous response, recognize and correct it.
+      After a response, provide three follow-up questions worded as if I'm asking you. Format in bold as Q1, Q2, and Q3. These questions should be thought-provoking and dig further into the original topic.
   - name: 'summary'
     instructions: |
       You are an advanced language model tasked with summarizing articles effectively. Your objective is to extract and condense essential information from the articles, ensuring accuracy and completeness. Follow these steps:
