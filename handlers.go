@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/nlpodyssey/cybertron/pkg/models/bert"
@@ -861,41 +862,61 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.WebSearch.Enabled {
-		topN := config.Tools.WebSearch.TopN // Retrieve top N results. Adjust based on context size.
+		topN := config.Tools.WebSearch.TopN
 
 		pterm.Info.Println("Searching the web...")
 
 		var urls []string
-		if config.Tools.WebSearch.Name == "ddg" {
+		switch config.Tools.WebSearch.Name {
+		case "ddg":
 			urls = web.SearchDDG(chatMessage)
-		} else if config.Tools.WebSearch.Name == "sxng" {
+		case "sxng":
 			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
 		}
 
 		pterm.Warning.Printf("URLs to fetch: %v\n", urls)
 
-		pagesRetrieved := 0
+		var wg sync.WaitGroup
+		urlsChan := make(chan string, len(urls))
+
 		for _, url := range urls {
+			wg.Add(1)
+
+			go func(u string) {
+				defer wg.Done()
+
+				pterm.Info.Printf("Fetching URL: %s\n", u)
+				page, err := web.WebGetHandler(u)
+				if err != nil {
+					if errors.Is(err, context.DeadlineExceeded) {
+						pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+					} else {
+						log.Errorf("Error fetching URL: %v", err)
+					}
+					return
+				}
+
+				err = handleTextSplitAndIndex(page, 1024, "avsolatorio/GIST-small-Embedding-v0")
+				if err != nil {
+					log.Errorf("Error handling text split and index: %v", err)
+				}
+
+				urlsChan <- page
+			}(url)
+		}
+
+		go func() {
+			wg.Wait()
+			close(urlsChan)
+		}()
+
+		var pagesRetrieved int
+		var document string
+		for page := range urlsChan {
 			if pagesRetrieved >= topN {
 				break
 			}
-			pterm.Info.Printf("Fetching URL: %s\n", url)
-
-			page, err := web.WebGetHandler(url)
-			if err != nil {
-				if errors.Is(err, context.DeadlineExceeded) {
-					pterm.Warning.Printf("Timeout exceeded for URL: %s\n", url)
-					continue
-				}
-				pterm.PrintOnError(err)
-			}
-
-			err = handleTextSplitAndIndex(config, page, 1024, "avsolatorio/GIST-small-Embedding-v0", "v0")
-			if err != nil {
-				pterm.PrintOnError(err)
-			}
-
-			// document = fmt.Sprintf("%s\n%s", document, page)
+			document = fmt.Sprintf("%s\n%s", document, page)
 			pagesRetrieved++
 		}
 
@@ -968,39 +989,48 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 }
 
 // storeChat stores a chat in the database and generates embeddings for it.
-func storeChat(config *AppConfig, prompt string, response string) error {
-	// Generate embeddings for the chat.
-	pterm.Warning.Println("Generating embeddings for chat...")
+// func storeChat(config *AppConfig, prompt string, response string) error {
+// 	// Generate embeddings for the chat.
+// 	pterm.Warning.Println("Generating embeddings for chat...")
 
-	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
-	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
-	if err != nil {
-		pterm.Error.Println("Error generating embeddings:", err)
-		return err
-	}
+// 	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
+// 	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
+// 	if err != nil {
+// 		pterm.Error.Println("Error generating embeddings:", err)
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
-func handleTextSplitAndIndex(config *AppConfig, inputText string, chunkSize int, modelName string, revision string) error {
+func handleTextSplitAndIndex(inputText string, chunkSize int, modelName string) error {
 	// Split the input text into chunks.
 	chunks := documents.SplitTextByCount(inputText, chunkSize)
 
-	// Index each chunk in Bleve.
+	var wg sync.WaitGroup
+
 	for _, chunk := range chunks {
-		docID := fmt.Sprintf("%d", time.Now().UnixNano())
-		doc := ChatTurnMessage{
-			ID:       docID,
-			Prompt:   inputText,
-			Response: chunk,
-			Model:    modelName,
-		}
-		if err := searchIndex.Index(docID, doc); err != nil {
-			log.Errorf("Error indexing chunk in Bleve: %v", err)
-			return err
-		}
+		wg.Add(1)
+
+		go func(c string) {
+			defer wg.Done()
+
+			docID := fmt.Sprintf("%d", time.Now().UnixNano())
+			doc := ChatTurnMessage{
+				ID:       docID,
+				Prompt:   inputText,
+				Response: c,
+				Model:    modelName,
+			}
+
+			if err := searchIndex.Index(docID, doc); err != nil {
+				log.Errorf("Error indexing chunk in Bleve: %v", err)
+			}
+		}(chunk)
 	}
+
+	wg.Wait()
 
 	return nil
 }
