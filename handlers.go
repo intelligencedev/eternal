@@ -14,6 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nlpodyssey/cybertron/pkg/models/bert"
+	"github.com/nlpodyssey/cybertron/pkg/tasks"
+	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
+
 	"github.com/blevesearch/bleve/v2"
 	index "github.com/blevesearch/bleve_index_api"
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +27,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"gorm.io/gorm"
 
-	"eternal/internal/python"
 	"eternal/pkg/documents"
 	"eternal/pkg/embeddings"
 	"eternal/pkg/hfutils"
@@ -32,6 +35,7 @@ import (
 	"eternal/pkg/llm/google"
 	"eternal/pkg/llm/openai"
 	"eternal/pkg/sd"
+	"eternal/pkg/vecstore"
 	"eternal/pkg/web"
 )
 
@@ -42,6 +46,17 @@ type ChatTurnMessage struct {
 	Prompt   string `json:"prompt"`
 	Response string `json:"response"`
 	Model    string `json:"model"`
+}
+
+// handleListProjects retrieves and returns a list of projects from the database.
+func handleListProjects() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projects, err := sqliteDB.ListProjects()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get projects"})
+		}
+		return c.Status(fiber.StatusOK).JSON(projects)
+	}
 }
 
 // handleUpload handles file uploads and saves them to the specified directory.
@@ -88,6 +103,13 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 
 		return c.JSON(fiber.Map{
 			"message": fmt.Sprintf("Tool %s is now %t", toolName, config.Tools.ImgGen.Enabled)})
+	}
+}
+
+// handleToolList retrieves and returns a list of tools from the configuration with all parameters.
+func handleToolList(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(config.Tools)
 	}
 }
 
@@ -233,6 +255,7 @@ func handleSelectedModels() fiber.Handler {
 // handleModelDownload handles the download of a specified model.
 func handleModelDownload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		pterm.Error.Println("Download route hit")
 		modelName := c.Query("model")
 
 		if modelName == "" {
@@ -762,7 +785,7 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 		// 1. Split the text and store each chunk in the index.
 		// 2. Store the entire chat message in the index.
 		// Split the chat message into chunks 500 characters long with a 200 character overlap.
-		chunks := documents.SplitTextByCount(message.ChatMessage, 500)
+		chunks := documents.SplitTextByCount(err.Error(), 500)
 
 		// 1. Store the chunk in Bleve.
 		for _, chunk := range chunks {
@@ -790,10 +813,6 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 		// if err != nil {
 		// 	log.Errorf("Error storing chat message in Bleve: %v", err)
 		// }
-
-		chatTurn++
-
-		return
 	}
 
 	// Increment the chat turn counter.
@@ -829,39 +848,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.Memory.Enabled {
-		topN := config.Tools.Memory.TopN // Retrieve top N results. Adjust based on context size.
-
-		// Create a search query.
-		query := bleve.NewQueryStringQuery(chatMessage)
-
-		// Create a search request with the query and limit the results.
-		searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
-
-		// Execute the search.
-		searchResults, err := searchIndex.Search(searchRequest)
-		if err != nil {
-			log.Errorf("Error searching index: %v", err)
-			return chatMessage
-		}
-
-		// Print the search results.
-		for _, hit := range searchResults.Hits {
-			doc, err := searchIndex.Document(hit.ID)
-			if err != nil {
-				log.Errorf("Error retrieving document: %v", err)
-				continue
-			}
-			doc.VisitFields(func(field index.Field) {
-				fmt.Printf("%s: %s\n", field.Name(), field.Value())
-
-				// Append the response field to the document.
-				if field.Name() == "response" {
-					document = fmt.Sprintf("%s\n%s", document, field.Value())
-				}
-			})
-		}
-
-		pterm.Info.Println(searchResults)
+		document, _ = handleChatMemory(config, chatMessage)
 	}
 
 	if config.Tools.WebGet.Enabled {
@@ -901,20 +888,20 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 					continue
 				}
 				pterm.PrintOnError(err)
-			} else {
-				document = fmt.Sprintf("%s\n%s", document, page)
-				pagesRetrieved++
 			}
+
+			err = handleTextSplitAndIndex(config, page, 1024, "avsolatorio/GIST-small-Embedding-v0", "v0")
+			if err != nil {
+				pterm.PrintOnError(err)
+			}
+
+			// document = fmt.Sprintf("%s\n%s", document, page)
+			pagesRetrieved++
 		}
 
-		webResults, err := handleTextSplitAndIndex(chatMessage, document, 10, 1000, "avsolatorio/GIST-small-Embedding-v0", "None")
-		if err != nil {
-			log.Errorf("Error handling text split and index: %v", err)
-		}
-
-		document = webResults
-
-		pterm.Warning.Printf("Web search results: %s\n", document)
+		pterm.Error.Printf("Fetching web search chunks from memory...")
+		document, _ = handleChatMemory(config, chatMessage)
+		pterm.Error.Printf("Web Search Document: %s\n", document)
 	}
 
 	chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
@@ -924,8 +911,64 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	return chatMessage
 }
 
+// handleChatMemory retrieves and returns chat memory.
+func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
+	var document string
+
+	topN := config.Tools.Memory.TopN
+
+	// Create a search query
+	query := bleve.NewQueryStringQuery(chatMessage)
+
+	// Create a search request with the query and limit the results
+	searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
+
+	// Execute the search
+	searchResults, err := searchIndex.Search(searchRequest)
+	if err != nil {
+		log.Errorf("Error searching index: %v", err)
+		return "", err
+	}
+
+	// Print the search results
+	for _, hit := range searchResults.Hits {
+		doc, err := searchIndex.Document(hit.ID)
+		if err != nil {
+			log.Errorf("Error retrieving document: %v", err)
+			continue
+		}
+
+		doc.VisitFields(func(field index.Field) {
+			fmt.Printf("%s: %s\n", field.Name(), field.Value())
+
+			// Append the response field to the document and store it for later use
+			if field.Name() == "response" {
+				document = fmt.Sprintf("%s\n%s", document, field.Value())
+			}
+		})
+	}
+
+	modelPath := filepath.Join(config.DataPath, "models/HF/avsolatorio/GIST-small-Embedding-v0/avsolatorio/GIST-small-Embedding-v0")
+	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 1024, 256, modelPath)
+
+	searchRes := searchSimilarEmbeddings(config, "GIST-small-Embedding-v0", modelPath, chatMessage, topN)
+
+	// Retrieve the most similar chunks of text from the chat embeddings
+	for _, res := range searchRes {
+
+		similarity := res.Similarity
+		if similarity > 0.7 {
+			pterm.Info.Println("Most similar chunk of text:")
+			pterm.Info.Println(res.Word)
+			document = fmt.Sprintf("%s\n%s", document, res.Word)
+		}
+	}
+
+	return document, nil
+}
+
 // storeChat stores a chat in the database and generates embeddings for it.
-func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName string) error {
+func storeChat(config *AppConfig, prompt string, response string) error {
 	// Generate embeddings for the chat.
 	pterm.Warning.Println("Generating embeddings for chat...")
 
@@ -940,7 +983,7 @@ func storeChat(db *gorm.DB, config *AppConfig, prompt, response, modelName strin
 }
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
-func handleTextSplitAndIndex(prompt string, inputText string, topN int, chunkSize int, modelName string, revision string) (string, error) {
+func handleTextSplitAndIndex(config *AppConfig, inputText string, chunkSize int, modelName string, revision string) error {
 	// Split the input text into chunks.
 	chunks := documents.SplitTextByCount(inputText, chunkSize)
 
@@ -951,57 +994,53 @@ func handleTextSplitAndIndex(prompt string, inputText string, topN int, chunkSiz
 			ID:       docID,
 			Prompt:   inputText,
 			Response: chunk,
-			Model:    "text-splitter",
+			Model:    modelName,
 		}
 		if err := searchIndex.Index(docID, doc); err != nil {
 			log.Errorf("Error indexing chunk in Bleve: %v", err)
-			return "", fmt.Errorf("error indexing chunk: %w", err)
+			return err
 		}
 	}
 
-	// Retrieve the top N relevant chunks from the Bleve index.
-	query := bleve.NewQueryStringQuery(prompt)
-	searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
-	searchResults, err := searchIndex.Search(searchRequest)
+	return nil
+}
+
+// searchSimilarEmbeddings searches for similar embeddings in the database.
+func searchSimilarEmbeddings(config *AppConfig, modelName string, modelPath string, prompt string, topN int) []vecstore.Embedding {
+	db := vecstore.NewEmbeddingDB()
+	dbPath := fmt.Sprintf("%s/embeddings.db", config.DataPath)
+	embeddings, err := db.LoadEmbeddings(dbPath)
 	if err != nil {
-		log.Errorf("Error searching index: %v", err)
-		return "", fmt.Errorf("error searching index: %w", err)
+		fmt.Println("Error loading embeddings:", err)
+		return nil
 	}
 
-	// Concatenate the top N chunks into a single string.
-	var result string
-	for _, hit := range searchResults.Hits {
-		doc, err := searchIndex.Document(hit.ID)
-		if err != nil {
-			log.Errorf("Error retrieving document: %v", err)
-			continue
-		}
-		doc.VisitFields(func(field index.Field) {
-			if field.Name() == "response" {
-				result = fmt.Sprintf("%s\n%s", result, field.Value())
-
-				// Execute the Python script to get vector embeddings.
-				vecs, err := python.ExecuteScript(
-					"/Users/arturoaquino/Documents/eternal/scripts/python/embed.py",
-					"--model_name", modelName,
-					"--revision", revision,
-					"--texts", result,
-					"--chunk_size", fmt.Sprintf("%d", chunkSize),
-					"--chunk_overlap", "0", // Adjust this as needed
-				)
-				if err != nil {
-					log.Errorf("Error executing Python script: %v", err)
-				}
-
-				// Print the vector embeddings
-				fmt.Println("Vector embeddings:", vecs)
-			}
-		})
+	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelPath, ModelName: modelName})
+	if err != nil {
+		fmt.Println("Error loading model:", err)
+		return nil
 	}
 
-	// Remove empty lines from the result.
-	result = strings.ReplaceAll(result, "\n\n", " ")
+	var vec []float64
+	result, err := model.Encode(context.Background(), prompt, int(bert.MeanPooling))
+	if err != nil {
+		fmt.Println("Error encoding text:", err)
+		return nil
+	}
+	vec = result.Vector.Data().F64()[:128]
 
-	// Return the concatenated result.
-	return result, nil
+	embeddingForPrompt := vecstore.Embedding{
+		Word:       prompt,
+		Vector:     vec,
+		Similarity: 0.0,
+	}
+
+	// Retrieve the top N similar embeddings
+	topEmbeddings := vecstore.FindTopNSimilarEmbeddings(embeddingForPrompt, embeddings, topN)
+	if len(topEmbeddings) == 0 {
+		fmt.Println("Error finding similar embeddings.")
+		return nil
+	}
+
+	return topEmbeddings
 }

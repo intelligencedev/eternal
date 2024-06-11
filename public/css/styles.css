@@ -7,6 +7,7 @@
     --et-yellow: #ffd700; /* Gold (unchanged) */
     --et-light: #d3d3d3; /* Light Gray */
     --et-card-bg: #252525; /* Dark Gray */
+    --et-btn-info: #6cbfbf; /* Soft Cyan */
 
     /* Galactic Gray Theme */
     --et-galactic-primary: #b0b0b0;
@@ -27,7 +28,7 @@
     --et-celestial-secondary: #32717a; /* Sea Green Blue */
     --et-celestial-accent: #1b3a41; /* Dark Cyan */
     --et-celestial-background: #081a1c; /* Almost Black Cyan */
-    --et-celestial-border-highlight: #6cbfbf; /* Soft Cyan */
+    
 }
 
 ::-webkit-scrollbar {
@@ -44,6 +45,16 @@ body {
     -ms-overflow-style: none;  /* IE and Edge */
     overflow: hidden; /* Ensure no scrollbars on body */
 }
+
+#scroll-to-bottom-btn {
+    display: none;
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+  
 
 .bg-primary {
     --bs-bg-opacity: 1;

@@ -11,7 +11,7 @@ func main() {
 	// Define the parameters for the CLI command
 	cliCommand := "mlx_lm.generate"
 	//model := "mlx-community/Phi-3-mini-128k-instruct-8bit"
-	model := "/Users/arturoaquino/.eternal-v1/models/everyone-coder-33b"
+	model := "/Users/arturoaquino/.eternal-v1/models/Phi-3-medium-128k-instruct"
 	prompt := "write a quicksort in python."
 	maxTokens := "32000"
 

@@ -44,11 +44,11 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Delete("/chats/:id", handleDeleteChat())
 
 	// Tool routes
+	app.Get("/tools/list", handleToolList(config))
 	app.Post("/tool/:toolName", handleToolToggle(config))
 	app.Get("/dpsearch", handleDPSearch())
 
 	// Utility routes
-
 	// return the app config
 	app.Post("/config", func(c *fiber.Ctx) error {
 		return c.JSON(config)

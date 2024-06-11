@@ -8,6 +8,7 @@ import (
 	"errors"
 	"eternal/pkg/llm"
 	"eternal/pkg/sd"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,6 +34,7 @@ import (
 var embedfs embed.FS
 
 var (
+	devMode     bool     // If enabled, removes the database and search index on shutdown
 	osFS        afero.Fs = afero.NewOsFs()
 	chatTurn             = 1
 	sqliteDB    *SQLiteDB
@@ -53,26 +55,30 @@ type Tool struct {
 }
 
 func main() {
+	flag.BoolVar(&devMode, "devmode", false, "Run the application in development mode")
+	flag.Parse()
+
 	displayBanner()
 
+	// DISABLED due to bug in CUDA
 	// Print host information as pterm table
-	hostInfo, err := GetHostInfo()
-	if err != nil {
-		pterm.Error.Println("Error getting host information:", err)
-	} else {
-		// Convert memory to GB
-		hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
-		// Convert ints to strings for pterm table
-		pterm.DefaultTable.WithData(pterm.TableData{
-			{"OS", hostInfo.OS},
-			{"Architecture", hostInfo.Arch},
-			{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
-			{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
-			{"GPU Model", hostInfo.GPUs[0].Model},
-			{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
-			{"Metal Support", hostInfo.GPUs[0].MetalSupport},
-		}).Render()
-	}
+	// hostInfo, err := GetHostInfo()
+	// if err != nil {
+	// 	pterm.Error.Println("Error getting host information:", err)
+	// } else {
+	// 	// Convert memory to GB
+	// 	hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
+	// 	// Convert ints to strings for pterm table
+	// 	pterm.DefaultTable.WithData(pterm.TableData{
+	// 		{"OS", hostInfo.OS},
+	// 		{"Architecture", hostInfo.Arch},
+	// 		{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
+	// 		{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
+	// 		{"GPU Model", hostInfo.GPUs[0].Model},
+	// 		{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
+	// 		{"Metal Support", hostInfo.GPUs[0].MetalSupport},
+	// 	}).Render()
+	// }
 
 	// Load configuration
 	config, err := loadConfig()
@@ -213,7 +219,7 @@ func initializeDatabase(dataPath string) error {
 		return err
 	}
 
-	return sqliteDB.AutoMigrate(&ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
+	return sqliteDB.AutoMigrate(&Project{}, &ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
 }
 
 // initializeSearchIndex initializes the search index
@@ -341,6 +347,18 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	// Handle graceful shutdown
 	go func() {
 		<-ctx.Done() // Wait for the context to be cancelled
+
+		if devMode {
+			// delete the search index and database
+			if err := os.RemoveAll(filepath.Join(config.DataPath, "search.bleve")); err != nil {
+				log.Fatalf("Failed to delete search index: %v", err)
+			}
+
+			if err := os.RemoveAll(filepath.Join(config.DataPath, "eternaldata.db")); err != nil {
+				log.Fatalf("Failed to delete database: %v", err)
+			}
+		}
+
 		if err := app.Shutdown(); err != nil {
 			log.Fatalf("Server shutdown failed: %v", err)
 		}
