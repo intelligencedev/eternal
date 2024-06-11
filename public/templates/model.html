@@ -29,7 +29,8 @@
       </ul>
     </div>
   </div>
-  <div class="w-100 d-none" id="progress-download" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div>
+  <div class="w-100 d-none" id="progress-download" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'
+    hx-trigger='load'></div>
 </div>
 
 <!-- Container to display selected model information -->
@@ -156,14 +157,11 @@
     const progressContainer = document.getElementById(`progress-download`);
     const downloadContainer = document.getElementById(`model-download`);
 
-
-
     // Move the downloadContainer to the progressContainer
     downloadContainer.appendChild(progressContainer);
 
-    // Delete the download button
+    // Delete the download button and show the download progress
     buttonDownload.remove();
-
     progressContainer.classList.remove('d-none');
 
     // Send a request to download the model
