@@ -911,7 +911,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}()
 
 		var pagesRetrieved int
-		var document string
 		for page := range urlsChan {
 			if pagesRetrieved >= topN {
 				break
@@ -923,6 +922,8 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		pterm.Error.Printf("Fetching web search chunks from memory...")
 		document, _ = handleChatMemory(config, chatMessage)
 		pterm.Error.Printf("Web Search Document: %s\n", document)
+		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
+		return chatMessage
 	}
 
 	chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
@@ -978,7 +979,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	for _, res := range searchRes {
 
 		similarity := res.Similarity
-		if similarity > 0.7 {
+		if similarity > 0.5 {
 			pterm.Info.Println("Most similar chunk of text:")
 			pterm.Info.Println(res.Word)
 			document = fmt.Sprintf("%s\n%s", document, res.Word)
