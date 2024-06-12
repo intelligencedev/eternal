@@ -878,51 +878,70 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		var wg sync.WaitGroup
 		urlsChan := make(chan string, len(urls))
+		pagesChan := make(chan string, topN)
+		done := make(chan struct{})
 
+		// Fetch URLs concurrently
 		for _, url := range urls {
 			wg.Add(1)
-
 			go func(u string) {
 				defer wg.Done()
-
-				pterm.Info.Printf("Fetching URL: %s\n", u)
-				page, err := web.WebGetHandler(u)
-				if err != nil {
-					if errors.Is(err, context.DeadlineExceeded) {
-						pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
-					} else {
-						log.Errorf("Error fetching URL: %v", err)
-					}
+				select {
+				case <-done:
 					return
+				default:
+					pterm.Info.Printf("Fetching URL: %s\n", u)
+					page, err := web.WebGetHandler(u)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+						} else {
+							log.Errorf("Error fetching URL: %v", err)
+						}
+						return
+					}
+					urlsChan <- page
 				}
-
-				err = handleTextSplitAndIndex(page, 1024, "avsolatorio/GIST-small-Embedding-v0")
-				if err != nil {
-					log.Errorf("Error handling text split and index: %v", err)
-				}
-
-				urlsChan <- page
 			}(url)
 		}
 
+		// Close urlsChan when all fetches are done
 		go func() {
 			wg.Wait()
 			close(urlsChan)
 		}()
 
-		var pagesRetrieved int
-		for page := range urlsChan {
-			if pagesRetrieved >= topN {
-				break
+		// Collect topN pages
+		go func() {
+			var pagesRetrieved int
+			for page := range urlsChan {
+				if pagesRetrieved >= topN {
+					close(done)
+					break
+				}
+				pagesChan <- page
+				pagesRetrieved++
+			}
+			close(pagesChan)
+		}()
+
+		// Process pages
+		var document string
+		for page := range pagesChan {
+			err := handleTextSplitAndIndex(page, 1024, "avsolatorio/GIST-small-Embedding-v0")
+			if err != nil {
+				log.Errorf("Error handling text split and index: %v", err)
 			}
 			document = fmt.Sprintf("%s\n%s", document, page)
-			pagesRetrieved++
 		}
 
 		pterm.Error.Printf("Fetching web search chunks from memory...")
 		document, _ = handleChatMemory(config, chatMessage)
 		pterm.Error.Printf("Web Search Document: %s\n", document)
 		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
+
+		pterm.Info.Println("Tool workflow complete")
+
 		return chatMessage
 	}
 
@@ -971,7 +990,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	}
 
 	modelPath := filepath.Join(config.DataPath, "models/HF/avsolatorio/GIST-small-Embedding-v0/avsolatorio/GIST-small-Embedding-v0")
-	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 1024, 256, modelPath)
+	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 1024, 512, modelPath)
 
 	searchRes := searchSimilarEmbeddings(config, "GIST-small-Embedding-v0", modelPath, chatMessage, topN)
 
@@ -979,7 +998,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	for _, res := range searchRes {
 
 		similarity := res.Similarity
-		if similarity > 0.5 {
+		if similarity > 0.7 {
 			pterm.Info.Println("Most similar chunk of text:")
 			pterm.Info.Println(res.Word)
 			document = fmt.Sprintf("%s\n%s", document, res.Word)
