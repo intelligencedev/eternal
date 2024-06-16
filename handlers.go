@@ -90,11 +90,32 @@ func handleUpload(config *AppConfig) fiber.Handler {
 func handleToolToggle(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		toolName := c.Params("toolName")
+		enabled := c.Params("enabled")
+		topN := c.Params("topN")
+
+		pterm.Info.Println(enabled)
+
+		// Convert the enabled parameter to a boolean.
+		enabledBool, err := strconv.ParseBool(enabled)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid enabled parameter")
+		}
+
+		// Convert the topN parameter to an integer.
+		topNInt, err := strconv.Atoi(topN)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid topN parameter")
+		}
+
+		// Print the params to the console.
+		pterm.Info.Println("Params:")
+		pterm.Info.Println(toolName)
 
 		switch toolName {
 		case "websearch":
 			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
-			config.Tools.WebSearch.Enabled = !config.Tools.WebSearch.Enabled
+			config.Tools.WebSearch.Enabled = enabledBool
+			config.Tools.WebSearch.TopN = topNInt
 		case "webget":
 			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
 			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled

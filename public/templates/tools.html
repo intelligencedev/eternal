@@ -41,7 +41,7 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch" onclick="toggleTool('websearch')">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch" onclick="updateSearchTool()">
           <label class="form-check-label" for="websearch-switch">
             Web Search
           </label>
@@ -65,7 +65,7 @@
             </label>
           </div>
           <p class="mb-0"><strong>TopN - Number of web search results to retrieve:</strong> 
-            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider" oninput="updateWebSearchSliderValue()">
+            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider" oninput="updateSearchTool()">
             <span id="websearch-topn-value">1</span>
           </p>
         </div>
@@ -76,7 +76,13 @@
 
 <script>
   function toggleTool(toolName) {
-    fetch(`/tool/${toolName}`, {
+    // Get the topN value
+    const topN = document.getElementById(`${toolName}-topn-value`).innerText;
+    postToolValue(toolName, topN);
+  }
+
+  function postToolValue(toolName, enabled, topN) {
+    fetch(`/tool/${toolName}/${enabled}/${topN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -92,64 +98,33 @@
   }
 
   async function getTools() {
-      try {
-        const response = await fetch('/tools/list');
-        const tools = await response.json();
-        const toolView = document.getElementById('tool-view'); // Corrected id
-        toolView.innerHTML = ''; // Clear any existing content
+    try {
+      const response = await fetch('/tools/list');
+      const tools = await response.json();
+      const toolView = document.getElementById('tool-view'); // Corrected id
+      toolView.innerHTML = ''; // Clear any existing content
 
-        tools.forEach(tool => {
-          // print the enabled value
-          console.log('Tool:', tool.Name, 'Enabled:', tool.Enabled);
-
-        });
-      } catch (error) {
-        console.error('Error fetching tools:', error);
-      }
+      tools.forEach(tool => {
+        // print the enabled value
+        console.log('Tool:', tool.Name, 'Enabled:', tool.Enabled);
+      });
+    } catch (error) {
+      console.error('Error fetching tools:', error);
     }
+  }
 
-    async function saveToolParams(toolName) {
-      try {
-        const enabled = document.getElementById(`enabled-toggle-${toolName}`).checked;
-        const topNInput = document.getElementById(`top-n-input-${toolName}`);
-        const endpointInput = document.getElementById(`endpoint-input-${toolName}`);
-        const searchEngineSelect = document.getElementById(`search-engine-select-${toolName}`);
+  function updateMemorySliderValue() {
+    const slider = document.getElementById('memory-slider');
+    const valueLabel = document.getElementById('memory-topn-value');
+    valueLabel.innerText = slider.value;
+  }
 
-        const toolParams = {
-          Name: toolName,
-          Enabled: enabled,
-          TopN: topNInput ? parseInt(topNInput.value) : undefined,
-          Endpoint: endpointInput ? endpointInput.value : undefined,
-          Engine: searchEngineSelect ? searchEngineSelect.value : undefined
-        };
-
-        const response = await fetch('/tool/set/params', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(toolParams),
-        });
-
-        if (response.ok) {
-          console.log('Settings saved successfully');
-        } else {
-          console.error('Error saving settings');
-        }
-      } catch (error) {
-        console.error('Error sending request:', error);
-      }
-    }
-
-    function updateMemorySliderValue() {
-      const slider = document.getElementById('memory-slider');
-      const valueLabel = document.getElementById('memory-topn-value');
-      valueLabel.innerText = slider.value;
-    }
-
-    function updateWebSearchSliderValue() {
-      const slider = document.getElementById('websearch-slider');
-      const valueLabel = document.getElementById('websearch-topn-value');
-      valueLabel.innerText = slider.value;
-    }
+  function updateSearchTool() {
+    // Get the enabled value from the switch
+    const enabled = document.getElementById('websearch-switch').checked;
+    const slider = document.getElementById('websearch-slider');
+    const valueLabel = document.getElementById('websearch-topn-value');
+    valueLabel.innerText = slider.value;
+    postToolValue('websearch', enabled, slider.value);
+  }
 </script>
