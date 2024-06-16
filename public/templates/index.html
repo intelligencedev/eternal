@@ -173,7 +173,7 @@
                 style="outline: none;">Write a comprehensive tutorial on how to code a neural network using golang.</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
-                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend show:bottom"
+                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend"
                 hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
                 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path fill="#ffffff" fill-rule="evenodd"

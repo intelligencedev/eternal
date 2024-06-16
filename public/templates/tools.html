@@ -24,8 +24,8 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="webrag-switch">
-          <label class="form-check-label" for="webrag-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="webget-switch" onclick="toggleTool('webget')">
+          <label class="form-check-label" for="webget-switch">
             Web Retrieval
           </label>
         </div>
@@ -41,7 +41,7 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch" onclick="toggleTool('websearch')">
           <label class="form-check-label" for="websearch-switch">
             Web Search
           </label>
@@ -73,3 +73,21 @@
     </div>
   </div>
 </div>
+
+<script>
+  function toggleTool(toolName) {
+    fetch(`/tool/${toolName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log(data.message);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+</script>
