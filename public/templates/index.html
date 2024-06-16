@@ -271,6 +271,7 @@
         data: {},
         async fetchData() {
           try {
+            //await getTools()
             let response = await fetch('/config');
             this.data = await response.json();
             console.log('Data fetched:', this.data);
@@ -281,6 +282,39 @@
 
             // Print the keys of the data object
             console.log('Data keys:', Object.keys(this.data));
+
+            // Set the tool toggles to the value of the enabled key for each tool
+            Object.keys(this.data.Tools).forEach((tool) => {
+              console.log('Tool:', tool);
+              console.log('Enabled:', this.data.Tools[tool].Enabled);
+              console.log('TopN:', this.data.Tools[tool].TopN);
+              console.log('Search Backend:', this.data.Tools["WebSearch"].Name);
+
+              document.getElementById("memory-switch").checked = this.data.Tools["Memory"].Enabled;
+              // set the topn value for the slider
+              document.getElementById("memory-slider").value = this.data.Tools["Memory"].TopN;
+              document.getElementById("memory-topn-value").innerText = this.data.Tools["Memory"].TopN;
+              
+              document.getElementById("webget-switch").checked = this.data.Tools["WebGet"].Enabled;
+
+              document.getElementById("websearch-switch").checked = this.data.Tools["WebSearch"].Enabled;
+
+              document.getElementById("websearch-slider").value = this.data.Tools["WebSearch"].TopN;
+              document.getElementById("websearch-topn-value").innerText = this.data.Tools["WebSearch"].TopN;
+
+              if (this.data.Tools["WebSearch"].Name == "sxng") {
+                // Add a class to the sxng radio button to show it as selected
+                document.getElementById("sxng-radio").classList.add("checked");
+
+                // Add the checked parameter to the sxng radio button
+                document.getElementById("sxng-radio").checked = true;
+              }
+              else {
+                // Add a class to the sxng radio button to show it as selected
+                document.getElementById("ddg-radio").classList.add("checked");
+                document.getElementById("ddg-radio").checked = true;
+              }
+            });
 
           } catch (error) {
             console.error('Error fetching data:', error);
@@ -377,85 +411,7 @@
           console.error('Error:', error);
         })
     }
-
-    async function getTools() {
-      try {
-        const response = await fetch('/tools/list');
-        const tools = await response.json();
-        const toolView = document.getElementById('tool-view'); // Corrected id
-        toolView.innerHTML = ''; // Clear any existing content
-
-        tools.forEach(tool => {
-          const toolCard = document.createElement('div');
-          toolCard.className = 'card h-100 mx-2';
-          toolCard.style.backgroundColor = 'var(--et-card-bg)';
-          toolCard.dataset.toolName = tool.Name;
-
-          toolCard.innerHTML = `
-        <div class="card-header">${tool.Name}</div>
-        <div class="card-body tab-content mh-100">
-          <p><strong>Enabled:</strong>
-            <input type="checkbox" class="form-check-input" id="enabled-toggle-${tool.Name}" ${tool.Enabled ? 'checked' : ''}>
-          </p>
-          ${tool.TopN ? `
-          <p><strong>Top N:</strong>
-            <input type="number" class="form-control" min="1" max="100" value="${tool.TopN}" id="top-n-input-${tool.Name}">
-          </p>` : ''}
-          ${tool.Endpoint ? `
-          <p><strong>Endpoint:</strong>
-            <input type="text" class="form-control" value="${tool.Endpoint}" id="endpoint-input-${tool.Name}">
-          </p>` : ''}
-          ${tool.Name === 'websearch' ? `
-          <p><strong>Search Engine:</strong>
-            <select class="form-select" id="search-engine-select-${tool.Name}">
-              <option value="ddg" ${tool.Engine === 'ddg' ? 'selected' : ''}>DDG</option>
-              <option value="sxng" ${tool.Engine === 'sxng' ? 'selected' : ''}>SearxNG</option>
-            </select>
-          </p>` : ''}
-        </div>
-        <button class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);" onclick="saveToolParams('${tool.Name}')">Save</button>
-      `;
-
-          toolView.appendChild(toolCard);
-        });
-      } catch (error) {
-        console.error('Error fetching tools:', error);
-      }
-    }
-
-    async function saveToolParams(toolName) {
-      try {
-        const enabled = document.getElementById(`enabled-toggle-${toolName}`).checked;
-        const topNInput = document.getElementById(`top-n-input-${toolName}`);
-        const endpointInput = document.getElementById(`endpoint-input-${toolName}`);
-        const searchEngineSelect = document.getElementById(`search-engine-select-${toolName}`);
-
-        const toolParams = {
-          Name: toolName,
-          Enabled: enabled,
-          TopN: topNInput ? parseInt(topNInput.value) : undefined,
-          Endpoint: endpointInput ? endpointInput.value : undefined,
-          Engine: searchEngineSelect ? searchEngineSelect.value : undefined
-        };
-
-        const response = await fetch('/tool/set/params', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(toolParams),
-        });
-
-        if (response.ok) {
-          console.log('Settings saved successfully');
-        } else {
-          console.error('Error saving settings');
-        }
-      } catch (error) {
-        console.error('Error sending request:', error);
-      }
-    }
-    htmx.logAll();
+    // htmx.logAll();
   </script>
 </body>
 
