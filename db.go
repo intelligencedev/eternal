@@ -117,6 +117,12 @@ type File struct {
 	ProjectID uint // Foreign key that refers to Project
 }
 
+// URLTracking represents the structure for tracking URLs
+type URLTracking struct {
+	ID  int64  `gorm:"primaryKey;autoIncrement"`
+	URL string `gorm:"unique;not null"`
+}
+
 func NewSQLiteDB(dataPath string) (*SQLiteDB, error) {
 
 	// Silence gorm logs during this step
@@ -296,6 +302,37 @@ func UpdateChat(db *gorm.DB, id int64, newPrompt, newResponse, newModel string) 
 func DeleteChat(db *gorm.DB, id int64) error {
 	result := db.Delete(&Chat{}, id)
 	return result.Error
+}
+
+// CreateURLTracking inserts a new URL into the URLTracking table
+func (sqldb *SQLiteDB) CreateURLTracking(url string) error {
+	var existingURLTracking URLTracking
+
+	// Check if the URL already exists in the table
+	err := sqldb.db.Where("url = ?", url).First(&existingURLTracking).Error
+	if err == nil {
+		// URL already exists, return without inserting
+		return nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// An error other than "record not found" occurred
+		return err
+	}
+
+	// URL does not exist, proceed to insert
+	urlTracking := URLTracking{URL: url}
+	return sqldb.db.Create(&urlTracking).Error
+}
+
+// ListURLTrackings retrieves all URLs from the URLTracking table
+func (sqldb *SQLiteDB) ListURLTrackings() ([]URLTracking, error) {
+	var urlTrackings []URLTracking
+	err := sqldb.db.Find(&urlTrackings).Error
+	return urlTrackings, err
+}
+
+// DeleteURLTracking removes a URL from the URLTracking table
+func (sqldb *SQLiteDB) DeleteURLTracking(url string) error {
+	return sqldb.db.Where("url = ?", url).Delete(&URLTracking{}).Error
 }
 
 // UpdateModelDownloadedState updates the downloaded state of a model in the database.

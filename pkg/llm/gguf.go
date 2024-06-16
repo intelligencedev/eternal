@@ -165,8 +165,11 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
-		"--flash-attn", // enable flash attention, default disabled
-		//"--mlock",
+		//"--flash-attn", // enable flash attention, default disabled
+		"--batch-size", "2048",
+		"--ubatch-size", "2048",
+		//"--cont-batching", // enable continuous batching, default disabled
+		"--mlock",
 		"--seed", "-1",
 		//"--no-mmap",
 		"--simple-io",

@@ -93,8 +93,10 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 
 		switch toolName {
 		case "websearch":
+			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
 			config.Tools.WebSearch.Enabled = !config.Tools.WebSearch.Enabled
 		case "webget":
+			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
 			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
 		case "imggen":
 			config.Tools.ImgGen.Enabled = true
@@ -103,7 +105,7 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 		}
 
 		return c.JSON(fiber.Map{
-			"message": fmt.Sprintf("Tool %s is now %t", toolName, config.Tools.ImgGen.Enabled)})
+			"message": fmt.Sprintf("Tool %s toggled", toolName)})
 	}
 }
 
@@ -637,8 +639,25 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 
 			// Prepare the full prompt for the model.
 			promptTemplate := model.Options.Prompt
-			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", chatMessage)
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", assistantRole)
+
+			fullInstructions := fmt.Sprintf("%s\n\n%s", assistantRole, chatMessage)
+
+			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
+			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
+
+			// Set the model options.
+			repeatPenalty := 1.1
+			temperature := 0.7
+			tp := 1.0
+			tk := 1
+
+			// If any of the tools are enabled, lower the RepeatPenalty to 1.0
+			if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
+				temperature = 0.2
+				repeatPenalty = 1.0 // 1.0 = disabled
+				tp = 0.95
+				tk = 40
+			}
 
 			// Set the model options.
 			modelOpts := &llm.GGUFOptions{
@@ -646,10 +665,10 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 				Model:         model.Options.Model,
 				Prompt:        fullPrompt,
 				CtxSize:       model.Options.CtxSize,
-				Temp:          0.2,
-				RepeatPenalty: 1.1,
-				TopP:          1.0,
-				TopK:          1.0,
+				Temp:          temperature,
+				RepeatPenalty: repeatPenalty,
+				TopP:          tp,
+				TopK:          tk,
 			}
 
 			// Make a completion request to the model and send the response over WebSocket.
@@ -737,8 +756,15 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 
 		log.Infof("Received WebSocket message: %+v", wsMessage)
 
-		// Perform the tool workflow on the chat message.
-		chatMessage := performToolWorkflow(c, config, wsMessage.ChatMessage)
+		chatMessage := wsMessage.ChatMessage
+
+		// Only perform the tool workflow if any of the tools are enabled.
+		if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
+
+			// Perform the tool workflow on the chat message.
+			chatMessage = performToolWorkflow(c, config, wsMessage.ChatMessage)
+		}
+
 		log.Infof("Processed chat message: %s", chatMessage)
 
 		// Process the WebSocket message.
@@ -782,11 +808,21 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 
 	if config.Tools.Memory.Enabled {
 
+		// Get the timestamp for the chat message in human-readable format.
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+
+		memHeader := fmt.Sprintf("Previous chat - %s", timestamp)
+
 		// Two examples of how to store chat messages in the Bleve index.
 		// 1. Split the text and store each chunk in the index.
 		// 2. Store the entire chat message in the index.
 		// Split the chat message into chunks 500 characters long with a 200 character overlap.
 		chunks := documents.SplitTextByCount(err.Error(), 500)
+
+		// Prepend the header to all chunks.
+		for i, chunk := range chunks {
+			chunks[i] = fmt.Sprintf("%s\n%s", memHeader, chunk)
+		}
 
 		// 1. Store the chunk in Bleve.
 		for _, chunk := range chunks {
@@ -822,6 +858,7 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 
 // performToolWorkflow performs the tool workflow on a chat message.
 func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
+
 	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
 	var document string
 
@@ -858,6 +895,9 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			pterm.Info.Println("Retrieving page content...")
 
 			document, _ = web.WebGetHandler(url[0])
+
+			// Add the page content to the chat message.
+
 		}
 	}
 
@@ -874,10 +914,27 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
 		}
 
-		pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+
+		ignoredURLs, err := sqliteDB.ListURLTrackings()
+		if err != nil {
+			log.Errorf("Error listing URL trackings: %v", err)
+		}
+
+		// match the ignored URLs with the fetched URLs and remove them from the list
+		for _, ignoredURL := range ignoredURLs {
+			for i, url := range urls {
+				if strings.Contains(url, ignoredURL.URL) {
+					urls = append(urls[:i], urls[i+1:]...)
+
+					pterm.Warning.Printf("Ignoring URL: %s\n", ignoredURL.URL)
+				}
+			}
+		}
 
 		var wg sync.WaitGroup
 		urlsChan := make(chan string, len(urls))
+		failedURLsChan := make(chan []string)
 		pagesChan := make(chan string, topN)
 		done := make(chan struct{})
 
@@ -895,11 +952,20 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
 							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+
+							// Add the URL to the channel to be processed later
+							failedURLsChan <- []string{u}
 						} else {
 							log.Errorf("Error fetching URL: %v", err)
+
+							failedURLsChan <- []string{u}
 						}
 						return
 					}
+
+					// Prepent the URL to the page content
+					page = fmt.Sprintf("%s\n%s", u, page)
+
 					urlsChan <- page
 				}
 			}(url)
@@ -909,6 +975,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		go func() {
 			wg.Wait()
 			close(urlsChan)
+			close(failedURLsChan)
 		}()
 
 		// Collect topN pages
@@ -925,10 +992,41 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			close(pagesChan)
 		}()
 
+		// Process failed URLs
+		var failedURLs []string
+		for url := range failedURLsChan {
+			failedURLs = append(failedURLs, url...)
+
+			// Insert the failed URLs back into the URLTracking table
+			for _, failedURL := range failedURLs {
+				// Parse the top-level domain from the URL by splitting the URL by slashes and getting the second element.
+				tld := strings.Split(failedURL, "/")[2]
+
+				err := sqliteDB.CreateURLTracking(tld)
+				if err != nil {
+					log.Errorf("Error inserting failed URL into database: %v", err)
+				}
+			}
+		}
+
+		// Retreve the failed URLs from the URLTracking table
+		trackedURLs, err := sqliteDB.ListURLTrackings()
+		if err != nil {
+			log.Errorf("Error listing URL trackings: %v", err)
+		}
+
+		// Print the failed URLs
+		for _, trackedURL := range trackedURLs {
+			pterm.Warning.Printf("New failed URL: %s\n", trackedURL.URL)
+		}
+
 		// Process pages
 		var document string
 		for page := range pagesChan {
-			err := handleTextSplitAndIndex(page, 1024, "avsolatorio/GIST-small-Embedding-v0")
+			// Parse the first line of the page to get the URL
+			pageURL := strings.Split(page, "\n")[0]
+			documentTags := fmt.Sprintf("web, %s", pageURL)
+			err := handleTextSplitAndIndex(documentTags, page, 1024, "avsolatorio/GIST-small-Embedding-v0")
 			if err != nil {
 				log.Errorf("Error handling text split and index: %v", err)
 			}
@@ -937,7 +1035,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		pterm.Error.Printf("Fetching web search chunks from memory...")
 		document, _ = handleChatMemory(config, chatMessage)
-		pterm.Error.Printf("Web Search Document: %s\n", document)
+		//pterm.Error.Printf("Web Search Document: %s\n", document)
 		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
 
 		pterm.Info.Println("Tool workflow complete")
@@ -945,7 +1043,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		return chatMessage
 	}
 
-	chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
+	chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
 
 	pterm.Info.Println("Tool workflow complete")
 
@@ -980,7 +1078,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 		}
 
 		doc.VisitFields(func(field index.Field) {
-			fmt.Printf("%s: %s\n", field.Name(), field.Value())
+			//fmt.Printf("%s: %s\n", field.Name(), field.Value())
 
 			// Append the response field to the document and store it for later use
 			if field.Name() == "response" {
@@ -990,7 +1088,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	}
 
 	modelPath := filepath.Join(config.DataPath, "models/HF/avsolatorio/GIST-small-Embedding-v0/avsolatorio/GIST-small-Embedding-v0")
-	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 1024, 512, modelPath)
+	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 4096, 1024, modelPath)
 
 	searchRes := searchSimilarEmbeddings(config, "GIST-small-Embedding-v0", modelPath, chatMessage, topN)
 
@@ -998,9 +1096,9 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	for _, res := range searchRes {
 
 		similarity := res.Similarity
-		if similarity > 0.7 {
-			pterm.Info.Println("Most similar chunk of text:")
-			pterm.Info.Println(res.Word)
+		if similarity > 0.8 {
+			//pterm.Info.Println("Most similar chunk of text:")
+			//pterm.Info.Println(res.Word)
 			document = fmt.Sprintf("%s\n%s", document, res.Word)
 		}
 	}
@@ -1024,9 +1122,14 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 // }
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
-func handleTextSplitAndIndex(inputText string, chunkSize int, modelName string) error {
+func handleTextSplitAndIndex(inputTags string, inputText string, chunkSize int, modelName string) error {
 	// Split the input text into chunks.
 	chunks := documents.SplitTextByCount(inputText, chunkSize)
+
+	// Prepend the input tags to each chunk.
+	for i, chunk := range chunks {
+		chunks[i] = fmt.Sprintf("TAGS: [%s]\n%s", inputTags, chunk)
+	}
 
 	var wg sync.WaitGroup
 
@@ -1093,4 +1196,10 @@ func searchSimilarEmbeddings(config *AppConfig, modelName string, modelPath stri
 	}
 
 	return topEmbeddings
+}
+
+// ToolState represents the state of a tool.
+type ToolState struct {
+	Tool    string `json:"tool"`
+	Enabled bool   `json:"enabled"`
 }
