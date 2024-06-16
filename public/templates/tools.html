@@ -13,7 +13,7 @@
       <div class="card-body tab-content mh-100">
         <div>
           <p class="mb-0"><strong>TopN:</strong> 
-            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider">
+            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider" oninput="updateMemorySliderValue()">
             <span id="memory-topn-value">1</span>
           </p>
         </div>
@@ -65,7 +65,7 @@
             </label>
           </div>
           <p class="mb-0"><strong>TopN - Number of web search results to retrieve:</strong> 
-            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider">
+            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider" oninput="updateWebSearchSliderValue()">
             <span id="websearch-topn-value">1</span>
           </p>
         </div>
@@ -139,5 +139,17 @@
       } catch (error) {
         console.error('Error sending request:', error);
       }
+    }
+
+    function updateMemorySliderValue() {
+      const slider = document.getElementById('memory-slider');
+      const valueLabel = document.getElementById('memory-topn-value');
+      valueLabel.innerText = slider.value;
+    }
+
+    function updateWebSearchSliderValue() {
+      const slider = document.getElementById('websearch-slider');
+      const valueLabel = document.getElementById('websearch-topn-value');
+      valueLabel.innerText = slider.value;
     }
 </script>
