@@ -77,12 +77,26 @@ func handleUpload(config *AppConfig) fiber.Handler {
 			if err := c.SaveFile(file, filename); err != nil {
 				return err
 			}
-			log.Infof("Uploaded file: %s", file.Filename)
+			log.Infof("Uploaded file %s to %s", file.Filename, filename)
+
+			// If the file is a pdf, extract the text content and print it as Markdown.
+			if strings.HasSuffix(file.Filename, ".pdf") {
+				pdfDoc, err := documents.GetPdfContents(filename)
+				if err != nil {
+					pterm.Error.Println(err)
+				}
+
+				err = searchIndex.Index(file.Filename, pdfDoc)
+				if err != nil {
+					log.Errorf("Error storing chat message in Bleve: %v", err)
+				}
+
+				return c.JSON(fiber.Map{"file": file.Filename, "content": pdfDoc})
+			}
 		}
 
-		return c.JSON(fiber.Map{
-			"message": fmt.Sprintf("%d files uploaded successfully", len(files)),
-		})
+		// return the file path of all the documents uploaded
+		return c.JSON(fiber.Map{"files": files})
 	}
 }
 

@@ -18,6 +18,7 @@ require (
 	github.com/google/generative-ai-go v0.10.0
 	github.com/google/uuid v1.4.0
 	github.com/jaypipes/ghw v0.12.0
+	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/nlpodyssey/cybertron v0.2.1
 	github.com/pterm/pterm v0.12.74
 	github.com/serpapi/google-search-results-golang v0.0.0-20230616000151-95707d993dc6
@@ -123,8 +124,6 @@ require (
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
-	github.com/tklauser/go-sysconf v0.3.13 // indirect
-	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
