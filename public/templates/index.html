@@ -170,7 +170,7 @@
               <input type="file" id="file-input" style="display: none;" />
               <textarea id="message" name="userprompt" class="col form-control shadow-none"
                 placeholder="Type your message..." rows="2"
-                style="outline: none;">Write a comprehensive tutorial on how to code a neural network using golang.</textarea>
+                style="outline: none;"></textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
                 hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend"
@@ -208,6 +208,7 @@
                     <li><a class="dropdown-item" href="#" onclick="setRole('cot_advanced')">Engineer</a></li>
                     <li><a class="dropdown-item" href="#" onclick="setRole('software_dev')">Developer</a></li>
                     <li><a class="dropdown-item" href="#" onclick="setRole('code_review')">Code Review</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setRole('image_bot')">Image Bot</a></li>
                   </ul>
                 </div>
               </div>
@@ -384,6 +385,8 @@
     document.getElementById('message').addEventListener('keydown', function (event) {
       if (event.key === 'Enter' || event.key === 'Return') {
         if (!event.shiftKey) {
+          var messageInput = document.getElementById('message');
+          messageInput.value += docContent;
           event.preventDefault(); // Prevent the default behavior of the Enter key
           document.getElementById('send').click(); // Trigger the click event on the submit button
           textarea.style.height = 'auto';

@@ -1,3 +1,4 @@
+// workflows.js
 // List of tool names enabled by default:
 var enabledTools = [
   // "webget", // Retrieves a single page from a given url
@@ -7,16 +8,32 @@ var enabledTools = [
 const uploadButton = document.getElementById('upload');
 const fileInput = document.getElementById('file-input');
 const form = document.querySelector('form'); // Select the form element
+var docContent = "";
 
 // Prevent the default form submit behavior
 form.addEventListener('submit', function(event) {
+  console.log(docContent);
   event.preventDefault(); // Prevent form from submitting traditionally
   console.log('Form submission prevented');
+
+  // Send the file content along with the form submission
+  const formData = new FormData(form);
+  formData.append('fileContent', docContent);
+
+  fetch(form.action, {
+    method: 'POST',
+    body: formData
+  }).then(response => {
+    // Handle response
+  }).catch(error => {
+    console.error('Error:', error);
+  });
 });
 
-uploadButton.addEventListener('click', function () {
+uploadButton.addEventListener('click', function(event) {
   console.log('Upload button clicked');
   fileInput.click(); // Trigger the file input dialog
+  event.stopPropagation(); // Prevent the form submit event from being triggered
 });
 
 fileInput.addEventListener('change', function () {
@@ -32,9 +49,9 @@ async function fileHandler(file) {
   }
   // reset the file input
   fileInput.value = null;
-  // append the file to the chat view
-  console.log("uploading...")
-  console.log(file.name)
+  console.log("uploading...");
+  console.log(file.name);
+  console.log(docContent);
 }
 
 async function uploadFile(file) {
@@ -48,6 +65,7 @@ async function uploadFile(file) {
     });
 
     const data = await response.json();
+    docContent = data.content;
 
     if (data.status === 'success' && data.callback === 'image') {
       // Image file detected, trigger another request
