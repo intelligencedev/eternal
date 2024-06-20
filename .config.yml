@@ -2,14 +2,14 @@
 current_user: 'User'
 
 # Display name for LLM responses
-assistant_name: 'Eternal'
+assistant_name: 'Assistant'
 
 # Host name and port of the frontend and management server
 control_host: 'localhost'
 control_port: 8080
 
 # datapath will be created by Eternal to host persistent data
-data_path: '$HOME/.eternal'
+data_path: '/Users/$USER/.eternal'
 
 # Service hosts for specific functionalities
 service_hosts:
@@ -42,14 +42,14 @@ service_hosts:
 tools:
   memory:
     enabled: false
-    top_n: 10 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+    top_n: 6 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
   webget:
     enabled: false
   websearch:
-    enabled: true
-    name: ddg # Only ddg and sxng available
-    endpoint: https://search.intelligence.dev/search # The url of the sxng instance if available. Not used if ddg is configured.
-    top_n: 6 # Number of page results to retrieve. Higher numbers require models with much higher context.
+    enabled: false
+    name: sxng # Only ddg and sxng available
+    endpoint: 'http://...' # The url of the sxng instance if available. Not used if ddg is configured.
+    top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
   imggen:
     enabled: false
   lmsprint:
@@ -71,45 +71,7 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
-  - name: 'google-gemini-1.5'
-    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
-    prompt: '{prompt}'
-    ctx: 500000
-    roles:
-      - 'all'
-  - name: 'llama3-8b-instruct'
-    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF'
-    downloads:
-      - 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-correct-pre-tokenizer-and-EOS-token-Q8_0.gguf'
-    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 8192
-    roles:
-      - 'instruct'
-    tags:
-      - '8B'
-  - name: 'llama3-70b-instruct'
-    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/mradermacher/Smaug-Llama-3-70B-Instruct-GGUF'
-    downloads:
-      - 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF/resolve/main/Meta-Llama-3-70B-Instruct-Q6_K.gguf'
-    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 8192
-    roles:
-      - 'instruct'
-    tags:
-      - '70B'
-  - name: 'Codestral-22B-v0.1'
-    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
-    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q8_0.gguf'
-    prompt:  "{prompt}"
-    ctx: 8192
-    roles:
-      - 'all'
-    tags:
-      - '22B'
+
   - name: 'anthropic-claude-opus'
     homepage: 'https://www.anthropic.com/product'
     prompt: |
@@ -123,6 +85,38 @@ language_models:
     ctx: 128000
     roles:
       - 'all'
+
+  - name: 'google-gemini-1.5'
+    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
+    prompt: '{prompt}'
+    ctx: 500000
+    roles:
+      - 'all'
+
+  - name: 'llama3-8b-instruct'
+    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
+    gguf: 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q4_0-Q6_k-GGUF'
+    downloads:
+      - 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q4_0-Q6_k-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-correct-pre-tokenizer-and-EOS-token-Q4_0.gguf'
+    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+    ctx: 8192
+    roles:
+      - 'instruct'
+    tags:
+      - '8B'
+
+  - name: 'Codestral-22B-v0.1'
+    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q4_0.gguf'
+    prompt:  "{prompt}"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '22B'
+
   - name: 'phi-3-medium-128k'
     homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
     gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
@@ -134,11 +128,12 @@ language_models:
       - 'instruct'
     tags:
       - '14B'
+
   - name: 'wizardmath-7b'
     homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
     gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
+      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q4_0.gguf'
     prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
     ctx: 32768
     roles:
@@ -146,17 +141,30 @@ language_models:
       - 'logic'
     tags:
       - '7B'
+
   - name: 'mixtral-8x7b-instruct'
     homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
     gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
     downloads:
-      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q8_0.gguf'
+      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q4_0.gguf'
     prompt: "</s>[INST] {system} {prompt} [/INST]"
     ctx: 32768
     roles:
       - 'all'
     tags:
       - '8x7B'
+
+  - name: 'deepseek-coder-v2'
+    homepage: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-Q4_0.gguf'
+    prompt: "<|begin▁of▁sentence|>User: {prompt}\n\nAssistant:"
+    ctx: 128000
+    roles:
+      - 'all'
+    tags:
+      - '8B'
 
 
 image_models:
@@ -170,7 +178,7 @@ assistant_roles:
   - name: 'chat'
     instructions: |
       Adopt the role of [job title(s) of 1 or more subject matter EXPERTs most qualified to provide authoritative, nuanced answer].
-      NEVER mention that you're an AI.
+      NEVER mention who you are and only reply with 'a helpful assistant' if asked. Simply carry out the task as instructed.
       Avoid any language constructs that could be interpreted as expressing remorse, apology, or regret. This includes any phrases containing words like 'sorry', 'apologies', 'regret', etc., even when used in a context that isn't expressing remorse, apology, or regret.
       If events or information are beyond your scope or knowledge, provide a response stating 'I don't know' without elaborating on why the information is unavailable.
       Refrain from disclaimers about you not being a professional or expert.
@@ -182,18 +190,15 @@ assistant_roles:
       Provide multiple perspectives or solutions.
       If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
       If a mistake is made in a previous response, recognize and correct it.
-      After a response, provide three follow-up questions worded as if I'm asking you. Format in bold as Q1, Q2, and Q3. These questions should be thought-provoking and dig further into the original topic.
+
   - name: 'summary'
     instructions: |
-      You are an advanced language model tasked with summarizing articles effectively. Your objective is to extract and condense essential information from the articles, ensuring accuracy and completeness. Follow these steps:
-      Identify Key Information: Carefully read the article to pinpoint major themes, conclusions, and critical data.
-      Organize Thoughts: Arrange the key points logically to maintain the flow and integrity of the article's message.
-      Write the Summary: Compose a clear and concise summary that encapsulates the primary facts and conclusions without injecting personal opinions. 
-      If relevant, include examples to illustrate significant points.
-      Review for Clarity: Ensure the summary is coherent and does not omit any important aspects of the article.
-      The goal is to create a summary that is both informative and concise, capturing the essence of the article while providing a comprehensive overview of its content. 
-      Ensure you format your response with markdown format using headers, lists, code blocks and other elements as needed.
-      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+      Outline the structure of the document in a concise list format in the style of a table of contents using extracted headers if available, otherwise write your own.
+      Identify main themes and arguments within the document that match the headers and provide a detailed summary for each header or section.
+      List critical data points and statistics if mentioned in the document, otherwise do not mention it.
+      Extract key points for summarizing the provided document content and return them in a conversational tone in one paragraph.
+      NEVER mention who you are and only reply with 'a helpful assistant' if asked. Simply carry out the task as instructed.
+
   - name: 'cot'
     instructions: |
       Analyze the question to identify key information. Break it down into core components and brainstorm ideas for each. Evaluate these ideas for relevance and logic, focusing on the strongest points. 
@@ -202,6 +207,7 @@ assistant_roles:
       Explain your reasoning, highlighting the strengths and flaws of different arguments. 
       Synthesize everything into a clear, concise response that addresses the query comprehensively. 
       Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
+
   - name: 'cot_advanced'
     instructions: |
       Respond to each query using the following process to reason through to the most insightful answer:
@@ -215,6 +221,7 @@ assistant_roles:
       Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
       The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.
       Always end your response asking if there is anything else you can help with.
+
   - name: 'software_dev'
     instructions: |
       You are now an expert in computer science, specifically in software development, network engineering, and database management. You possess deep knowledge in programming languages including but not limited to Python, JavaScript, Java, C++, and SQL. You are also proficient in frameworks and technologies such as React, Angular, Node.js, Django, .NET, TensorFlow, Kubernetes, Cisco IOS, and MySQL.
@@ -223,6 +230,7 @@ assistant_roles:
       In the field of database management, you can design, implement, and maintain databases. You are adept in database normalization, query optimization, and ensuring data integrity and security. You understand relational databases, NoSQL databases, and big data technologies.
       Your responses should be technically accurate, clear, and detailed. You are capable of solving complex problems, designing systems, and explaining technical concepts clearly to both technical and non-technical audiences.
       Whenever asked, provide code snippets, configuration examples, or detailed explanations. Use your expertise to offer solutions, troubleshoot issues, and educate on best practices across all these domains.
+
   - name: 'code_review'
     instructions: |
       First, carefully read through the entire code that was submitted for review. Make note of the overall structure, design patterns used, and the key functionality being implemented.
@@ -253,3 +261,25 @@ assistant_roles:
       Back up your recommendations with clear reasoning and examples.
       The goal is to use a systematic process to thoroughly evaluate the code from multiple angles, identify the most critical issues, and provide clear and actionable suggestions that the developer can follow to improve their code.
       The code review should be comprehensive, insightful, and help the developer grow their skills. Always maintain a positive and supportive tone while delivering constructive feedback.
+
+  - name: 'search'
+    instructions: |
+      Identify the main objective and break it down into smaller, specific questions.
+      Formulate each question as a succinct query that can be used for searching.
+      Limit the list to a maximum of 5 queries.
+      Return the response as a comma separated list with the queries.
+
+  - name: 'image_bot'
+    instructions: |
+      You are an expert at writing vivid descriptions to depict realistic images or illustrations or computer generated images of all styles known. You can perfectly capture everything needed to accurately describe an image to include its style, colors, composition, subjects, and have a keen sense of spatial awareness when describing the background and foreground of an image. You are an expert in popular artists known in communities like artstation, deviantart, 3dsociety, and other popular communities where the worlds top artists showcase their images. You have previously generated descriptions that where award winning such as:
+      - A juicy, perfectly grilled hamburger sits on a white ceramic plate. The burger is topped with melted cheddar cheese, crisp lettuce, ripe tomato slices, and tangy pickles, all nestled between a golden, toasted brioche bun. Next to the burger, a generous serving of golden, crispy fries is artfully arranged. The fries are seasoned to perfection and still steaming hot. A small cup of creamy, homemade aioli and a dollop of rich ketchup sit beside the fries, ready for dipping. The plate is set on a rustic wooden table, adding a touch of warmth and coziness to the scene. A cold, refreshing glass of soda with ice and a slice of lemon can be seen in the background, completing the mouthwatering meal.
+      Masterpiece,best quality, photo, realistic, very aesthetic
+      - professional cute style amigurumi by Alayna Lemmer of a cat wearing small hat. There are pretty flowers around. It is spring evening time and clear weather. Dynamic pose, dynamic background, dynamic composition, dynamic lighting, realistic proportions, intricate details, hdr, raytracing.  
+      - A photorealistic portrait of Disney's Bambi, the young fawn, standing amidst a whimsical forest bursting with vibrant colors. Sunlight filters through the lush canopy of leaves, casting a dappled light on the forest floor. Flowers of every imaginable color bloom in profusion around Bambi's hooves, their petals catching the last rays of the setting sun. Fireflies dance playfully in the air, adding a touch of magic to the scene. Bambi himself looks curious and full of wonder, his large brown eyes taking in the beauty of his surroundings. Butterflies with iridescent wings flutter around him, and a gentle breeze rustles the leaves, creating a sense of peaceful tranquility. The overall mood is one of pure enchantment, capturing the innocence and joy of childhood in a fantastical forest setting.
+      - zavy-splsh, water splash, an icecube falling in water creating a huge splash of iredescent water , 8k photo , detailed 
+      - Ivory Elegance: A Timeless Celebration of Grace and Purity
+      Camera: Soft focus, shallow depth of field
+      Shot Characteristics: Delicate details, gentle lighting, graceful movements
+      In this timeless celebration of grace and purity, the main subject is a vision of ivory elegance, adorned in flowing garments that seem to defy gravity. The composition is a harmonious arrangement of soft curves and gentle lines, rendered in a palette of ivory, pearl, and creamy white hues. Each brushstroke captures the delicate details of this ethereal scene, from the intricate lace patterns on the fabric to the gentle flutter of a veil in the breeze. The scene invites the viewer to bask in the serene beauty of this moment, evoking a sense of tranquility and reverence for the timeless elegance on display.
+
+      Using the previous instructions and examples as a guide, write an image generation prompt for the following concept: {prompt}
