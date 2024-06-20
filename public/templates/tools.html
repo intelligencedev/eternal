@@ -13,7 +13,7 @@
       <div class="card-body tab-content mh-100">
         <div>
           <p class="mb-0"><strong>TopN:</strong> 
-            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider">
+            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider" oninput="updateMemorySliderValue()">
             <span id="memory-topn-value">1</span>
           </p>
         </div>
@@ -24,8 +24,8 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="webrag-switch">
-          <label class="form-check-label" for="webrag-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="webget-switch" onclick="toggleTool('webget')">
+          <label class="form-check-label" for="webget-switch">
             Web Retrieval
           </label>
         </div>
@@ -41,7 +41,7 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="websearch-switch" onclick="updateSearchTool()">
           <label class="form-check-label" for="websearch-switch">
             Web Search
           </label>
@@ -59,13 +59,13 @@
             </label>
           </div>
           <div class="form-check">
-            <input class="form-check-input" type="radio" value="frontend" name="radio-group-search" id="sxng-radio" checked>
+            <input class="form-check-input" type="radio" value="frontend" name="radio-group-search" id="sxng-radio">
             <label class="form-check-label" for="sxng-radio">
               SXNG
             </label>
           </div>
           <p class="mb-0"><strong>TopN - Number of web search results to retrieve:</strong> 
-            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider">
+            <input type="range" class="form-range" min="1" max="6" step="1" value="1" id="websearch-slider" oninput="updateSearchTool()">
             <span id="websearch-topn-value">1</span>
           </p>
         </div>
@@ -73,3 +73,58 @@
     </div>
   </div>
 </div>
+
+<script>
+  function toggleTool(toolName) {
+    // Get the topN value
+    const topN = document.getElementById(`${toolName}-topn-value`).innerText;
+    postToolValue(toolName, topN);
+  }
+
+  function postToolValue(toolName, enabled, topN) {
+    fetch(`/tool/${toolName}/${enabled}/${topN}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log(data.message);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+
+  async function getTools() {
+    try {
+      const response = await fetch('/tools/list');
+      const tools = await response.json();
+      const toolView = document.getElementById('tool-view'); // Corrected id
+      toolView.innerHTML = ''; // Clear any existing content
+
+      tools.forEach(tool => {
+        // print the enabled value
+        console.log('Tool:', tool.Name, 'Enabled:', tool.Enabled);
+      });
+    } catch (error) {
+      console.error('Error fetching tools:', error);
+    }
+  }
+
+  function updateMemorySliderValue() {
+    const slider = document.getElementById('memory-slider');
+    const valueLabel = document.getElementById('memory-topn-value');
+    valueLabel.innerText = slider.value;
+  }
+
+  function updateSearchTool() {
+    // Get the enabled value from the switch
+    const enabled = document.getElementById('websearch-switch').checked;
+    const slider = document.getElementById('websearch-slider');
+    const valueLabel = document.getElementById('websearch-topn-value');
+    valueLabel.innerText = slider.value;
+    postToolValue('websearch', enabled, slider.value);
+  }
+</script>

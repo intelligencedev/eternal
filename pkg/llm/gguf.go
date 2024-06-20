@@ -165,8 +165,11 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled
-		"--flash-attn", // enable flash attention, default disabled
-		//"--mlock",
+		//"--flash-attn", // enable flash attention, default disabled
+		"--batch-size", "2048",
+		"--ubatch-size", "2048",
+		//"--cont-batching", // enable continuous batching, default disabled
+		"--mlock",
 		"--seed", "-1",
 		//"--no-mmap",
 		"--simple-io",
@@ -299,7 +302,7 @@ func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOption
 			// Send the accumulated content
 			// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet url='http://localhost:1313/v1/exec' sandbox='go' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
 			//formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg, turnIDStr)
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1, rounded-2' hx-trigger='load'>%s</div><codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg)
+			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
 			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 				pterm.Error.Println("WebSocket write error:", err)
 				return err

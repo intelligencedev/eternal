@@ -45,7 +45,7 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 
 	// Tool routes
 	app.Get("/tools/list", handleToolList(config))
-	app.Post("/tool/:toolName", handleToolToggle(config))
+	app.Post("/tool/:toolName/:enabled/:topN", handleToolToggle(config))
 	app.Get("/dpsearch", handleDPSearch())
 
 	// Utility routes

@@ -1,3 +1,4 @@
+// web.go
 package web
 
 import (
@@ -11,6 +12,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 	"github.com/go-shiori/go-readability"
@@ -44,6 +46,8 @@ var (
 		"apnews.com",
 		"bloomberg.com",
 		"polygon.com",
+		"reddit.com",
+		"indeed.com",
 		// Add more URLs to block from search results
 	}
 
@@ -67,6 +71,18 @@ func WebGetHandler(address string) (string, error) {
 	var docs string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(address),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			headers := map[string]interface{}{
+				"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+				"Referer":         "https://www.google.com/",
+				"Accept-Language": "en-US,en;q=0.9",
+				"X-Forwarded-For": "203.0.113.195",
+				"Accept-Encoding": "gzip, deflate, br",
+				"Connection":      "keep-alive",
+				"DNT":             "1",
+			}
+			return network.SetExtraHTTPHeaders(network.Headers(headers)).Do(ctx)
+		}),
 		chromedp.WaitReady("body"),
 		chromedp.OuterHTML("html", &docs),
 	)
@@ -97,7 +113,9 @@ func WebGetHandler(address string) (string, error) {
 
 	text := doc.Find("body").Text()
 
-	pterm.Info.Println("Document:", text)
+	text = removeEmptyRows(text)
+
+	//pterm.Info.Println("Document:", text)
 
 	return text, nil
 }
@@ -297,4 +315,17 @@ func RemoveUrls(input string) string {
 	}
 
 	return input
+}
+
+func removeEmptyRows(input string) string {
+	lines := strings.Split(input, "\n")
+	var filteredLines []string
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	return strings.Join(filteredLines, "\n")
 }

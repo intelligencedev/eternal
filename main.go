@@ -219,7 +219,7 @@ func initializeDatabase(dataPath string) error {
 		return err
 	}
 
-	return sqliteDB.AutoMigrate(&Project{}, &ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{})
+	return sqliteDB.AutoMigrate(&Project{}, &ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{}, &URLTracking{})
 }
 
 // initializeSearchIndex initializes the search index
@@ -356,6 +356,22 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 
 			if err := os.RemoveAll(filepath.Join(config.DataPath, "eternaldata.db")); err != nil {
 				log.Fatalf("Failed to delete database: %v", err)
+			}
+
+			// Loop through the config models and delete the cache
+			for _, model := range modelParams {
+				if model.Downloaded {
+					cachePath := filepath.Join(config.DataPath, "models", model.Name, "cache")
+
+					// First check if the cache file exists
+					if _, err := os.Stat(cachePath); err == nil {
+						pterm.Warning.Printf("Deleting cache: %s\n", cachePath)
+
+						if err := os.RemoveAll(cachePath); err != nil {
+							log.Fatalf("Failed to delete cache: %v", err)
+						}
+					}
+				}
 			}
 		}
 

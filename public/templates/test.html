@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Paragraph</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden-text {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p id="test-paragraph" class="hidden-text"></p>
+    </div>
+
+    <script>
+        // Obfuscated text
+        const obfuscatedText = [
+            'T', 'h', 'i', 's', ' ',
+            'i', 's', ' ',
+            'a', ' ',
+            't', 'e', 's', 't', ' ',
+            'p', 'a', 'r', 'a', 'g', 'r', 'a', 'p', 'h', '.'
+        ];
+
+        // Function to deobfuscate and display the text
+        function displayText() {
+            const paragraph = document.getElementById('test-paragraph');
+            paragraph.textContent = obfuscatedText.join('');
+            paragraph.classList.remove('hidden-text');
+        }
+
+        // Add a delay to simulate human interaction
+        setTimeout(displayText, 2000);
+    </script>
+</body>
+</html>
