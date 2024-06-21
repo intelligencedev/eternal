@@ -65,14 +65,14 @@ anthropic_key: '...'
 google_key: '...'
 
 language_models:
-  - name: 'openai-gpt'
+  - name: 'openai-gpt-4o'
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
     prompt: '{system}\n\n{prompt}'
     ctx: 128000
     roles:
       - 'all'
 
-  - name: 'anthropic-claude-opus'
+  - name: 'anthropic-claude-3.5-sonnet'
     homepage: 'https://www.anthropic.com/product'
     prompt: |
       Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
