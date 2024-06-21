@@ -4,7 +4,7 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="memory-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="memory-switch" onclick="updateMemoryTool()">
           <label class="form-check-label" for="memory-switch">
             Chat Memory
           </label>
@@ -13,7 +13,7 @@
       <div class="card-body tab-content mh-100">
         <div>
           <p class="mb-0"><strong>TopN:</strong> 
-            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider" oninput="updateMemorySliderValue()">
+            <input type="range" class="form-range" min="1" max="25" step="2" value="1" id="memory-slider" oninput="updateMemoryTool()">
             <span id="memory-topn-value">1</span>
           </p>
         </div>
@@ -24,7 +24,7 @@
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
         <div class="form-check-reverse form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" value="" id="webget-switch" onclick="toggleTool('webget')">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="webget-switch" onclick="updateWebgetTool()">
           <label class="form-check-label" for="webget-switch">
             Web Retrieval
           </label>
@@ -75,12 +75,6 @@
 </div>
 
 <script>
-  function toggleTool(toolName) {
-    // Get the topN value
-    const topN = document.getElementById(`${toolName}-topn-value`).innerText;
-    postToolValue(toolName, topN);
-  }
-
   function postToolValue(toolName, enabled, topN) {
     fetch(`/tool/${toolName}/${enabled}/${topN}`, {
       method: 'POST',
@@ -101,11 +95,10 @@
     try {
       const response = await fetch('/tools/list');
       const tools = await response.json();
-      const toolView = document.getElementById('tool-view'); // Corrected id
-      toolView.innerHTML = ''; // Clear any existing content
+      const toolView = document.getElementById('tool-view');
+      toolView.innerHTML = '';
 
       tools.forEach(tool => {
-        // print the enabled value
         console.log('Tool:', tool.Name, 'Enabled:', tool.Enabled);
       });
     } catch (error) {
@@ -113,14 +106,20 @@
     }
   }
 
-  function updateMemorySliderValue() {
+  function updateMemoryTool() {
+    const enabled = document.getElementById('memory-switch').checked;
     const slider = document.getElementById('memory-slider');
     const valueLabel = document.getElementById('memory-topn-value');
     valueLabel.innerText = slider.value;
+    postToolValue('memory', enabled, slider.value);
+  }
+
+  function updateWebgetTool() {
+    const enabled = document.getElementById('webget-switch').checked;
+    postToolValue('webget', enabled, 1); // Assuming webget doesn't have a slider, we pass 1 as topN
   }
 
   function updateSearchTool() {
-    // Get the enabled value from the switch
     const enabled = document.getElementById('websearch-switch').checked;
     const slider = document.getElementById('websearch-slider');
     const valueLabel = document.getElementById('websearch-topn-value');
