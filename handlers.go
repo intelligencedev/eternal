@@ -681,18 +681,18 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
 
 			// Set the model options.
-			repeatPenalty := 1.1
-			temperature := 0.7
-			tp := 1.0
-			tk := 1
+			// repeatPenalty := 1.1
+			// temperature := 0.2
+			// tp := 0.95
+			// tk := 40
 
 			// If any of the tools are enabled, lower the RepeatPenalty to 1.0
-			if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
-				temperature = 0.2
-				repeatPenalty = 1.0 // 1.0 = disabled
-				tp = 0.95
-				tk = 40
-			}
+			// if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
+			// 	temperature = 0.2
+			// 	repeatPenalty = 1.0 // 1.0 = disabled
+			// 	tp = 0.95
+			// 	tk = 40
+			// }
 
 			// Set the model options.
 			modelOpts := &llm.GGUFOptions{
@@ -700,10 +700,10 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 				Model:         model.Options.Model,
 				Prompt:        fullPrompt,
 				CtxSize:       model.Options.CtxSize,
-				Temp:          temperature,
-				RepeatPenalty: repeatPenalty,
-				TopP:          tp,
-				TopK:          tk,
+				Temp:          model.Options.Temp,
+				RepeatPenalty: model.Options.RepeatPenalty,
+				TopP:          model.Options.TopP,
+				TopK:          model.Options.TopK,
 			}
 
 			// Make a completion request to the model and send the response over WebSocket.
@@ -750,7 +750,7 @@ func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 	}
 
 	// Stream the completion response from Anthropic to the WebSocket.
-	res := anthropic.StreamCompletionToWebSocket(c, chatID, "claude-3-opus-20240229", messages, 0.5, apiKey)
+	res := anthropic.StreamCompletionToWebSocket(c, chatID, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey)
 	if res != nil {
 		pterm.Error.Println("Error in anthropic completion:", res)
 	}

@@ -43,6 +43,39 @@ In general, if a bug is encountered or there are issues, the best thing to do is
 
 If you encounter a bug, please open an issue.
 
+## LLM Parameters
+
+### Creative Writing (e.g., story generation, poetry)
+- **TopK Range:** 40-100
+- **TopP Range:** 0.8-0.95
+- **Reason:** Higher TopP values encourage more diversity and creativity, allowing for unexpected and novel combinations of words.
+
+### Conversational Agents (e.g., chatbots)
+- **TopK Range:** 10-50
+- **TopP Range:** 0.7-0.9
+- **Reason:** A moderate TopP range ensures responses are relevant and contextually appropriate while maintaining some level of diversity.
+
+### Technical Writing (e.g., code generation, documentation)
+- **TopK Range:** 1-10
+- **TopP Range:** 0.5-0.7
+- **Reason:** Lower TopP values ensure precision and correctness, as the output needs to be highly accurate and specific.
+
+### Summarization
+- **TopK Range:** 5-20
+- **TopP Range:** 0.6-0.8
+- **Reason:** A balance is needed to ensure the summary is concise and relevant without losing important details.
+
+### Translation
+- **TopK Range:** 5-30
+- **TopP Range:** 0.6-0.85
+- **Reason:** Ensures the translation is accurate and contextually appropriate, with some flexibility for natural language variations.
+
+### Question Answering
+- **TopK Range:** 1-5
+- **TopP Range:** 0.3-0.6
+- **Reason:** Requires highly accurate and specific answers, so a very low TopP range is ideal to avoid irrelevant or incorrect responses.
+
+
 ## Tool Configuration
 
 The tools are highly experimental and may not work as intended in some cases. It is recommended that the memory tool be disabled when enabling the web tools to prevent Eternal from running that embeddings workflow for memory which can be time consuming on large documents. This will be improved in future updates.
