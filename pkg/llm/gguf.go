@@ -161,7 +161,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,
 		"--top-k", topK,
-		//"--n-gpu-layers", fmt.Sprintf("%d", options.NGPULayers),
+		"--n-gpu-layers", "99",
 		"--multiline-input",
 		"--temp", temp,
 		//--dynatemp-range", "0.5", // 0.0 = disabled

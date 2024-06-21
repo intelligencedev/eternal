@@ -126,13 +126,17 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 		pterm.Info.Println(toolName)
 
 		switch toolName {
+		case "memory":
+			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
+			config.Tools.Memory.Enabled = enabledBool
+			config.Tools.Memory.TopN = topNInt
+		case "webget":
+			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
+			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
 		case "websearch":
 			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
 			config.Tools.WebSearch.Enabled = enabledBool
 			config.Tools.WebSearch.TopN = topNInt
-		case "webget":
-			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
-			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
 		case "imggen":
 			config.Tools.ImgGen.Enabled = true
 		default:
