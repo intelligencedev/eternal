@@ -10,7 +10,7 @@
           <h6 class="dropdown-header">Public Models</h6>
         </li>
         {{range .models}}
-        {{if (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
+        {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
         <li><a href="/modelcards" hx-get="/modelcards" class="dropdown-item"
             onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
         {{end}}
@@ -22,7 +22,7 @@
           <h6 class="dropdown-header">Local Models</h6>
         </li>
         {{range .models}}
-        {{if not (or (eq .Name "openai-gpt") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-opus"))}}
+        {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
         <li><a href="#" class="dropdown-item" onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
         {{end}}
         {{end}}
@@ -61,7 +61,7 @@
       if (modelData) {
         const modelInfoContainer = document.getElementById('model-info-container');
 
-        if (!modelData.Downloaded && !['openai-gpt', 'google-gemini-1.5', 'anthropic-claude-opus'].includes(modelData.Name)) {
+        if (!modelData.Downloaded && !['openai-gpt-4o', 'google-gemini-1.5', 'anthropic-claude-3.5-sonnet'].includes(modelData.Name)) {
           modelInfoContainer.innerHTML = `
         <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
           <div class="card-header">${modelData.Name}</div>
