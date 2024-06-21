@@ -169,13 +169,15 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--batch-size", "2048",
 		"--ubatch-size", "2048",
 		//"--cont-batching", // enable continuous batching, default disabled
-		"--mlock",
+		//"--mlock",
 		"--seed", "-1",
 		//"--no-mmap",
 		"--simple-io",
 		"--keep", "-1",
-		"--prompt-cache", cache,
-		"--prompt-cache-all",
+		//"--prompt-cache", cache,
+		//"--prompt-cache-all",
+		//"-ctk", "q4_0",
+		//"-ctv", "q4_0",
 		//"--grammar-file", "./json.gbnf",
 		//"--override-kv", "llama.expert_used_count=int:3", // mixtral only
 	}

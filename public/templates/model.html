@@ -91,6 +91,14 @@
               <input type="range" class="form-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
               <span id="temp-value">${modelData.Options.temp}</span>
             </p>
+            <p><strong>TopP:</strong> 
+              <input type="range" class="form-range" min="0.0" max="1.0" step="0.1" value="${modelData.Options.top_p}" id="topp-slider">
+              <span id="topp-value">${modelData.Options.top_p}</span>
+            </p>
+            <p><strong>TopK:</strong> 
+              <input type="range" class="form-range" min="5" max="100" step="5" value="${modelData.Options.top_k}" id="topk-slider">
+              <span id="topk-value">${modelData.Options.top_k}</span>
+            </p>
             <p><strong>Repetition Penalty:</strong> 
               <input type="range" class="form-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
               <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span>
@@ -110,18 +118,36 @@
             document.getElementById('temp-value').textContent = this.value;
           });
 
+          document.getElementById('topp-slider').addEventListener('input', function () {
+            document.getElementById('topp-value').textContent = this.value;
+          });
+
+          document.getElementById('topk-slider').addEventListener('input', function () {
+            document.getElementById('topk-value').textContent = this.value;
+          });
+
+          document.getElementById('repeat-penalty-slider').addEventListener('input', function () {
+            document.getElementById('repeat-penalty-value').textContent = this.value;
+          });
+
           // Add event listener to save the model parameters
           const saveButton = document.getElementById('saveModelParamsBtn');
           saveButton.addEventListener('click', async () => {
             try {
               const ctxSize = parseInt(document.getElementById('ctx-size-slider').value);
               const temp = parseFloat(document.getElementById('temp-slider').value);
+              const top_p = parseFloat(document.getElementById('topp-slider').value);
+              const top_k = parseInt(document.getElementById('topk-slider').value);
+              const repeat_penalty = parseFloat(document.getElementById('repeat-penalty-slider').value);
 
               const modelParams = {
                 Name: modelData.Name,
                 Options: {
                   ctx_size: ctxSize,
                   temp: temp,
+                  top_p: top_p,
+                  top_k: top_k,
+                  repeat_penalty: repeat_penalty,
                   // Include other options if necessary
                 },
               };

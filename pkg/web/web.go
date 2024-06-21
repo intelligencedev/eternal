@@ -48,6 +48,7 @@ var (
 		"polygon.com",
 		"reddit.com",
 		"indeed.com",
+		"test.com",
 		// Add more URLs to block from search results
 	}
 
