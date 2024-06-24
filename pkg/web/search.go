@@ -23,7 +23,7 @@ func postRequest(endpoint string, queryParam string) (string, error) {
 	// Create a new POST request
 	req, err := http.NewRequest("POST", endpoint, data)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %v", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set the appropriate headers
@@ -33,7 +33,7 @@ func postRequest(endpoint string, queryParam string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to perform request: %v", err)
+		return "", fmt.Errorf("failed to perform request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -53,7 +53,7 @@ func postRequest(endpoint string, queryParam string) (string, error) {
 func extractURLs(htmlContent string) ([]string, error) {
 	doc, err := html.Parse(strings.NewReader(htmlContent))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse HTML: %v", err)
+		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
 	var urls []string
@@ -78,13 +78,13 @@ func extractURLs(htmlContent string) ([]string, error) {
 func GetSearXNGResults(endpoint string, query string) []string {
 	htmlContent, err := postRequest(endpoint, query)
 	if err != nil {
-		pterm.Error.Sprintf("Error: %v\n", err)
+		pterm.Error.Printf("Error: %v\n", err)
 		return nil
 	}
 
 	urls, err := extractURLs(htmlContent)
 	if err != nil {
-		pterm.Error.Sprintf("Error extracting URLs: %v\n", err)
+		pterm.Error.Printf("Error extracting URLs: %v\n", err)
 		return nil
 	}
 

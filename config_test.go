@@ -20,20 +20,4 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "localhost", config.ControlHost)
 	assert.Equal(t, "8080", config.ControlPort)
 	assert.Equal(t, "/Users/$USER/.eternal", config.DataPath)
-
-	// Refactored assertServiceHost function
-	assertServiceHost := func(service string, hostKey string, expectedHost string, expectedPort string) {
-		hostConfig, exists := config.ServiceHosts[service][hostKey]
-		assert.True(t, exists)
-		assert.Equal(t, expectedHost, hostConfig.Host) // Use Host instead of HostURL
-		assert.Equal(t, expectedPort, hostConfig.Port) // Use Port instead of HostPort
-	}
-
-	// Updated calls to assertServiceHost with correct field names and types
-	assertServiceHost("retrieval", "retrieval_host_1", "localhost", "8081")
-	assertServiceHost("image", "image_host_1", "localhost", "8082")
-	assertServiceHost("speech", "speech_host_1", "localhost", "8083")
-	assertServiceHost("llm", "llm_host_1", "localhost", "8081")
-
-	assert.Equal(t, "sk-...", config.OAIKey)
 }

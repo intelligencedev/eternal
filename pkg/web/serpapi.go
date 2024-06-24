@@ -22,7 +22,7 @@ func GetSerpResults(query string, apikey string) (*[]SearchData, error) {
 	search := g.NewGoogleSearch(parameter, apikey)
 	results, err := search.GetJSON()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	resdata := []SearchData{}
