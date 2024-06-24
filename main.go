@@ -33,14 +33,6 @@ import (
 //go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 var embedfs embed.FS
 
-var (
-	devMode     bool     // If enabled, removes the database and search index on shutdown
-	osFS        afero.Fs = afero.NewOsFs()
-	chatTurn             = 1
-	sqliteDB    *SQLiteDB
-	searchIndex bleve.Index
-)
-
 // WebSocketMessage represents the structure of a WebSocket message
 type WebSocketMessage struct {
 	ChatMessage string                 `json:"chat_message"`
@@ -86,6 +78,10 @@ func main() {
 		pterm.Error.Println("Error loading config:", err)
 		os.Exit(1)
 	}
+
+	// Set defaults
+	// Set default assistant role
+	config.CurrentRoleInstructions = config.AssistantRoles[0].Instructions
 
 	// Initialize tools based on config
 	tools := initializeTools(config)

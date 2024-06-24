@@ -103,7 +103,22 @@
               <input type="range" class="form-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
               <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span>
             </p>
-            <p><strong>Prompt Template:</strong> ${modelData.Options.prompt}</p>
+            
+            <div class="accordion" id="promptTemplateAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#promptTemplateContent" aria-expanded="false" aria-controls="promptTemplateContent">
+                    Prompt Template
+                  </button>
+                </h2>
+                // Style the pre element so it displays scrollbars by default
+                <div id="promptTemplateContent" class="accordion-collapse collapse" data-bs-parent="#promptTemplateAccordion">
+                  <div class="accordion-body" style="overflow: auto;">
+                    <pre>${modelData.Options.prompt}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <button id="saveModelParamsBtn" class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);" onclick="saveModelParams('${modelData.Name}')">Save</button>
         </div>

@@ -5,32 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	"github.com/nlpodyssey/cybertron/pkg/models/bert"
-	"github.com/nlpodyssey/cybertron/pkg/tasks"
-	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
-
-	"github.com/blevesearch/bleve/v2"
-	index "github.com/blevesearch/bleve_index_api"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/gofiber/websocket/v2"
-	"github.com/pterm/pterm"
-	"github.com/valyala/fasthttp"
-	"gorm.io/gorm"
-
 	"eternal/pkg/documents"
 	"eternal/pkg/embeddings"
-	"eternal/pkg/hfutils"
 	"eternal/pkg/llm"
 	"eternal/pkg/llm/anthropic"
 	"eternal/pkg/llm/google"
@@ -38,465 +14,30 @@ import (
 	"eternal/pkg/sd"
 	"eternal/pkg/vecstore"
 	"eternal/pkg/web"
-)
+	"fmt"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
-var assistantRole = "You are a helpful AI assistant that responds in well-structured markdown format. Do not repeat your instructions. Do not deviate from the topic."
+	"github.com/blevesearch/bleve/v2"
+	index "github.com/blevesearch/bleve_index_api"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/websocket/v2"
+	"github.com/nlpodyssey/cybertron/pkg/models/bert"
+	"github.com/nlpodyssey/cybertron/pkg/tasks"
+	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
+	"github.com/pterm/pterm"
+	"github.com/valyala/fasthttp"
+)
 
 type ChatTurnMessage struct {
 	ID       string `json:"id"`
 	Prompt   string `json:"prompt"`
 	Response string `json:"response"`
 	Model    string `json:"model"`
-}
-
-// handleListProjects retrieves and returns a list of projects from the database.
-func handleListProjects() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		projects, err := sqliteDB.ListProjects()
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get projects"})
-		}
-		return c.Status(fiber.StatusOK).JSON(projects)
-	}
-}
-
-// handleUpload handles file uploads and saves them to the specified directory.
-func handleUpload(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		pterm.Warning.Println("Uploads route hit")
-
-		form, err := c.MultipartForm()
-		if err != nil {
-			return err
-		}
-
-		files := form.File["file"]
-		for _, file := range files {
-			filename := filepath.Join(config.DataPath, "web", "uploads", file.Filename)
-			pterm.Warning.Printf("Uploading file: %s\n", filename)
-			if err := c.SaveFile(file, filename); err != nil {
-				return err
-			}
-			log.Infof("Uploaded file %s to %s", file.Filename, filename)
-
-			// If the file is a pdf, extract the text content and print it as Markdown.
-			if strings.HasSuffix(file.Filename, ".pdf") {
-				pdfDoc, err := documents.GetPdfContents(filename)
-				if err != nil {
-					pterm.Error.Println(err)
-				}
-
-				err = searchIndex.Index(file.Filename, pdfDoc)
-				if err != nil {
-					log.Errorf("Error storing chat message in Bleve: %v", err)
-				}
-
-				return c.JSON(fiber.Map{"file": file.Filename, "content": pdfDoc})
-			}
-		}
-
-		// return the file path of all the documents uploaded
-		return c.JSON(fiber.Map{"files": files})
-	}
-}
-
-// handleToolToggle toggles the state of various tools based on the provided tool name.
-func handleToolToggle(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		toolName := c.Params("toolName")
-		enabled := c.Params("enabled")
-		topN := c.Params("topN")
-
-		pterm.Info.Println(enabled)
-
-		// Convert the enabled parameter to a boolean.
-		enabledBool, err := strconv.ParseBool(enabled)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid enabled parameter")
-		}
-
-		// Convert the topN parameter to an integer.
-		topNInt, err := strconv.Atoi(topN)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid topN parameter")
-		}
-
-		// Print the params to the console.
-		pterm.Info.Println("Params:")
-		pterm.Info.Println(toolName)
-
-		switch toolName {
-		case "memory":
-			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
-			config.Tools.Memory.Enabled = enabledBool
-			config.Tools.Memory.TopN = topNInt
-		case "webget":
-			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
-			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
-		case "websearch":
-			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
-			config.Tools.WebSearch.Enabled = enabledBool
-			config.Tools.WebSearch.TopN = topNInt
-		case "imggen":
-			config.Tools.ImgGen.Enabled = true
-		default:
-			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
-		}
-
-		return c.JSON(fiber.Map{
-			"message": fmt.Sprintf("Tool %s toggled", toolName)})
-	}
-}
-
-// handleToolList retrieves and returns a list of tools from the configuration with all parameters.
-func handleToolList(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(config.Tools)
-	}
-}
-
-// handleOpenAIModels retrieves and returns a list of OpenAI models.
-func handleOpenAIModels(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		client := openai.NewClient(config.OAIKey)
-		modelsResponse, err := openai.GetModels(client)
-
-		if err != nil {
-			log.Errorf(err.Error())
-			return c.Status(500).SendString("Server Error")
-		}
-
-		var gptModels []string
-		for _, model := range modelsResponse.Data {
-			if strings.HasPrefix(model.ID, "gpt") {
-				gptModels = append(gptModels, model.ID)
-			}
-		}
-
-		return c.JSON(fiber.Map{
-			"object": "list",
-			"data":   gptModels,
-		})
-	}
-}
-
-// handleModelData retrieves and returns data for a specific model.
-func handleModelData() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		var model ModelParams
-		modelName := c.Params("modelName")
-		err := sqliteDB.First(modelName, &model)
-
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return c.Status(fiber.StatusNotFound).SendString("Model not found")
-			}
-			return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-		}
-
-		return c.JSON(model)
-	}
-}
-
-// handleModelDownloadUpdate updates the download status of a model.
-func handleModelDownloadUpdate() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		modelName := c.Params("modelName")
-		var payload struct {
-			Downloaded bool `json:"downloaded"`
-		}
-
-		if err := c.BodyParser(&payload); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
-		}
-
-		err := sqliteDB.UpdateDownloadedByName(modelName, payload.Downloaded)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to update model: %v", err)})
-		}
-
-		return c.JSON(fiber.Map{
-			"success": true,
-			"message": "Model 'Downloaded' status updated successfully",
-		})
-	}
-}
-
-// handleModelUpdate updates the model data in the database.
-func handleModelUpdate() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		var model ModelParams
-		if err := c.BodyParser(&model); err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Cannot parse JSON")
-		}
-
-		err := sqliteDB.UpdateByName(model.Name, model)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-		}
-
-		return c.JSON(model)
-	}
-}
-
-// handleModelCards retrieves and renders model cards.
-func handleModelCards(modelParams []ModelParams) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		err := sqliteDB.Find(&modelParams)
-
-		if err != nil {
-			log.Errorf("Database error: %v", err)
-			return c.Status(500).SendString("Server Error")
-		}
-
-		return c.Render("templates/model", fiber.Map{"models": modelParams})
-	}
-}
-
-// handleModelSelect handles the selection of models for use.
-func handleModelSelect() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		modelName := c.Params("name")
-		action := c.Params("action")
-
-		if action == "add" {
-			if err := AddSelectedModel(sqliteDB.db, modelName); err != nil {
-				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-			}
-		} else if action == "remove" {
-			if err := RemoveSelectedModel(sqliteDB.db, modelName); err != nil {
-				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-			}
-		} else {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid action")
-		}
-
-		return c.SendStatus(fiber.StatusOK)
-	}
-}
-
-// handleSelectedModels retrieves and returns the list of selected models.
-func handleSelectedModels() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		selectedModels, err := GetSelectedModels(sqliteDB.db)
-
-		if err != nil {
-			log.Errorf("Error getting selected models: %v", err)
-			return c.Status(500).SendString("Server Error")
-		}
-
-		var selectedModelNames []string
-		for _, model := range selectedModels {
-			selectedModelNames = append(selectedModelNames, model.ModelName)
-		}
-
-		return c.JSON(selectedModelNames)
-	}
-}
-
-// handleModelDownload handles the download of a specified model.
-func handleModelDownload(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		pterm.Error.Println("Download route hit")
-		modelName := c.Query("model")
-
-		if modelName == "" {
-			log.Errorf("Missing parameters for download")
-			return c.Status(fiber.StatusBadRequest).SendString("Missing parameters")
-		}
-
-		var downloadURL string
-		for _, model := range config.LanguageModels {
-			if model.Name == modelName {
-				downloadURL = model.Downloads[0]
-				break
-			}
-		}
-
-		modelFileName := filepath.Base(downloadURL)
-		modelPath := filepath.Join(config.DataPath, "models", modelName, modelFileName)
-
-		var partialDownload bool
-		if info, err := os.Stat(modelPath); err == nil {
-			if info.Size() > 0 {
-				expectedSize, err := llm.GetExpectedFileSize(downloadURL)
-				if err != nil {
-					log.Errorf("Error getting expected file size: %v", err)
-				}
-				partialDownload = info.Size() < expectedSize
-			}
-		}
-
-		go func() {
-			var err error
-
-			if partialDownload {
-				pterm.Info.Printf("Resuming download for model: %s\n", modelName)
-				err = llm.Download(downloadURL, modelPath)
-			} else {
-				pterm.Info.Printf("Starting download for model: %s\n", modelName)
-				err = llm.Download(downloadURL, modelPath)
-			}
-
-			if err != nil {
-				log.Errorf("Error in download: %v", err)
-			} else {
-				err = sqliteDB.UpdateDownloadedByName(modelName, true)
-				if err != nil {
-					log.Errorf("Failed to update model downloaded state: %v", err)
-				}
-			}
-		}()
-
-		progressErr := fmt.Sprintf("<div class='w-100' id='progress-download-%s' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message' hx-trigger='load'></div>", modelName)
-
-		return c.SendString(progressErr)
-	}
-}
-
-// handleImgModelDownload handles the download of image generation models.
-func handleImgModelDownload(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		config.Tools.ImgGen.Enabled = true
-
-		modelName := c.Query("model")
-
-		var downloadURL string
-		for _, model := range config.ImageModels {
-			if model.Name == modelName {
-				downloadURL = model.Downloads[0]
-			}
-		}
-
-		modelFileName := strings.Split(downloadURL, "/")[len(strings.Split(downloadURL, "/"))-1]
-
-		if modelName == "" {
-			log.Errorf("Missing parameters for download")
-			return c.Status(fiber.StatusBadRequest).SendString("Missing parameters")
-		}
-
-		modelRoot := fmt.Sprintf("%s/models/%s", config.DataPath, modelName)
-		modelPath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, modelFileName)
-		tmpPath := fmt.Sprintf("%s/tmp", config.DataPath)
-
-		if _, err := os.Stat(modelRoot); os.IsNotExist(err) {
-			if err := os.MkdirAll(modelRoot, 0755); err != nil {
-				log.Errorf("Error creating model directory: %v", err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-			}
-		}
-
-		if _, err := os.Stat(tmpPath); os.IsNotExist(err) {
-			if err := os.MkdirAll(tmpPath, 0755); err != nil {
-				log.Errorf("Error creating tmp directory: %v", err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-			}
-		}
-
-		if _, err := os.Stat(modelPath); err != nil {
-			dm := hfutils.ConcurrentDownloadManager{
-				FileName:    modelFileName,
-				URL:         downloadURL,
-				Destination: modelPath,
-				NumParts:    1,
-				TempDir:     tmpPath,
-			}
-
-			go dm.PrintProgress()
-
-			if err := dm.Download(); err != nil {
-				fmt.Println("Download failed:", err)
-			} else {
-				fmt.Println("Download successful!")
-			}
-		}
-
-		vaeName := "sdxl_vae.safetensors"
-		vaeURL := "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/blob/main/sdxl_vae.safetensors"
-		vaePath := fmt.Sprintf("%s/models/%s/%s", config.DataPath, modelName, vaeName)
-
-		if _, err := os.Stat(modelRoot); os.IsNotExist(err) {
-			if err := os.MkdirAll(modelRoot, 0755); err != nil {
-				log.Errorf("Error creating model directory: %v", err)
-				return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
-			}
-		}
-
-		if _, err := os.Stat(vaePath); os.IsNotExist(err) {
-			go func() {
-				response, err := http.Get(vaeURL)
-				if err != nil {
-					pterm.Error.Printf("Failed to download file: %v", err)
-					return
-				}
-				defer response.Body.Close()
-
-				file, err := os.Create(vaePath)
-				if err != nil {
-					pterm.Error.Printf("Failed to create file: %v", err)
-					return
-				}
-				defer file.Close()
-
-				_, err = io.Copy(file, response.Body)
-				if err != nil {
-					pterm.Error.Printf("Failed to write to file: %v", err)
-					return
-				}
-
-				pterm.Info.Printf("Downloaded file: %s", vaeName)
-			}()
-		}
-
-		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
-
-		return c.SendString(progressErr)
-	}
-}
-
-// handleRoleSelection handles the selection of assistant roles.
-func handleRoleSelection(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		roleName := c.Params("name")
-		var foundRole *struct {
-			Name         string `yaml:"name"`
-			Instructions string `yaml:"instructions"`
-		}
-
-		for i := range config.AssistantRoles {
-			if config.AssistantRoles[i].Name == roleName {
-				foundRole = &config.AssistantRoles[i]
-				break
-			}
-		}
-
-		if foundRole == nil {
-			pterm.Warning.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
-			for i := range config.AssistantRoles {
-				if config.AssistantRoles[i].Name == "chat" {
-					foundRole = &config.AssistantRoles[i]
-					break
-				}
-			}
-		}
-
-		if foundRole == nil && len(config.AssistantRoles) > 0 {
-			foundRole = &config.AssistantRoles[0]
-		}
-
-		if foundRole != nil {
-			assistantRole = foundRole.Instructions
-			pterm.Info.Printf("Role set to: %s\n", foundRole.Name)
-			pterm.Info.Println(foundRole.Instructions)
-			return c.JSON(fiber.Map{
-				"message": fmt.Sprintf("Role set to %s", foundRole.Name),
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "No roles configured",
-		})
-	}
 }
 
 // handleChatSubmit handles the submission of chat messages.
@@ -610,6 +151,57 @@ func handleDeleteChat() fiber.Handler {
 	}
 }
 
+// handleListProjects retrieves and returns a list of projects from the database.
+func handleListProjects() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projects, err := sqliteDB.ListProjects()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not get projects"})
+		}
+		return c.Status(fiber.StatusOK).JSON(projects)
+	}
+}
+
+// handleUpload handles file uploads and saves them to the specified directory.
+func handleUpload(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		pterm.Warning.Println("Uploads route hit")
+
+		form, err := c.MultipartForm()
+		if err != nil {
+			return err
+		}
+
+		files := form.File["file"]
+		for _, file := range files {
+			filename := filepath.Join(config.DataPath, "web", "uploads", file.Filename)
+			pterm.Warning.Printf("Uploading file: %s\n", filename)
+			if err := c.SaveFile(file, filename); err != nil {
+				return err
+			}
+			log.Infof("Uploaded file %s to %s", file.Filename, filename)
+
+			// If the file is a pdf, extract the text content and print it as Markdown.
+			if strings.HasSuffix(file.Filename, ".pdf") {
+				pdfDoc, err := documents.GetPdfContents(filename)
+				if err != nil {
+					pterm.Error.Println(err)
+				}
+
+				err = searchIndex.Index(file.Filename, pdfDoc)
+				if err != nil {
+					log.Errorf("Error storing chat message in Bleve: %v", err)
+				}
+
+				return c.JSON(fiber.Map{"file": file.Filename, "content": pdfDoc})
+			}
+		}
+
+		// return the file path of all the documents uploaded
+		return c.JSON(fiber.Map{"files": files})
+	}
+}
+
 // handleDPSearch handles search requests using DuckDuckGo.
 func handleDPSearch() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -679,7 +271,7 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 			// Prepare the full prompt for the model.
 			promptTemplate := model.Options.Prompt
 
-			fullInstructions := fmt.Sprintf("%s\n\n%s", assistantRole, chatMessage)
+			fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
 
 			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
 			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
