@@ -146,7 +146,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 
 	pterm.Warning.Printfln("Cache path: %s", cache)
 
-	//ctxSize := fmt.Sprintf("%d", options.CtxSize)
+	ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
 	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)
 	topP := fmt.Sprintf("%f", options.TopP)
@@ -156,7 +156,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		"--no-display-prompt",
 		"-m", options.Model,
 		"-p", options.Prompt,
-		"-c", "0", // 0 = loaded from model
+		"-c", ctxSize,
 		"--n-predict", "-2", // -1 = infinity, -2 = until context filled
 		"--repeat-penalty", repeatPenalty,
 		"--top-p", topP,

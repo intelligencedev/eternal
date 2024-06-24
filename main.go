@@ -97,6 +97,12 @@ func main() {
 	if err := createDataDirectory(config.DataPath); err != nil {
 		pterm.Error.Println("Error creating data directory:", err)
 		os.Exit(1)
+	} else {
+		// Delete all of the files in the web/public/tmp directory
+		tmpDir := filepath.Join(config.DataPath, "web", "public", "tmp")
+		if err := os.RemoveAll(tmpDir); err != nil {
+			pterm.Error.Println("Error deleting tmp directory:", err)
+		}
 	}
 
 	// Initialize server

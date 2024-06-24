@@ -23,7 +23,6 @@ config.yml
 *.log
 
 # Misc
-tmp
 reference
 cache
 embeddings.db

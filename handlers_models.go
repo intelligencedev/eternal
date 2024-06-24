@@ -4,6 +4,7 @@ import (
 	"errors"
 	"eternal/pkg/hfutils"
 	"eternal/pkg/llm"
+	"eternal/pkg/llm/openai"
 	"fmt"
 	"io"
 	"net/http"
@@ -288,5 +289,30 @@ func handleImgModelDownload(config *AppConfig) fiber.Handler {
 		progressErr := "<div name='sse-messages' class='w-100' id='sse-messages' hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'></div>"
 
 		return c.SendString(progressErr)
+	}
+}
+
+// handleOpenAIModels retrieves and returns a list of OpenAI models.
+func handleOpenAIModels(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		client := openai.NewClient(config.OAIKey)
+		modelsResponse, err := openai.GetModels(client)
+
+		if err != nil {
+			log.Errorf(err.Error())
+			return c.Status(500).SendString("Server Error")
+		}
+
+		var gptModels []string
+		for _, model := range modelsResponse.Data {
+			if strings.HasPrefix(model.ID, "gpt") {
+				gptModels = append(gptModels, model.ID)
+			}
+		}
+
+		return c.JSON(fiber.Map{
+			"object": "list",
+			"data":   gptModels,
+		})
 	}
 }

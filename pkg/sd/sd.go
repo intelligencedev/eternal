@@ -72,7 +72,7 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 	//modelPath := filepath.Join(dataPath, "models/StableDiffusion/sd15/dreamshaper_8_q5_1.gguf")
 	modelPath := filepath.Join(dataPath, "models/dreamshaper-8-turbo-sdxl/DreamShaperXL_Turbo_V2-SFW.safetensors")
 	vaePath := filepath.Join(dataPath, "models/dreamshaper-8-turbo-sdxl/sdxl_vae.safetensors")
-	outPath := filepath.Join(dataPath, "web/img/sd_out.png")
+	outPath := filepath.Join(dataPath, "web/tmp/sd_out.png")
 	cmdPath := filepath.Join(dataPath, "sd/sd")
 
 	pterm.Println("Command:", cmdPath)
