@@ -1,12 +1,23 @@
+// main_test.go
 package main
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func setupTestFiles(t *testing.T, baseDir string, files map[string]string) {
+	for name, content := range files {
+		err := ioutil.WriteFile(filepath.Join(baseDir, name), []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+}
 
 func TestHasMatchingExtension(t *testing.T) {
 	tests := []struct {
@@ -29,6 +40,93 @@ func TestHasMatchingExtension(t *testing.T) {
 	}
 }
 
+func TestProcessPath(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test files and directories
+	files := map[string]string{
+		"file1.txt": "Content of file1",
+		"file2.go":  "Content of file2",
+		"file3.jpg": "Content of file3",
+	}
+	subDir := filepath.Join(tempDir, "subdir")
+	os.Mkdir(subDir, 0755)
+	subFiles := map[string]string{
+		"subfile1.txt": "Content of subfile1",
+		"subfile2.go":  "Content of subfile2",
+	}
+
+	setupTestFiles(t, tempDir, files)
+	setupTestFiles(t, subDir, subFiles)
+
+	// Test non-recursive processing
+	fileContents := make(map[string]string)
+	fileStructure := make(map[string][]string)
+	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, false, fileContents, fileStructure)
+	if err != nil {
+		t.Fatalf("processPath failed: %v", err)
+	}
+
+	expectedFiles := []string{"file1.txt", "file2.go"}
+	for _, fileName := range expectedFiles {
+		if _, exists := fileContents[filepath.Join(tempDir, fileName)]; !exists {
+			t.Errorf("Expected file %s not found in fileContents", fileName)
+		}
+	}
+
+	if _, exists := fileContents[filepath.Join(subDir, "subfile1.txt")]; exists {
+		t.Errorf("Unexpected file subfile1.txt found in fileContents")
+	}
+
+	// Test recursive processing
+	fileContents = make(map[string]string)
+	fileStructure = make(map[string][]string)
+	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, true, fileContents, fileStructure)
+	if err != nil {
+		t.Fatalf("processPath failed: %v", err)
+	}
+
+	expectedFiles = []string{"file1.txt", "file2.go"}
+	expectedSubFiles := []string{"subfile1.txt", "subfile2.go"}
+
+	for _, fileName := range expectedFiles {
+		if _, exists := fileContents[filepath.Join(tempDir, fileName)]; !exists {
+			t.Errorf("Expected file %s not found in fileContents", fileName)
+		}
+	}
+
+	for _, fileName := range expectedSubFiles {
+		if _, exists := fileContents[filepath.Join(subDir, fileName)]; !exists {
+			t.Errorf("Expected file %s not found in fileContents", fileName)
+		}
+	}
+}
+
+func TestGenerateStructureString(t *testing.T) {
+	fileStructure := map[string][]string{
+		"/path/to/dir":        {"file1.txt", "file2.go"},
+		"/path/to/dir/subdir": {"subfile1.txt", "subfile2.go"},
+	}
+	fileContents := map[string]string{
+		"/path/to/dir/file1.txt":           "Content of file1",
+		"/path/to/dir/file2.go":            "Content of file2",
+		"/path/to/dir/subdir/subfile1.txt": "Content of subfile1",
+		"/path/to/dir/subdir/subfile2.go":  "Content of subfile2",
+	}
+
+	expected := "/path/to/dir/\n├── file1.txt\n├── file2.go\n/path/to/dir/subdir/\n├── subfile1.txt\n├── subfile2.go\n"
+	formatter := &PlainTextFormatter{}
+	result := formatter.Format(fileStructure, fileContents)
+	if result != expected {
+		t.Errorf("generateStructureString() = %v; want %v", result, expected)
+	}
+}
+
 func TestMainFunctionality(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir, err := ioutil.TempDir("", "test")
@@ -44,12 +142,7 @@ func TestMainFunctionality(t *testing.T) {
 		"file3.jpg": "Content of file3",
 	}
 
-	for name, content := range files {
-		err := ioutil.WriteFile(filepath.Join(tempDir, name), []byte(content), 0644)
-		if err != nil {
-			t.Fatalf("Failed to create test file: %v", err)
-		}
-	}
+	setupTestFiles(t, tempDir, files)
 
 	// Set up command-line arguments
 	os.Args = []string{"cmd", "-paths=" + tempDir, "-types=.txt,.go", "-output=test_output.txt"}
