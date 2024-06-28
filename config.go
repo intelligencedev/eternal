@@ -45,7 +45,8 @@ type AppConfig struct {
 		Name         string `yaml:"name"`
 		Instructions string `yaml:"instructions"`
 	} `yaml:"assistant_roles"`
-	Tools Tools `yaml:"tools"`
+	Tools                Tools                `yaml:"tools"`
+	DefaultProjectConfig DefaultProjectConfig `yaml:"default_project"`
 }
 
 // BackendHost represents a local or remote backend host.

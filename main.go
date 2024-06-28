@@ -32,6 +32,7 @@ import (
 //
 //go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 var embedfs embed.FS
+var currentProject *Project
 
 // WebSocketMessage represents the structure of a WebSocket message
 type WebSocketMessage struct {
@@ -111,11 +112,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	pterm.Warning.Println("Server initialized")
+
 	// Initialize database
-	if err := initializeDatabase(config.DataPath); err != nil {
+	if err := initializeDatabase(config); err != nil {
 		pterm.Error.Println("Failed to initialize database:", err)
 		os.Exit(1)
 	}
+
+	// Get the project info from the database
+	// project, err := pm.GetProjectByName(config.DefaultProjectConfig.Name)
+	// if err != nil {
+	// 	pterm.Error.Println("Failed to get project info from database:", err)
+	// 	os.Exit(1)
+	// }
+
+	// Print the project info as JSON
+	//pterm.Info.Println("Project info:", project)
 
 	// Initialize search index
 	if err := initializeSearchIndex(config.DataPath); err != nil {
@@ -214,14 +227,40 @@ func initializeServer(dataPath string) error {
 }
 
 // initializeDatabase initializes the SQLite database
-func initializeDatabase(dataPath string) error {
+func initializeDatabase(config *AppConfig) error {
 	var err error
-	sqliteDB, err = NewSQLiteDB(dataPath)
+	sqliteDB, err = NewSQLiteDB(config.DataPath)
 	if err != nil {
 		return err
 	}
 
-	return sqliteDB.AutoMigrate(&Project{}, &ModelParams{}, &ImageModel{}, &SelectedModels{}, &Chat{}, &URLTracking{})
+	err = sqliteDB.AutoMigrate(
+		&Project{},
+		&ModelParams{},
+		&ImageModel{},
+		&SelectedModels{},
+		&Chat{},
+		&URLTracking{},
+		&Assistant{},
+	)
+	if err != nil {
+		return err
+	}
+
+	pterm.Warning.Println("Database initialized")
+
+	return CreateDefaultProject(config)
+}
+
+func setCurrentProject(projectName string) error {
+	var project Project
+	if err := sqliteDB.First(projectName, &project); err != nil {
+		return err
+	}
+
+	// Set the application context to the current project
+	currentProject = &project
+	return nil
 }
 
 // initializeSearchIndex initializes the search index

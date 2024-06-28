@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/pterm/pterm"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -150,6 +151,36 @@ func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
 // CreateProject inserts a new project into the database.
 func (sqldb *SQLiteDB) CreateProject(project *Project) error {
 	return sqldb.db.Create(project).Error
+}
+
+func CreateDefaultProject(config *AppConfig) error {
+	var project Project
+	if err := sqliteDB.First(config.DefaultProjectConfig.Name, &project); err == nil {
+		return nil // Project already exists
+	}
+
+	// Create default project
+	project = Project{
+		Name:        config.DefaultProjectConfig.Name,
+		Description: config.DefaultProjectConfig.Description,
+		Team: Team{
+			Name: config.DefaultProjectConfig.TeamName,
+			Assistants: []Assistant{
+				{
+					Name: config.DefaultProjectConfig.AssistantName,
+					Params: LLMParams{
+						Model: "openai-gpt-4o",
+					},
+				},
+			},
+		},
+	}
+
+	// Print the project
+	pterm.Warning.Println("Creating default project:")
+	pterm.Warning.Println(project)
+
+	return sqliteDB.CreateProject(&project)
 }
 
 // DeleteProject removes a project from the database.
@@ -350,3 +381,33 @@ func (sqldb *SQLiteDB) DeleteURLTracking(url string) error {
 
 // 	return nil
 // }
+
+func CreateDevTeam(sqldb *SQLiteDB) error {
+	// Create a new team
+	team := Team{
+		Name: "Dev Team",
+		Assistants: []Assistant{
+			{
+				Name: "Senior Developer",
+				Role: Role{
+					Name:         "Software Developer",
+					Instructions: "Help with software development tasks",
+				},
+			},
+			{
+				Name: "Code Reviewer",
+				Role: Role{
+					Name:         "Code Reviewer",
+					Instructions: "Review code changes and provide feedback",
+				},
+			},
+		},
+	}
+
+	// Create the team in the database
+	if err := sqldb.Create(&team).Error; err != nil {
+		return fmt.Errorf("failed to create team: %w", err)
+	}
+
+	return nil
+}
