@@ -96,12 +96,12 @@ type Chat struct {
 	ModelName string
 }
 
-type Project struct {
-	gorm.Model
-	Name  string
-	Tools []ProjectTool `gorm:"foreignKey:ProjectID"`
-	Files []File        `gorm:"foreignKey:ProjectID"`
-}
+// type Project struct {
+// 	gorm.Model
+// 	Name  string
+// 	Tools []ProjectTool `gorm:"foreignKey:ProjectID"`
+// 	Files []File        `gorm:"foreignKey:ProjectID"`
+// }
 
 type ProjectTool struct {
 	gorm.Model
@@ -110,12 +110,12 @@ type ProjectTool struct {
 	ProjectID uint // Foreign key that refers to Project
 }
 
-type File struct {
-	gorm.Model
-	Path      string
-	Content   string
-	ProjectID uint // Foreign key that refers to Project
-}
+// type File struct {
+// 	gorm.Model
+// 	Path      string
+// 	Content   string
+// 	ProjectID uint // Foreign key that refers to Project
+// }
 
 // URLTracking represents the structure for tracking URLs
 type URLTracking struct {

@@ -1,3 +1,5 @@
+// eternal/config.go
+
 package main
 
 import (
@@ -43,24 +45,7 @@ type AppConfig struct {
 		Name         string `yaml:"name"`
 		Instructions string `yaml:"instructions"`
 	} `yaml:"assistant_roles"`
-	Tools struct {
-		Memory struct {
-			Enabled bool `yaml:"enabled"`
-			TopN    int  `yaml:"top_n"`
-		} `yaml:"memory"`
-		WebGet struct {
-			Enabled bool `yaml:"enabled"`
-		} `yaml:"webget"`
-		WebSearch struct {
-			Enabled  bool   `yaml:"enabled"`
-			Name     string `yaml:"name"`
-			Endpoint string `yaml:"endpoint"`
-			TopN     int    `yaml:"top_n"`
-		} `yaml:"websearch"`
-		ImgGen struct {
-			Enabled bool `yaml:"enabled"`
-		} `yaml:"img_gen"`
-	} `yaml:"tools"`
+	Tools Tools `yaml:"tools"`
 }
 
 // BackendHost represents a local or remote backend host.

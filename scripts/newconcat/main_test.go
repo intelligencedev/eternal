@@ -1,4 +1,3 @@
-// main_test.go
 package main
 
 import (
@@ -40,6 +39,27 @@ func TestHasMatchingExtension(t *testing.T) {
 	}
 }
 
+func TestShouldIgnore(t *testing.T) {
+	tests := []struct {
+		fileName      string
+		ignorePattern string
+		expected      bool
+	}{
+		{"test.txt", "ignore", false},
+		{"ignore_this.txt", "ignore", true},
+		{"test.txt", "", false},
+		{"ignore_file.go", "ignore", true},
+		{"file.txt", "txt", true},
+	}
+
+	for _, test := range tests {
+		result := shouldIgnore(test.fileName, test.ignorePattern)
+		if result != test.expected {
+			t.Errorf("shouldIgnore(%s, %s) = %v; want %v", test.fileName, test.ignorePattern, result, test.expected)
+		}
+	}
+}
+
 func TestProcessPath(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir, err := ioutil.TempDir("", "test")
@@ -50,24 +70,27 @@ func TestProcessPath(t *testing.T) {
 
 	// Create test files and directories
 	files := map[string]string{
-		"file1.txt": "Content of file1",
-		"file2.go":  "Content of file2",
-		"file3.jpg": "Content of file3",
+		"file1.txt":       "Content of file1",
+		"file2.go":        "Content of file2",
+		"file3.jpg":       "Content of file3",
+		"ignore_this.txt": "Content to ignore",
+		"ignore_that.go":  "More content to ignore",
 	}
 	subDir := filepath.Join(tempDir, "subdir")
 	os.Mkdir(subDir, 0755)
 	subFiles := map[string]string{
-		"subfile1.txt": "Content of subfile1",
-		"subfile2.go":  "Content of subfile2",
+		"subfile1.txt":       "Content of subfile1",
+		"subfile2.go":        "Content of subfile2",
+		"ignore_subfile.txt": "Subfile content to ignore",
 	}
 
 	setupTestFiles(t, tempDir, files)
 	setupTestFiles(t, subDir, subFiles)
 
-	// Test non-recursive processing
+	// Test non-recursive processing with ignore pattern
 	fileContents := make(map[string]string)
 	fileStructure := make(map[string][]string)
-	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, false, fileContents, fileStructure)
+	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, false, "ignore", fileContents, fileStructure)
 	if err != nil {
 		t.Fatalf("processPath failed: %v", err)
 	}
@@ -79,14 +102,21 @@ func TestProcessPath(t *testing.T) {
 		}
 	}
 
+	ignoredFiles := []string{"ignore_this.txt", "ignore_that.go"}
+	for _, fileName := range ignoredFiles {
+		if _, exists := fileContents[filepath.Join(tempDir, fileName)]; exists {
+			t.Errorf("Ignored file %s found in fileContents", fileName)
+		}
+	}
+
 	if _, exists := fileContents[filepath.Join(subDir, "subfile1.txt")]; exists {
 		t.Errorf("Unexpected file subfile1.txt found in fileContents")
 	}
 
-	// Test recursive processing
+	// Test recursive processing with ignore pattern
 	fileContents = make(map[string]string)
 	fileStructure = make(map[string][]string)
-	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, true, fileContents, fileStructure)
+	err = processPath(context.Background(), tempDir, []string{".txt", ".go"}, true, "ignore", fileContents, fileStructure)
 	if err != nil {
 		t.Fatalf("processPath failed: %v", err)
 	}
@@ -103,6 +133,16 @@ func TestProcessPath(t *testing.T) {
 	for _, fileName := range expectedSubFiles {
 		if _, exists := fileContents[filepath.Join(subDir, fileName)]; !exists {
 			t.Errorf("Expected file %s not found in fileContents", fileName)
+		}
+	}
+
+	ignoredFiles = append(ignoredFiles, "ignore_subfile.txt")
+	for _, fileName := range ignoredFiles {
+		if _, exists := fileContents[filepath.Join(tempDir, fileName)]; exists {
+			t.Errorf("Ignored file %s found in fileContents", fileName)
+		}
+		if _, exists := fileContents[filepath.Join(subDir, fileName)]; exists {
+			t.Errorf("Ignored file %s found in fileContents", fileName)
 		}
 	}
 }
@@ -137,15 +177,16 @@ func TestMainFunctionality(t *testing.T) {
 
 	// Create test files
 	files := map[string]string{
-		"file1.txt": "Content of file1",
-		"file2.go":  "Content of file2",
-		"file3.jpg": "Content of file3",
+		"file1.txt":       "Content of file1",
+		"file2.go":        "Content of file2",
+		"file3.jpg":       "Content of file3",
+		"ignore_this.txt": "Content to ignore",
 	}
 
 	setupTestFiles(t, tempDir, files)
 
 	// Set up command-line arguments
-	os.Args = []string{"cmd", "-paths=" + tempDir, "-types=.txt,.go", "-output=test_output.txt"}
+	os.Args = []string{"cmd", "-paths=" + tempDir, "-types=.txt,.go", "-output=test_output.txt", "-ignore=ignore"}
 
 	// Run main function
 	main()
@@ -171,8 +212,11 @@ func TestMainFunctionality(t *testing.T) {
 	}
 
 	// Check if output doesn't contain unexpected content
-	if strings.Contains(string(outputContent), "file3.jpg") {
-		t.Errorf("Output contains unexpected content for file3.jpg")
+	unexpectedFiles := []string{"file3.jpg", "ignore_this.txt"}
+	for _, fileName := range unexpectedFiles {
+		if strings.Contains(string(outputContent), fileName) {
+			t.Errorf("Output contains unexpected content for %s", fileName)
+		}
 	}
 
 	// Clean up

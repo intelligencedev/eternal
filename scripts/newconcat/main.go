@@ -64,6 +64,7 @@ func main() {
 	types := flag.String("types", "", "Comma-separated list of file types")
 	outputFile := flag.String("output", "output.txt", "Output file path")
 	recursive := flag.Bool("recursive", false, "Traverse subdirectories")
+	ignorePattern := flag.String("ignore", "", "Pattern to ignore in file names")
 	flag.Parse()
 
 	// Validate input
@@ -86,7 +87,7 @@ func main() {
 
 	// Loop over each path
 	for _, path := range pathList {
-		err := processPath(ctx, path, typeList, *recursive, fileContents, fileStructure)
+		err := processPath(ctx, path, typeList, *recursive, *ignorePattern, fileContents, fileStructure)
 		if err != nil {
 			log.Printf("Error processing path %s: %v\n", path, err)
 		}
@@ -114,7 +115,7 @@ func main() {
 	fmt.Printf("Concatenated content written to %s\n", *outputFile)
 }
 
-func processPath(ctx context.Context, path string, typeList []string, recursive bool, fileContents map[string]string, fileStructure map[string][]string) error {
+func processPath(ctx context.Context, path string, typeList []string, recursive bool, ignorePattern string, fileContents map[string]string, fileStructure map[string][]string) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -129,12 +130,12 @@ func processPath(ctx context.Context, path string, typeList []string, recursive 
 
 			if file.IsDir() {
 				if recursive {
-					err := processPath(ctx, filePath, typeList, recursive, fileContents, fileStructure)
+					err := processPath(ctx, filePath, typeList, recursive, ignorePattern, fileContents, fileStructure)
 					if err != nil {
 						return err
 					}
 				}
-			} else if hasMatchingExtension(filePath, typeList) {
+			} else if hasMatchingExtension(filePath, typeList) && !shouldIgnore(file.Name(), ignorePattern) {
 				processor := &TextFileProcessor{}
 				err := processor.Process(filePath)
 				if err != nil {
@@ -159,4 +160,11 @@ func hasMatchingExtension(filePath string, extensions []string) bool {
 		}
 	}
 	return false
+}
+
+func shouldIgnore(fileName, ignorePattern string) bool {
+	if ignorePattern == "" {
+		return false
+	}
+	return strings.Contains(fileName, ignorePattern)
 }
