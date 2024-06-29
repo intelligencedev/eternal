@@ -3,6 +3,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
-	"github.com/go-shiori/go-readability"
 	"github.com/pterm/pterm"
 )
 
@@ -95,30 +95,30 @@ func WebGetHandler(address string) (string, error) {
 		return "", err
 	}
 
-	// Convert url to url.URL
-	getUrl, err := url.Parse(address)
-	if err != nil {
-		log.Println("Error parsing URL:", err)
-		return "", err
-	}
-
-	article, err := readability.FromReader(strings.NewReader(docs), getUrl)
-	if err != nil {
-		log.Println("Error parsing reader view:", err)
-		return "", err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(article.Content))
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(docs))
 	if err != nil {
 		log.Println("Error parsing document:", err)
 		return "", err
 	}
 
-	text := doc.Find("body").Text()
+	// Remove unwanted elements
+	doc.Find("script, style, nav, header, footer").Remove()
 
-	text = removeEmptyRows(text)
+	// Extract text and images
+	var content strings.Builder
+	doc.Find("body").Each(func(i int, s *goquery.Selection) {
+		s.Find("p, h1, h2, h3, h4, h5, h6, img").Each(func(j int, el *goquery.Selection) {
+			if goquery.NodeName(el) == "img" {
+				if src, exists := el.Attr("src"); exists {
+					content.WriteString(fmt.Sprintf("<img src=\"%s\">\n", src))
+				}
+			} else {
+				content.WriteString(el.Text() + "\n")
+			}
+		})
+	})
 
-	//pterm.Info.Println("Document:", text)
+	text := removeEmptyRows(content.String())
 
 	return text, nil
 }
