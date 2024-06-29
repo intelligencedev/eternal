@@ -2,7 +2,7 @@
 OS := $(shell uname -s)
 
 # Path variables
-LLAMA_BUILD_TARGETS := main quantize quantize-stats perplexity imatrix embedding vdot q8dot train-text-from-scratch convert-llama2c-to-ggml simple batched batched-bench save-load-state server gguf llama-bench libllava.a llava-cli baby-llama beam-search ggml-metal.metal ggml-common.h speculative infill tokenize benchmark-matmult parallel finetune export-lora lookahead lookup passkey gritlm
+LLAMA_BUILD_TARGETS := llama-baby-llama llama-batched llama-batched-bench llama-bench llama-benchmark-matmult llama-cli llama-convert-llama2c-to-ggml llama-cvector-generator llama-embedding llama-eval-callback llama-export-lora llama-finetune llama-gbnf-validator llama-gguf llama-gguf-split llama-gritlm llama-imatrix llama-infill llama-llava-cli llama-lookahead llama-lookup llama-lookup-create llama-lookup-merge llama-lookup-stats llama-parallel llama-passkey llama-perplexity llama-q8dot llama-quantize llama-quantize-stats llama-retrieval llama-save-load-state llama-server llama-simple llama-speculative llama-tokenize llama-train-text-from-scratch llama-vdot
 
 # Directory variables
 LLAMA_DIR := pkg/llm/local/gguf
