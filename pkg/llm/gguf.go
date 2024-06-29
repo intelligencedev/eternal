@@ -136,7 +136,7 @@ type GGUFOptions struct {
 }
 
 func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
-	execPath := filepath.Join(cmdPath, "gguf/llama-cli")
+	execPath := filepath.Join(cmdPath, "gguf/main")
 
 	// Extract the path without the filename
 	modelPath := filepath.Dir(options.Model)
