@@ -1,0 +1,117 @@
+<div id="projects-container" class="row">
+    <div class="h-auto">
+        <div class="h-auto dropdown dropdown-center mx-2">
+            <button class="btn btn-secondary bg-gradient dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                Projects
+            </button>
+            <ul class="dropdown-menu w-100" style="background-color: var(--et-card-bg);">
+                <li><a href="#" class="dropdown-item" onclick="createNewProject()">Create New Project</a></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <h6 class="dropdown-header">Existing Projects</h6>
+                </li>
+                <div id="project-list">
+                    <!-- Project list items will be rendered here -->
+                    {{range .projects}}
+                    <li><a href="#" class="dropdown-item"
+                            onclick="selectProject('{{.Name}}')">{{.Name}}</a></li>
+                    {{end}}
+                </div>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div id="project-cards-container" class="row mt-3"></div>
+
+<style>
+    .project-card {
+        background-color: var(--et-card-bg);
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .project-card .card-header {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .project-card .card-body {
+        padding: 1rem;
+    }
+
+    .project-card .btn-group {
+        margin-top: 1rem;
+    }
+</style>
+
+<script>
+    function renderProjectList(projects) {
+        const projectList = document.getElementById('project-list');
+        //projectList.innerHTML = '';
+        projects.forEach(project => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="#" class="dropdown-item" onclick="selectProject('${project.Name}')">${project.Name}</a>`;
+            projectList.appendChild(li);
+        });
+    }
+
+    function renderProjectCards(projects) {
+        const container = document.getElementById('project-cards-container');
+        container.innerHTML = '';
+        projects.forEach(project => {
+            console.log("Projects data:", project);
+            const card = document.createElement('div');
+            card.className = 'col-md-4';
+            card.innerHTML = `
+          <div class="card project-card">
+            <div class="card-header">
+              <h5 class="card-title">${project.Name}</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text">${project.Description}</p>
+              <p><strong>Team:</strong> ${project.Team.Name}</p>
+              <div class="btn-group" role="group">
+                <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
+                <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+            container.appendChild(card);
+        });
+    }
+
+    function selectProject(projectName) {
+        console.log(`Selected project: ${projectName}`);
+        // Implement project selection logic here
+    }
+
+    function createNewProject() {
+        console.log('Creating new project');
+        // Implement new project creation logic here
+    }
+
+    function editProject(projectName) {
+        console.log(`Editing project: ${projectName}`);
+        // Implement project editing logic here
+    }
+
+    function deleteProject(projectName) {
+        if (confirm(`Are you sure you want to delete the project "${projectName}"?`)) {
+            fetch(`/projects/${projectName}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`Deleted project: ${projectName}`);
+                        fetchProjects(); // Refresh the project list
+                    } else {
+                        console.error(`Failed to delete project: ${projectName}`);
+                    }
+                })
+                .catch(error => console.error('Error deleting project:', error));
+        }
+    }
+</script>

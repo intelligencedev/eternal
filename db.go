@@ -148,6 +148,14 @@ func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
 	return nil
 }
 
+// GetProjects retrieves all projects from the database.
+func (sqldb *SQLiteDB) GetProjects() ([]Project, error) {
+	var projects []Project
+	err := sqldb.db.Find(&projects).Error
+
+	return projects, err
+}
+
 // CreateProject inserts a new project into the database.
 func (sqldb *SQLiteDB) CreateProject(project *Project) error {
 	return sqldb.db.Create(project).Error

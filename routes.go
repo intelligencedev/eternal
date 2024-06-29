@@ -21,6 +21,9 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 		return c.Render("templates/flow", fiber.Map{})
 	})
 
+	// Project routes
+	app.Post("/projects", handleGetProjects())
+
 	// Chat session routes
 	app.Post("/chatsubmit", handleChatSubmit(config))
 	app.Post("/chat/role/:name", handleRoleSelection(config))
