@@ -50,3 +50,4 @@ examples/web/search.bleve/index_meta.json
 examples/web/search.bleve/store/*
 examples/web/search.bleve/store/root.bolt
 eternal
+tmp/*
