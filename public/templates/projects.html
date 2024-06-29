@@ -16,8 +16,7 @@
                 <div id="project-list">
                     <!-- Project list items will be rendered here -->
                     {{range .projects}}
-                    <li><a href="#" class="dropdown-item"
-                            onclick="selectProject('{{.Name}}')">{{.Name}}</a></li>
+                    <li><a href="#" class="dropdown-item" onclick="selectProject('{{.Name}}')">{{.Name}}</a></li>
                     {{end}}
                 </div>
             </ul>
@@ -25,7 +24,7 @@
     </div>
 </div>
 
-<div id="project-cards-container" class="row mt-3"></div>
+<div id="selected-project-container" class="row mt-3"></div>
 
 <style>
     .project-card {
@@ -60,34 +59,43 @@
     }
 
     function renderProjectCards(projects) {
-        const container = document.getElementById('project-cards-container');
-        container.innerHTML = '';
-        projects.forEach(project => {
-            console.log("Projects data:", project);
-            const card = document.createElement('div');
-            card.className = 'col-md-4';
-            card.innerHTML = `
-          <div class="card project-card">
-            <div class="card-header">
-              <h5 class="card-title">${project.Name}</h5>
-            </div>
-            <div class="card-body">
-              <p class="card-text">${project.Description}</p>
-              <p><strong>Team:</strong> ${project.Team.Name}</p>
-              <div class="btn-group" role="group">
-                <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
-                <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-            container.appendChild(card);
-        });
+        function renderProjectCards(projects) {
+            const container = document.getElementById('project-cards-container');
+            const selectedProjectContainer = document.getElementById('selected-project-container');
+            container.innerHTML = '';
+            selectedProjectContainer.innerHTML = ''; // Clear the selected project container
+            projects.forEach(project => {
+                console.log("Projects data:", project);
+                const card = document.createElement('div');
+                card.className = 'col-md-4';
+                card.innerHTML = `
+                    <div class="card project-card">
+                        <div class="card-header">
+                        <h5 class="card-title">${project.Name}</h5>
+                        </div>
+                        <div class="card-body">
+                        <p class="card-text">${project.Description}</p>
+                        <p><strong>Team:</strong> ${project.Team.Name}</p>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
+                            <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
+                        </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
     }
 
     function selectProject(projectName) {
         console.log(`Selected project: ${projectName}`);
-        // Implement project selection logic here
+        fetch(`/projects/${projectName}`)
+            .then(response => response.json())
+            .then(project => {
+                renderSelectedProjectCard(project);
+            })
+            .catch(error => console.error('Error fetching project details:', error));
     }
 
     function createNewProject() {
@@ -114,4 +122,29 @@
                 .catch(error => console.error('Error deleting project:', error));
         }
     }
+
+    function renderSelectedProjectCard(project) {
+        const container = document.getElementById('project-cards-container');
+        container.innerHTML = ''; // Clear existing content
+        const card = document.createElement('div');
+        card.className = 'col-md-4';
+        card.innerHTML = `
+                <div class="card project-card">
+                    <div class="card-header">
+                        <h5 class="card-title">${project.Name}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">${project.Description}</p>
+                        <p><strong>Team:</strong> ${project.Team.Name}</p>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
+                            <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        container.appendChild(card);
+    }
+
+
 </script>
