@@ -32,7 +32,7 @@ import (
 //
 //go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 var embedfs embed.FS
-var currentProject *Project
+var currentProject Project
 
 // WebSocketMessage represents the structure of a WebSocket message
 type WebSocketMessage struct {
@@ -120,15 +120,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create the default project if it doesn't exist
+	if err := CreateDefaultProject(config); err != nil {
+		pterm.Error.Println("Failed to create default project:", err)
+		os.Exit(1)
+	}
+
 	// Get the project info from the database
-	// project, err := pm.GetProjectByName(config.DefaultProjectConfig.Name)
+	// currentProject, err = GetProjectByName("default", sqliteDB.db)
 	// if err != nil {
 	// 	pterm.Error.Println("Failed to get project info from database:", err)
 	// 	os.Exit(1)
 	// }
 
-	// Print the project info as JSON
-	//pterm.Info.Println("Project info:", project)
+	// Set the current project
+	// projectName := project.Name
+	// currentProject, err = setCurrentProject(projectName)
+	// if err != nil {
+	// 	pterm.Error.Println("Failed to set current project:", err)
+	// 	os.Exit(1)
+	// }
 
 	// Initialize search index
 	if err := initializeSearchIndex(config.DataPath); err != nil {
@@ -249,18 +260,18 @@ func initializeDatabase(config *AppConfig) error {
 
 	pterm.Warning.Println("Database initialized")
 
-	return CreateDefaultProject(config)
+	return nil
 }
 
-func setCurrentProject(projectName string) error {
+func setCurrentProject(projectName string) (Project, error) {
 	var project Project
 	if err := sqliteDB.First(projectName, &project); err != nil {
-		return err
+		return Project{}, err
 	}
 
 	// Set the application context to the current project
-	currentProject = &project
-	return nil
+	currentProject = project
+	return project, nil
 }
 
 // initializeSearchIndex initializes the search index

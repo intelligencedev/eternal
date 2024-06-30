@@ -266,49 +266,42 @@ func CompletionWebSocket(c *websocket.Conn, cmdPath string) {
 }
 
 // MakeCompletionWebSocket creates a closure that captures model parameters and returns a WebSocket handler.
-func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath string) error {
+func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOptions, dataPath string, responseBuffer *bytes.Buffer) error {
 	defer c.Close()
-	var msgBuffer bytes.Buffer // Buffer to accumulate messages
 
+	cmd := BuildCommand(dataPath, *modelOpts)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(stdout)
 	for {
-		cmd := BuildCommand(dataPath, *modelOpts)
-
-		stdout, err := cmd.StdoutPipe()
+		line, err := reader.ReadString('\n')
 		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
 			return err
 		}
 
-		if err = cmd.Start(); err != nil {
+		responseBuffer.WriteString(line)
+
+		// Convert the buffer content to HTML
+		htmlMsg := web.MarkdownToHTML(responseBuffer.Bytes())
+
+		// Convert chatID to string for formatting
+		turnIDStr := fmt.Sprint(chatID + TurnCounter)
+
+		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
+		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
+			pterm.Error.Println("WebSocket write error:", err)
 			return err
-		}
-
-		reader := bufio.NewReader(stdout)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					return fmt.Errorf("%s", msgBuffer.String())
-				}
-
-				return err
-			}
-
-			msgBuffer.WriteString(line)
-
-			// Convert the buffer content to HTML
-			htmlMsg := web.MarkdownToHTML(msgBuffer.Bytes())
-
-			// Convert chatID to string for formatting
-			turnIDStr := fmt.Sprint(chatID + TurnCounter)
-
-			// Send the accumulated content
-			// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet url='http://localhost:1313/v1/exec' sandbox='go' editor='external'></codapi-snippet>", turnIDStr, htmlMsg)
-			//formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>\n<codapi-snippet engine='browser' sandbox='javascript' editor='basic'></codapi-snippet>", turnIDStr, htmlMsg, turnIDStr)
-			formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
-			if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-				pterm.Error.Println("WebSocket write error:", err)
-				return err
-			}
 		}
 	}
 }

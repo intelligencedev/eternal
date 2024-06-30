@@ -38,8 +38,7 @@
         <span class="badge my-3 mx-1 bg-gradient end-0"
           style="background-color: var(--et-galactic-accent);">{{.assistant}}</span>
       </div>
-      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream"
-        hx-on:load="highlight()">
+      <div name="chat-{{.turnID}}" id="response-content-{{.turnID}}" hx-trigger="load, customEndOfStream" hx-on:load="highlight()">
         <div class="loadership_JTACT">
           <div></div>
           <div></div>

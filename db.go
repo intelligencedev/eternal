@@ -162,22 +162,29 @@ func (sqldb *SQLiteDB) CreateProject(project *Project) error {
 }
 
 func CreateDefaultProject(config *AppConfig) error {
-	var project Project
-	if err := sqliteDB.First(config.DefaultProjectConfig.Name, &project); err == nil {
-		return nil // Project already exists
-	}
+
+	// if err := sqliteDB.First(config.DefaultProjectConfig.Name, &project); err == nil {
+	// 	pterm.Warning.Println("Project already exists")
+	// 	return nil // Project already exists
+	// }
 
 	// Create default project
-	project = Project{
-		Name:        config.DefaultProjectConfig.Name,
+	currentProject = Project{
+		Name:        "default",
 		Description: config.DefaultProjectConfig.Description,
 		Team: Team{
-			Name: config.DefaultProjectConfig.TeamName,
+			Name: "default",
 			Assistants: []Assistant{
 				{
-					Name: config.DefaultProjectConfig.AssistantName,
+					Name: "llama3-8b-instruct",
 					Params: LLMParams{
-						Model: "openai-gpt-4o",
+						Model: "llama3-8b-instruct",
+					},
+				},
+				{
+					Name: "gemma-2-9b-it",
+					Params: LLMParams{
+						Model: "gemma-2-9b-it",
 					},
 				},
 			},
@@ -186,9 +193,14 @@ func CreateDefaultProject(config *AppConfig) error {
 
 	// Print the project
 	pterm.Warning.Println("Creating default project:")
-	pterm.Warning.Println(project)
+	pterm.Warning.Println(currentProject)
 
-	return sqliteDB.CreateProject(&project)
+	err := sqliteDB.Create(&currentProject)
+	if err != nil {
+		return fmt.Errorf("failed to create default project: %w", err)
+	}
+
+	return nil
 }
 
 // DeleteProject removes a project from the database.

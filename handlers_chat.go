@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"eternal/pkg/documents"
@@ -44,14 +45,24 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 		userPrompt := c.FormValue("userprompt")
 		var wsroute string
 
-		selectedModels, err := GetSelectedModels(sqliteDB.db)
+		// selectedModels, err := GetSelectedModels(sqliteDB.db)
+		// if err != nil {
+		// 	log.Errorf("Error getting selected models: %v", err)
+		// 	return c.Status(500).SendString("Server Error")
+		// }
+
+		var model ModelParams
+		// Retrieve the model parameters from the database.
+		err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
 		if err != nil {
-			log.Errorf("Error getting selected models: %v", err)
-			return c.Status(500).SendString("Server Error")
+			log.Errorf("Error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
+			return err
 		}
 
-		if len(selectedModels) > 0 {
-			firstModelName := selectedModels[0].ModelName
+		pterm.Info.Println("Team: ", currentProject.Team)
+
+		if len(currentProject.Team.Assistants) > 0 {
+			firstModelName := currentProject.Team.Assistants[0].Name
 
 			if strings.HasPrefix(firstModelName, "openai-") {
 				wsroute = "/wsoai"
@@ -72,7 +83,7 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			"username":  config.CurrentUser,
 			"message":   userPrompt,
 			"assistant": config.AssistantName,
-			"model":     selectedModels[0].ModelName,
+			"model":     model.Name,
 			"turnID":    turnID,
 			"wsRoute":   wsroute,
 			"hosts":     config.ServiceHosts["llm"],
@@ -260,7 +271,7 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
 			var model ModelParams
 			// Retrieve the model parameters from the database.
-			err := sqliteDB.First(wsMessage.Model, &model)
+			err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
 			if err != nil {
 				log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
 				return err
@@ -301,9 +312,98 @@ func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 			}
 
 			// Make a completion request to the model and send the response over WebSocket.
-			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath)
+			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, nil)
 		})
 	}
+}
+
+func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMessage func(WebSocketMessage, string) error) {
+	var responseBuffer bytes.Buffer
+	var wsMessage WebSocketMessage
+	var err error
+
+	// Read and unmarshal the initial WebSocket message
+	wsMessage, err = readAndUnmarshalMessage(c)
+	if err != nil {
+		log.Errorf("Error reading or unmarshalling message: %v", err)
+		return
+	}
+
+	chatMessage := wsMessage.ChatMessage
+
+	// Only perform the tool workflow if any of the tools are enabled
+	if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
+		chatMessage = performToolWorkflow(c, config, chatMessage)
+	}
+
+	// Process the first model
+	err = processFirstModel(c, config, wsMessage, chatMessage, &responseBuffer)
+	if err != nil {
+		log.Errorf("Error processing first model: %v", err)
+		return
+	}
+
+	// Process the second model
+	err = processSecondModel(c, config, wsMessage, chatMessage, responseBuffer.String(), &responseBuffer)
+	if err != nil {
+		log.Errorf("Error processing second model: %v", err)
+		return
+	}
+
+	// Handle the completed chat turn
+	handleChatTurnFinished(config, wsMessage, fmt.Errorf("%s", responseBuffer.String()))
+}
+
+func processFirstModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage string, responseBuffer *bytes.Buffer) error {
+	var model ModelParams
+	err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
+	if err != nil {
+		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
+	}
+
+	promptTemplate := model.Options.Prompt
+	fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
+	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
+	fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
+
+	modelOpts := &llm.GGUFOptions{
+		NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
+		Model:         model.Options.Model,
+		Prompt:        fullPrompt,
+		CtxSize:       model.Options.CtxSize,
+		Temp:          model.Options.Temp,
+		RepeatPenalty: model.Options.RepeatPenalty,
+		TopP:          model.Options.TopP,
+		TopK:          model.Options.TopK,
+	}
+
+	return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
+}
+
+func processSecondModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage, firstModelResponse string, responseBuffer *bytes.Buffer) error {
+	var model ModelParams
+	err := sqliteDB.First(currentProject.Team.Assistants[1].Name, &model)
+	if err != nil {
+		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[1].Name, err)
+	}
+
+	promptTemplate := model.Options.Prompt
+	fullInstructions := fmt.Sprintf("Query: %s\n\nPrevious Response: %s\n\nReview the previous information for correctness and elaborate on the topic.", chatMessage, firstModelResponse)
+	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
+	fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
+
+	modelOpts := &llm.GGUFOptions{
+		NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
+		Model:         model.Options.Model,
+		Prompt:        fullPrompt,
+		CtxSize:       model.Options.CtxSize,
+		Temp:          model.Options.Temp,
+		RepeatPenalty: model.Options.RepeatPenalty,
+		TopP:          model.Options.TopP,
+		TopK:          model.Options.TopK,
+	}
+
+	return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 }
 
 // handleOpenAIWebSocket handles WebSocket connections for OpenAI.
@@ -373,40 +473,6 @@ func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
 	}
 }
 
-// handleWebSocketConnection handles the common logic for WebSocket connections.
-func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMessage func(WebSocketMessage, string) error) {
-	for {
-		// Read and unmarshal the WebSocket message.
-		wsMessage, err := readAndUnmarshalMessage(c)
-		if err != nil {
-			log.Errorf("Error reading or unmarshalling message: %v", err)
-			return
-		}
-
-		log.Infof("Received WebSocket message: %+v", wsMessage)
-
-		chatMessage := wsMessage.ChatMessage
-
-		// Only perform the tool workflow if any of the tools are enabled.
-		if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
-
-			// Perform the tool workflow on the chat message.
-			chatMessage = performToolWorkflow(c, config, wsMessage.ChatMessage)
-		}
-
-		log.Infof("Processed chat message: %s", chatMessage)
-
-		// Process the WebSocket message.
-		err = processMessage(wsMessage, chatMessage)
-		if err != nil {
-			handleError(config, wsMessage, err)
-			return
-		}
-
-		log.Info("Message processed successfully")
-	}
-}
-
 // readAndUnmarshalMessage reads and unmarshals a WebSocket message.
 func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 	// Read the message from the WebSocket.
@@ -426,7 +492,9 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 }
 
 // handleError handles errors that occur during message processing.
-func handleError(config *AppConfig, message WebSocketMessage, err error) {
+func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err error) {
+	chatTurn++
+
 	log.Errorf("Chat turn finished: %v", err)
 
 	// Store the chat turn in the sqlite db.
@@ -480,9 +548,6 @@ func handleError(config *AppConfig, message WebSocketMessage, err error) {
 		// 	log.Errorf("Error storing chat message in Bleve: %v", err)
 		// }
 	}
-
-	// Increment the chat turn counter.
-	chatTurn++
 }
 
 // handleChatMemory retrieves and returns chat memory.
