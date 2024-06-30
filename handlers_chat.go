@@ -269,50 +269,7 @@ func handleSSEUpdates() fiber.Handler {
 func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			var model ModelParams
-			// Retrieve the model parameters from the database.
-			err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
-			if err != nil {
-				log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
-				return err
-			}
-
-			// Prepare the full prompt for the model.
-			promptTemplate := model.Options.Prompt
-
-			fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
-
-			fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
-			fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
-
-			// Set the model options.
-			// repeatPenalty := 1.1
-			// temperature := 0.2
-			// tp := 0.95
-			// tk := 40
-
-			// If any of the tools are enabled, lower the RepeatPenalty to 1.0
-			// if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
-			// 	temperature = 0.2
-			// 	repeatPenalty = 1.0 // 1.0 = disabled
-			// 	tp = 0.95
-			// 	tk = 40
-			// }
-
-			// Set the model options.
-			modelOpts := &llm.GGUFOptions{
-				NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
-				Model:         model.Options.Model,
-				Prompt:        fullPrompt,
-				CtxSize:       model.Options.CtxSize,
-				Temp:          model.Options.Temp,
-				RepeatPenalty: model.Options.RepeatPenalty,
-				TopP:          model.Options.TopP,
-				TopK:          model.Options.TopK,
-			}
-
-			// Make a completion request to the model and send the response over WebSocket.
-			return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, nil)
+			return nil
 		})
 	}
 }
