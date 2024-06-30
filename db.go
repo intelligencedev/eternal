@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pterm/pterm"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -97,16 +96,9 @@ type Chat struct {
 	ModelName string
 }
 
-// type Project struct {
-// 	gorm.Model
-// 	Name  string
-// 	Tools []ProjectTool `gorm:"foreignKey:ProjectID"`
-// 	Files []File        `gorm:"foreignKey:ProjectID"`
-// }
-
 type ProjectTool struct {
 	gorm.Model
-	Name      string
+	Name      string `gorm:"unique;not null"`
 	Enable    bool
 	ProjectID uint // Foreign key that refers to Project
 }
@@ -159,48 +151,6 @@ func (sqldb *SQLiteDB) GetProjects() ([]Project, error) {
 // CreateProject inserts a new project into the database.
 func (sqldb *SQLiteDB) CreateProject(project *Project) error {
 	return sqldb.db.Create(project).Error
-}
-
-func CreateDefaultProject(config *AppConfig) error {
-
-	// if err := sqliteDB.First(config.DefaultProjectConfig.Name, &project); err == nil {
-	// 	pterm.Warning.Println("Project already exists")
-	// 	return nil // Project already exists
-	// }
-
-	// Create default project
-	currentProject = Project{
-		Name:        "default",
-		Description: config.DefaultProjectConfig.Description,
-		Team: Team{
-			Name: "default",
-			Assistants: []Assistant{
-				{
-					Name: "llama3-8b-instruct",
-					Params: LLMParams{
-						Model: "llama3-8b-instruct",
-					},
-				},
-				{
-					Name: "gemma-2-9b-it",
-					Params: LLMParams{
-						Model: "gemma-2-9b-it",
-					},
-				},
-			},
-		},
-	}
-
-	// Print the project
-	pterm.Warning.Println("Creating default project:")
-	pterm.Warning.Println(currentProject)
-
-	err := sqliteDB.Create(&currentProject)
-	if err != nil {
-		return fmt.Errorf("failed to create default project: %w", err)
-	}
-
-	return nil
 }
 
 // DeleteProject removes a project from the database.

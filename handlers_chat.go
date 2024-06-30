@@ -361,6 +361,15 @@ func processFirstModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocket
 		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
 	}
 
+	role := currentProject.Team.Assistants[0].Role.Name
+
+	// get the role from the config that matches the name of the assistant role
+	for _, r := range config.AssistantRoles {
+		if r.Name == role {
+			config.CurrentRoleInstructions = r.Instructions
+		}
+	}
+
 	promptTemplate := model.Options.Prompt
 	fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
 	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
@@ -387,8 +396,17 @@ func processSecondModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocke
 		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[1].Name, err)
 	}
 
+	role := currentProject.Team.Assistants[1].Role.Name
+
+	// get the role from the config that matches the name of the assistant role
+	for _, r := range config.AssistantRoles {
+		if r.Name == role {
+			config.CurrentRoleInstructions = r.Instructions
+		}
+	}
+
 	promptTemplate := model.Options.Prompt
-	fullInstructions := fmt.Sprintf("Query: %s\n\nPrevious Response: %s\n\nReview the previous information for correctness and elaborate on the topic.", chatMessage, firstModelResponse)
+	fullInstructions := fmt.Sprintf("Query: %s\n\nPrevious Response: %s\n\n%s", chatMessage, firstModelResponse, config.CurrentRoleInstructions)
 	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
 	fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
 

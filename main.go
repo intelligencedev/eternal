@@ -120,26 +120,29 @@ func main() {
 		os.Exit(1)
 	}
 
+	currentProject = config.DefaultProjectConfig
+
 	// Create the default project if it doesn't exist
-	if err := CreateDefaultProject(config); err != nil {
-		pterm.Error.Println("Failed to create default project:", err)
+	err = sqliteDB.CreateProject(&currentProject)
+	if err != nil {
+		pterm.Warning.Println("Default project already exists")
+	}
+
+	// List all projects and print to terminal
+	projects, err := sqliteDB.ListProjects()
+	if err != nil {
+		pterm.Error.Println("Failed to list projects:", err)
 		os.Exit(1)
 	}
 
-	// Get the project info from the database
-	// currentProject, err = GetProjectByName("default", sqliteDB.db)
-	// if err != nil {
-	// 	pterm.Error.Println("Failed to get project info from database:", err)
-	// 	os.Exit(1)
-	// }
+	// Convert projects to [][]string
+	var projectData [][]string
+	for _, project := range projects {
+		projectData = append(projectData, []string{project.Name, project.Description})
+	}
 
-	// Set the current project
-	// projectName := project.Name
-	// currentProject, err = setCurrentProject(projectName)
-	// if err != nil {
-	// 	pterm.Error.Println("Failed to set current project:", err)
-	// 	os.Exit(1)
-	// }
+	// Print the projects as a pterm table
+	pterm.DefaultTable.WithData(projectData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
 
 	// Initialize search index
 	if err := initializeSearchIndex(config.DataPath); err != nil {

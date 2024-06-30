@@ -1,5 +1,20 @@
 <div id="tools-container" class="row">
   <div class="col">
+    <!-- Team Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <!-- Team Header -->
+        <span class="fs-6">Team</span>
+        <!-- Select Team  -->
+        <select class="form-select" id="team-select" onchange="selectTeam()">
+          <option value="team1">Team 1</option>
+          <option value="team2">Team 2</option>
+          <option value="team3">Team 3</option>
+        </select>
+      </div>
+      <div class="card-body tab-content mh-100"></div>
+    </div>
+
     <!-- Memory Card -->
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">

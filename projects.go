@@ -135,7 +135,7 @@ type File struct {
 // Project represents the overall configuration for a goal
 type Project struct {
 	gorm.Model
-	Name        string
+	Name        string `gorm:"unique;not null"`
 	Description string
 	TeamID      uint
 	Team        Team `gorm:"foreignKey:TeamID"`
@@ -144,13 +144,14 @@ type Project struct {
 	Files       []File   `gorm:"foreignKey:ProjectID"`
 }
 
+// DEPRECATED
 // DefaultProjectConfig is a struct for the default configuration of a project
-type DefaultProjectConfig struct {
-	Name          string `yaml:"name"`
-	Description   string `yaml:"description"`
-	TeamName      string `yaml:"team_name"`
-	AssistantName string `yaml:"assistant_name"`
-}
+// type DefaultProjectConfig struct {
+// 	Name          string `yaml:"name"`
+// 	Description   string `yaml:"description"`
+// 	TeamName      string `yaml:"team_name"`
+// 	AssistantName string `yaml:"assistant_name"`
+// }
 
 // Processor is an interface for objects that can process files
 type Processor interface {
@@ -188,36 +189,6 @@ func CreateProjectFolder(config AppConfig, p *Project) error {
 	// Create the project folder
 	projectPath := fmt.Sprintf("%s/projects/%s", config.DataPath, p.Name)
 	return os.MkdirAll(projectPath, os.ModePerm)
-}
-
-// CreateProject creates a new project with the given configuration
-func CreateProject(config DefaultProjectConfig, db *SQLiteDB) (Project, error) {
-	// Create a new project
-	project := Project{
-		Name:        config.Name,
-		Description: config.Description,
-	}
-
-	// Create a new team
-	team := Team{
-		Name: config.TeamName,
-	}
-
-	// Create a new assistant
-	assistant := Assistant{
-		Name: config.AssistantName,
-	}
-
-	// Add the assistant
-	team.Assistants = append(team.Assistants, assistant)
-	project.Team = team
-
-	// Save the project
-	if err := db.Create(&project); err != nil {
-		return Project{}, err
-	}
-
-	return project, nil
 }
 
 // GetProjectByName retrieves a project by its name
