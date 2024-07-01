@@ -62,7 +62,7 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 
 	// OpenAI routes
 	app.Get("/openai/models", handleOpenAIModels(config))
-	app.Get("/wsoai", websocket.New(handleOpenAIWebSocket(config)))
+	//app.Get("/wsoai", websocket.New(handleOpenAIWebSocket(config)))
 
 	// Anthropic routes
 	app.Get("/wsanthropic", websocket.New(handleAnthropicWebSocket(config)))

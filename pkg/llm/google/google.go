@@ -22,7 +22,7 @@ const (
 )
 
 // StreamGeminiResponseToWebSocket streams the response from the Gemini API to a WebSocket connection.
-func StreamGeminiResponseToWebSocket(c *websocket.Conn, chatID int, prompt string, apiKey string) error {
+func StreamGeminiResponseToWebSocket(c websocket.Conn, chatID int, prompt string, apiKey string) error {
 	pterm.Warning.Printfln("Using model: %s", model)
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))

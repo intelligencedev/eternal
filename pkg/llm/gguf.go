@@ -298,6 +298,8 @@ func MakeCompletionWebSocket(c websocket.Conn, chatID int, modelOpts *GGUFOption
 		// Convert chatID to string for formatting
 		turnIDStr := fmt.Sprint(chatID + TurnCounter)
 
+		// fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'><span class='badge my-3 mx-1 bg-gradient' style='background-color: var(--et-galactic-accent);'>Assistant</span><br>%s</div>", turnIDStr, htmlMsg)
+		// fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1 rounded-2' hx-trigger='load'>%s</div>", turnIDStr, htmlMsg)
 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 			pterm.Error.Println("WebSocket write error:", err)

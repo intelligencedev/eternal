@@ -62,17 +62,18 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 		pterm.Info.Println("Team: ", currentProject.Team)
 
 		if len(currentProject.Team.Assistants) > 0 {
-			firstModelName := currentProject.Team.Assistants[0].Name
+			// firstModelName := currentProject.Team.Assistants[0].Name
 
-			if strings.HasPrefix(firstModelName, "openai-") {
-				wsroute = "/wsoai"
-			} else if strings.HasPrefix(firstModelName, "google-") {
-				wsroute = "/wsgoogle"
-			} else if strings.HasPrefix(firstModelName, "anthropic-") {
-				wsroute = "/wsanthropic"
-			} else {
-				wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
-			}
+			// if strings.HasPrefix(firstModelName, "openai-") {
+			// 	wsroute = "/wsoai"
+			// } else if strings.HasPrefix(firstModelName, "google-") {
+			// 	wsroute = "/wsgoogle"
+			// } else if strings.HasPrefix(firstModelName, "anthropic-") {
+			// 	wsroute = "/wsanthropic"
+			// } else {
+			// 	wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
+			// }
+			wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
 		} else {
 			return c.JSON(fiber.Map{"error": "No models selected"})
 		}
@@ -293,32 +294,27 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		chatMessage = performToolWorkflow(c, config, chatMessage)
 	}
 
-	// Process the first model
-	err = processFirstModel(c, config, wsMessage, chatMessage, &responseBuffer)
-	if err != nil {
-		log.Errorf("Error processing first model: %v", err)
-		return
-	}
-
-	// Process the second model
-	err = processSecondModel(c, config, wsMessage, chatMessage, responseBuffer.String(), &responseBuffer)
-	if err != nil {
-		log.Errorf("Error processing second model: %v", err)
-		return
+	// Loop through each assistant in the group and process the chat message
+	for _, assistant := range currentProject.Team.Assistants {
+		err = handleAssistantTurn(c, config, wsMessage, chatMessage, &responseBuffer, assistant)
+		if err != nil {
+			log.Errorf("Error processing model: %v", err)
+			// return
+		}
 	}
 
 	// Handle the completed chat turn
 	handleChatTurnFinished(config, wsMessage, fmt.Errorf("%s", responseBuffer.String()))
 }
 
-func processFirstModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage string, responseBuffer *bytes.Buffer) error {
+func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage string, responseBuffer *bytes.Buffer, assistant Assistant) error {
 	var model ModelParams
-	err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
+	err := sqliteDB.First(assistant.Name, &model)
 	if err != nil {
-		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
+		return fmt.Errorf("error getting model %s: %v", assistant.Name, err)
 	}
 
-	role := currentProject.Team.Assistants[0].Role.Name
+	role := assistant.Role.Name
 
 	// get the role from the config that matches the name of the assistant role
 	for _, r := range config.AssistantRoles {
@@ -328,7 +324,8 @@ func processFirstModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocket
 	}
 
 	promptTemplate := model.Options.Prompt
-	fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
+	// fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)
+	fullInstructions := fmt.Sprintf("Query: %s\n\nPrevious Response: %s\n\n%s", chatMessage, responseBuffer.String(), config.CurrentRoleInstructions)
 	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
 	fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
 
@@ -343,55 +340,38 @@ func processFirstModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocket
 		TopK:          model.Options.TopK,
 	}
 
-	return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
-}
+	// Insert an alert with the name and role of the assistant into the response buffer
+	responseBuffer.WriteString(fmt.Sprintf("<div class='alert alert-primary my-1' role='alert'>%s - %s</div>", assistant.Name, assistant.Role.Name))
 
-func processSecondModel(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage, firstModelResponse string, responseBuffer *bytes.Buffer) error {
-	var model ModelParams
-	err := sqliteDB.First(currentProject.Team.Assistants[1].Name, &model)
-	if err != nil {
-		return fmt.Errorf("error getting model %s: %v", currentProject.Team.Assistants[1].Name, err)
+	// invoke the correct handler based on the model name
+	if strings.HasPrefix(model.Name, "openai-") {
+		// Get the system template for the chat message.
+		cpt := llm.GetSystemTemplate(chatMessage)
+		return openai.StreamCompletionToWebSocket(*c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey, responseBuffer)
+	} else if strings.HasPrefix(model.Name, "google-") {
+		apiKey := config.GoogleKey
+		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
+	} else if strings.HasPrefix(model.Name, "anthropic-") {
+		apiKey := config.AnthropicKey
+		handleAnthropicWS(c, apiKey, chatTurn)
+	} else {
+		return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 	}
 
-	role := currentProject.Team.Assistants[1].Role.Name
-
-	// get the role from the config that matches the name of the assistant role
-	for _, r := range config.AssistantRoles {
-		if r.Name == role {
-			config.CurrentRoleInstructions = r.Instructions
-		}
-	}
-
-	promptTemplate := model.Options.Prompt
-	fullInstructions := fmt.Sprintf("Query: %s\n\nPrevious Response: %s\n\n%s", chatMessage, firstModelResponse, config.CurrentRoleInstructions)
-	fullPrompt := strings.ReplaceAll(promptTemplate, "{prompt}", fullInstructions)
-	fullPrompt = strings.ReplaceAll(fullPrompt, "{system}", "You are a helpful AI assistant.")
-
-	modelOpts := &llm.GGUFOptions{
-		NGPULayers:    config.ServiceHosts["llm"]["llm_host_1"].GgufGPULayers,
-		Model:         model.Options.Model,
-		Prompt:        fullPrompt,
-		CtxSize:       model.Options.CtxSize,
-		Temp:          model.Options.Temp,
-		RepeatPenalty: model.Options.RepeatPenalty,
-		TopP:          model.Options.TopP,
-		TopK:          model.Options.TopK,
-	}
-
-	return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
+	return nil
 }
 
 // handleOpenAIWebSocket handles WebSocket connections for OpenAI.
-func handleOpenAIWebSocket(config *AppConfig) func(*websocket.Conn) {
-	return func(c *websocket.Conn) {
-		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			// Get the system template for the chat message.
-			cpt := llm.GetSystemTemplate(chatMessage)
-			// Stream the completion response from OpenAI to the WebSocket.
-			return openai.StreamCompletionToWebSocket(c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey)
-		})
-	}
-}
+// func handleOpenAIWebSocket(config *AppConfig) func(*websocket.Conn) {
+// 	return func(c *websocket.Conn) {
+// 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+// 			// Get the system template for the chat message.
+// 			cpt := llm.GetSystemTemplate(chatMessage)
+// 			// Stream the completion response from OpenAI to the WebSocket.
+// 			return openai.StreamCompletionToWebSocket(*c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey)
+// 		})
+// 	}
+// }
 
 // handleAnthropicWS handles WebSocket connections for Anthropic.
 func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
@@ -419,7 +399,7 @@ func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
 	}
 
 	// Stream the completion response from Anthropic to the WebSocket.
-	res := anthropic.StreamCompletionToWebSocket(c, chatID, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey)
+	res := anthropic.StreamCompletionToWebSocket(*c, chatID, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey)
 	if res != nil {
 		pterm.Error.Println("Error in anthropic completion:", res)
 	}
@@ -443,7 +423,7 @@ func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
 
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
 			// Stream the Gemini response from Google to the WebSocket.
-			return google.StreamGeminiResponseToWebSocket(c, chatTurn, chatMessage, apiKey)
+			return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
 		})
 	}
 }

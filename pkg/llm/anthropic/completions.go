@@ -54,7 +54,7 @@ type TextDelta struct {
 	Text string `json:"text"`
 }
 
-func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, messages []Message, temperature float64, apiKey string) error {
+func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, messages []Message, temperature float64, apiKey string) error {
 
 	payload := &CompletionRequest{
 		Model:       model,

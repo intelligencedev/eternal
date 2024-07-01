@@ -40,7 +40,7 @@ func SendRequest(endpoint string, payload interface{}, apiKey string) (*http.Res
 	return http.DefaultClient.Do(req)
 }
 
-func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, messages []llm.Message, temperature float64, apiKey string) error {
+func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, messages []llm.Message, temperature float64, apiKey string, responseBuffer *bytes.Buffer) error {
 	payload := &CompletionRequest{
 		Model:       model,
 		Messages:    messages,
@@ -56,7 +56,6 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 	defer resp.Body.Close()
 
 	// Handle streaming response
-	msgBuffer := new(bytes.Buffer)
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -71,17 +70,25 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 				FinishReason string `json:"finish_reason"`
 			}
 
+			//the stream terminated by a data: [DONE] message.
+
+			// If the stream is done, break out of the loop
+			if strings.Contains(jsonStr, "[DONE]") {
+				pterm.Error.Println("OpenAI stream completed")
+				return fmt.Errorf("OpenAI stream completed")
+			}
+
 			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-				return fmt.Errorf("%s", msgBuffer.String())
+				return fmt.Errorf("%s", responseBuffer.String())
 			}
 
 			// Accumulate content from each choice in the buffer
 			for _, choice := range data.Choices {
-				msgBuffer.WriteString(choice.Delta.Content)
+				responseBuffer.WriteString(choice.Delta.Content)
 			}
 
 			// Process the accumulated content after streaming is complete
-			htmlMsg := web.MarkdownToHTML(msgBuffer.Bytes())
+			htmlMsg := web.MarkdownToHTML(responseBuffer.Bytes())
 
 			turnIDStr := fmt.Sprint(chatID + llm.TurnCounter)
 
@@ -101,7 +108,7 @@ func StreamCompletionToWebSocket(c *websocket.Conn, chatID int, model string, me
 		return err
 	}
 
-	return nil
+	return err
 }
 
 // StreamTTSToFile streams TTS response to a file.
