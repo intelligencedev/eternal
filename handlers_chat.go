@@ -341,7 +341,7 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 	}
 
 	// Insert an alert with the name and role of the assistant into the response buffer
-	responseBuffer.WriteString(fmt.Sprintf("<div class='alert alert-primary my-1' role='alert'>%s - %s</div>", assistant.Name, assistant.Role.Name))
+	responseBuffer.WriteString(fmt.Sprintf("\n### %s - %s\n", assistant.Name, assistant.Role.Name))
 
 	// invoke the correct handler based on the model name
 	if strings.HasPrefix(model.Name, "openai-") {
