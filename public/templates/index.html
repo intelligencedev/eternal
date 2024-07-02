@@ -172,16 +172,18 @@
                 placeholder="Type your message..." rows="2" style="outline: none;">write a haiku</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
-                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend"
-                hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
-                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#ffffff" fill-rule="evenodd"
-                    d="M12 15.75a.75.75 0 0 0 .75-.75V4.027l1.68 1.961a.75.75 0 1 0 1.14-.976l-3-3.5a.75.75 0 0 0-1.14 0l-3 3.5a.75.75 0 1 0 1.14.976l1.68-1.96V15c0 .414.336.75.75.75"
-                    clip-rule="evenodd" />
-                  <path fill="#ffffff"
-                    d="M16 9c-.702 0-1.053 0-1.306.169a1 1 0 0 0-.275.275c-.169.253-.169.604-.169 1.306V15a2.25 2.25 0 1 1-4.5 0v-4.25c0-.702 0-1.053-.169-1.306a1 1 0 0 0-.275-.275C9.053 9 8.702 9 8 9c-2.828 0-4.243 0-5.121.879C2 10.757 2 12.17 2 14.999v1c0 2.83 0 4.243.879 5.122C3.757 22 5.172 22 8 22h8c2.828 0 4.243 0 5.121-.879C22 20.242 22 18.828 22 16v-1c0-2.829 0-4.243-.879-5.121C20.243 9 18.828 9 16 9" />
-                </svg>
+                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend" hx-on:afterRequest="toggleSendIcon('stop')">
+                <div id="send-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#ffffff" fill-rule="evenodd"
+                      d="M12 15.75a.75.75 0 0 0 .75-.75V4.027l1.68 1.961a.75.75 0 1 0 1.14-.976l-3-3.5a.75.75 0 0 0-1.14 0l-3 3.5a.75.75 0 1 0 1.14.976l1.68-1.96V15c0 .414.336.75.75.75"
+                      clip-rule="evenodd" />
+                    <path fill="#ffffff"
+                      d="M16 9c-.702 0-1.053 0-1.306.169a1 1 0 0 0-.275.275c-.169.253-.169.604-.169 1.306V15a2.25 2.25 0 1 1-4.5 0v-4.25c0-.702 0-1.053-.169-1.306a1 1 0 0 0-.275-.275C9.053 9 8.702 9 8 9c-2.828 0-4.243 0-5.121.879C2 10.757 2 12.17 2 14.999v1c0 2.83 0 4.243.879 5.122C3.757 22 5.172 22 8 22h8c2.828 0 4.243 0 5.121-.879C22 20.242 22 18.828 22 16v-1c0-2.829 0-4.243-.879-5.121C20.243 9 18.828 9 16 9" />
+                  </svg>
+                </div>
               </button>
+
             </div>
 
             <div class="row ms-auto w-25">
@@ -419,6 +421,25 @@
           console.error('Error:', error);
         })
     }
+
+    document.getElementById('send').addEventListener('click', () => {
+      const sendIcon = document.getElementById('send-icon');
+      sendIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2c4.714 0 7.071 0 8.535 1.464C22 4.93 22 7.286 22 12c0 4.714 0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12Z"/>
+        </svg>
+    `;
+    });
+
+    // htmx.on('htmx:afterRequest', () => {
+    //   const sendIcon = document.getElementById('send-icon');
+    //   sendIcon.innerHTML = `
+    //     <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    //         <path fill="#ffffff" fill-rule="evenodd" d="M12 15.75a.75.75 0 0 0 .75-.75V4.027l1.68 1.961a.75.75 0 1 0 1.14-.976l-3-3.5a.75.75 0 0 0-1.14 0l-3 3.5a.75.75 0 1 0 1.14.976l1.68-1.96V15c0 .414.336.75.75.75" clip-rule="evenodd"/>
+    //         <path fill="#ffffff" d="M16 9c-.702 0-1.053 0-1.306.169a1 1 0 0 0-.275.275c-.169.253-.169.604-.169 1.306V15a2.25 2.25 0 1 1-4.5 0v-4.25c0-.702 0-1.053-.169-1.306a1 1 0 0 0-.275-.275C9.053 9 8.702 9 8 9c-2.828 0-4.243 0-5.121.879C2 10.757 2 12.17 2 14.999v1c0 2.83 0 4.243.879 5.122C3.757 22 5.172 22 8 22h8c2.828 0 4.243 0 5.121-.879C22 20.242 22 18.828 22 16v-1c0-2.829 0-4.243-.879-5.121C20.243 9 18.828 9 16 9"/>
+    //     </svg>
+    // `;
+    // });
     // htmx.logAll();
   </script>
 </body>

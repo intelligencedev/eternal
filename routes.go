@@ -27,6 +27,7 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	// Chat session routes
 	app.Post("/chatsubmit", handleChatSubmit(config))
 	app.Post("/chat/role/:name", handleRoleSelection(config))
+	app.Post("/stop-streaming/:turnID", handleStopStreaming())
 
 	// Model management routes
 	app.Post("/modelcards", handleModelCards(modelParams))

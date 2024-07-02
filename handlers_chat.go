@@ -81,6 +81,31 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 	}
 }
 
+// TEST FUNCTIONS TO STOP STREAMING CHAT RESPONSE
+func handleStopStreaming() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		turnID := c.Params("turnID")
+		pterm.Info.Println("Stopping streaming for turnID:", turnID)
+		// Logic to stop the streaming process for the given turnID
+		// This could involve stopping the CLI process or closing the WebSocket connection
+		return c.SendStatus(fiber.StatusOK)
+	}
+}
+
+func stopCLIProcess(turnID string) error {
+	// Logic to find and stop the CLI process associated with the given turnID
+	// This could involve maintaining a map of turnIDs to process IDs
+	return nil
+}
+
+func closeWebSocketConnection(turnID string) error {
+	// Logic to find and close the WebSocket connection associated with the given turnID
+	// This could involve maintaining a map of turnIDs to WebSocket connections
+	return nil
+}
+
+// END TEST FUNCTIONS
+
 // handleGetChats retrieves and returns all chat records.
 func handleGetChats() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -290,6 +315,8 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 			log.Errorf("Error processing model: %v", err)
 			// return
 		}
+
+		pterm.Info.Println("Assistant finished turn: ", assistant.Name)
 	}
 
 	// Handle the completed chat turn
@@ -349,28 +376,13 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 		}
 
 		// Stream the completion response from Anthropic to the WebSocket.
-		res := anthropic.StreamCompletionToWebSocket(*c, chatTurn, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey, responseBuffer)
-		if res != nil {
-			pterm.Error.Println("Error in anthropic completion:", res)
-		}
+		return anthropic.StreamCompletionToWebSocket(*c, chatTurn, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey, responseBuffer)
 	} else {
 		return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 	}
 
 	return nil
 }
-
-// handleGoogleWebSocket handles WebSocket connections for Google.
-// func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
-// 	return func(c *websocket.Conn) {
-// 		apiKey := config.GoogleKey
-
-// 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-// 			// Stream the Gemini response from Google to the WebSocket.
-// 			return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
-// 		})
-// 	}
-// }
 
 // readAndUnmarshalMessage reads and unmarshals a WebSocket message.
 func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {

@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	model = "models/gemini-1.5-pro-latest"
+	model = "models/gemini-1.5-flash-latest"
 )
 
 // StreamGeminiResponseToWebSocket streams the response from the Gemini API to a WebSocket connection.
@@ -46,7 +46,8 @@ func StreamGeminiResponseToWebSocket(c websocket.Conn, chatID int, prompt string
 	for {
 		resp, err := iter.Next()
 		if err == iterator.Done {
-			return err
+			c.WriteMessage(websocket.TextMessage, []byte("EOS")) //End of stream
+			return fmt.Errorf("EOS")
 		}
 		if err != nil {
 			pterm.Error.Println(err)

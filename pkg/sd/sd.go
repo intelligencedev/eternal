@@ -86,14 +86,16 @@ func BuildCommand(dataPath string, params SDParams) *exec.Cmd {
 		"--rng", "std_default",
 		"--cfg-scale", "2",
 		"--sampling-method", "dpm++2m",
-		"--steps", "10",
+		"--steps", "6",
 		"--seed", "-1",
 		//"--upscale-model", "/mnt/d/StableDiffusionModels/sdxl/upscalers/RealESRGAN_x4plus_anime_6B.pth",
 		"--schedule", "karras",
 		"--strength", "1.0",
-		"--clip-skip", "2",
+		//"--clip-skip", "2",
 		"--width", "1024",
 		"--height", "1024",
+		"--vae-tiling",
+		"--canny",
 	}
 
 	// Print cmdArgs

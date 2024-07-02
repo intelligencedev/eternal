@@ -74,8 +74,8 @@ func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, mes
 
 			// If the stream is done, break out of the loop
 			if strings.Contains(jsonStr, "[DONE]") {
-				pterm.Error.Println("OpenAI stream completed")
-				return fmt.Errorf("OpenAI stream completed")
+				c.WriteMessage(websocket.TextMessage, []byte("EOS")) // End of stream
+				return fmt.Errorf("EOS")
 			}
 
 			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {

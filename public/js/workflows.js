@@ -164,3 +164,20 @@ function executeWorkflow(workflowName) {
   const models = workflows[workflowName];
   // Logic to interact with models in the specified order
 }
+
+function stopStreaming(turnID) {
+  fetch(`/stop-streaming/${turnID}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then(response => {
+    if (response.ok) {
+      console.log(`Streaming for turn ${turnID} stopped.`);
+    } else {
+      console.error(`Failed to stop streaming for turn ${turnID}.`);
+    }
+  }).catch(error => {
+    console.error('Error:', error);
+  });
+}
