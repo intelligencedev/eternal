@@ -191,6 +191,10 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			// Parse the first line of the page to get the URL
 			pageURL := strings.Split(page, "\n")[0]
 			documentTags := fmt.Sprintf("web, %s", pageURL)
+
+			// Remove any '403 Forbidden' text from the documentTags
+			documentTags = strings.ReplaceAll(documentTags, "403 Forbidden", "")
+
 			err := handleTextSplitAndIndex(documentTags, page, 1024, "avsolatorio/GIST-small-Embedding-v0")
 			if err != nil {
 				log.Errorf("Error handling text split and index: %v", err)

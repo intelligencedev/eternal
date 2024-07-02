@@ -172,7 +172,7 @@
                 placeholder="Type your message..." rows="2" style="outline: none;">write a haiku</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
-                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend" hx-on:afterRequest="toggleSendIcon('stop')">
+                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
                 <div id="send-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#ffffff" fill-rule="evenodd"
