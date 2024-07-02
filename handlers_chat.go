@@ -339,7 +339,7 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 		return openai.StreamCompletionToWebSocket(*c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey, responseBuffer)
 	} else if strings.HasPrefix(model.Name, "google-") {
 		apiKey := config.GoogleKey
-		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
+		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey, responseBuffer)
 	} else if strings.HasPrefix(model.Name, "anthropic-") {
 		apiKey := config.AnthropicKey
 
@@ -361,16 +361,16 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 }
 
 // handleGoogleWebSocket handles WebSocket connections for Google.
-func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
-	return func(c *websocket.Conn) {
-		apiKey := config.GoogleKey
+// func handleGoogleWebSocket(config *AppConfig) func(*websocket.Conn) {
+// 	return func(c *websocket.Conn) {
+// 		apiKey := config.GoogleKey
 
-		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-			// Stream the Gemini response from Google to the WebSocket.
-			return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
-		})
-	}
-}
+// 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
+// 			// Stream the Gemini response from Google to the WebSocket.
+// 			return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
+// 		})
+// 	}
+// }
 
 // readAndUnmarshalMessage reads and unmarshals a WebSocket message.
 func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {

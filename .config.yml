@@ -56,7 +56,7 @@ default_project:
   name: "default"
   description: "This is the default project."
   team:
-    name: "platform_architecture"
+    name: "default_team"
     assistants:
       - name: "llama3-8b-instruct"
         role:

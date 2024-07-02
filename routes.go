@@ -68,5 +68,5 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	//app.Get("/wsanthropic", websocket.New(handleAnthropicWebSocket(config)))
 
 	// Google routes
-	app.Get("/wsgoogle", websocket.New(handleGoogleWebSocket(config)))
+	// app.Get("/wsgoogle", websocket.New(handleGoogleWebSocket(config)))
 }
