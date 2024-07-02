@@ -54,7 +54,7 @@ type TextDelta struct {
 	Text string `json:"text"`
 }
 
-func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, messages []Message, temperature float64, apiKey string) error {
+func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, messages []Message, temperature float64, apiKey string, msgBuffer *bytes.Buffer) error {
 
 	payload := &CompletionRequest{
 		Model:       model,
@@ -71,7 +71,7 @@ func StreamCompletionToWebSocket(c websocket.Conn, chatID int, model string, mes
 	defer resp.Body.Close()
 
 	// Handle streaming response
-	msgBuffer := new(bytes.Buffer)
+	//msgBuffer := new(bytes.Buffer)
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()

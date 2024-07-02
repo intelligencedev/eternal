@@ -62,17 +62,6 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 		pterm.Info.Println("Team: ", currentProject.Team)
 
 		if len(currentProject.Team.Assistants) > 0 {
-			// firstModelName := currentProject.Team.Assistants[0].Name
-
-			// if strings.HasPrefix(firstModelName, "openai-") {
-			// 	wsroute = "/wsoai"
-			// } else if strings.HasPrefix(firstModelName, "google-") {
-			// 	wsroute = "/wsgoogle"
-			// } else if strings.HasPrefix(firstModelName, "anthropic-") {
-			// 	wsroute = "/wsanthropic"
-			// } else {
-			// 	wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
-			// }
 			wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
 		} else {
 			return c.JSON(fiber.Map{"error": "No models selected"})
@@ -353,67 +342,22 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey)
 	} else if strings.HasPrefix(model.Name, "anthropic-") {
 		apiKey := config.AnthropicKey
-		handleAnthropicWS(c, apiKey, chatTurn)
+
+		// Prepare the messages for the completion request.
+		messages := []anthropic.Message{
+			{Role: "user", Content: chatMessage},
+		}
+
+		// Stream the completion response from Anthropic to the WebSocket.
+		res := anthropic.StreamCompletionToWebSocket(*c, chatTurn, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey, responseBuffer)
+		if res != nil {
+			pterm.Error.Println("Error in anthropic completion:", res)
+		}
 	} else {
 		return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 	}
 
 	return nil
-}
-
-// handleOpenAIWebSocket handles WebSocket connections for OpenAI.
-// func handleOpenAIWebSocket(config *AppConfig) func(*websocket.Conn) {
-// 	return func(c *websocket.Conn) {
-// 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
-// 			// Get the system template for the chat message.
-// 			cpt := llm.GetSystemTemplate(chatMessage)
-// 			// Stream the completion response from OpenAI to the WebSocket.
-// 			return openai.StreamCompletionToWebSocket(*c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey)
-// 		})
-// 	}
-// }
-
-// handleAnthropicWS handles WebSocket connections for Anthropic.
-func handleAnthropicWS(c *websocket.Conn, apiKey string, chatID int) {
-	// Read the initial message from the WebSocket.
-	_, message, err := c.ReadMessage()
-	if err != nil {
-		pterm.PrintOnError(err)
-		return
-	}
-
-	// Unmarshal the JSON message.
-	var wsMessage WebSocketMessage
-	err = json.Unmarshal(message, &wsMessage)
-	if err != nil {
-		c.WriteMessage(websocket.TextMessage, []byte("Error unmarshalling JSON"))
-		return
-	}
-
-	// Extract the chat message value.
-	chatMessage := wsMessage.ChatMessage
-
-	// Prepare the messages for the completion request.
-	messages := []anthropic.Message{
-		{Role: "user", Content: chatMessage},
-	}
-
-	// Stream the completion response from Anthropic to the WebSocket.
-	res := anthropic.StreamCompletionToWebSocket(*c, chatID, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey)
-	if res != nil {
-		pterm.Error.Println("Error in anthropic completion:", res)
-	}
-
-	// Increment the chat turn counter.
-	chatTurn = chatTurn + 1
-}
-
-// handleAnthropicWebSocket handles WebSocket connections for Anthropic.
-func handleAnthropicWebSocket(config *AppConfig) func(*websocket.Conn) {
-	return func(c *websocket.Conn) {
-		apiKey := config.AnthropicKey
-		handleAnthropicWS(c, apiKey, chatTurn)
-	}
 }
 
 // handleGoogleWebSocket handles WebSocket connections for Google.
