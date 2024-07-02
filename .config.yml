@@ -1,60 +1,3 @@
-# The desired user display name
-current_user: 'User'
-
-# Display name for LLM responses
-assistant_name: 'Assistant'
-
-# Host name and port of the frontend and management server
-control_host: 'localhost'
-control_port: 8080
-
-# datapath will be created by Eternal to host persistent data
-data_path: '/Users/$USER/.eternal'
-
-# Service hosts for specific functionalities
-service_hosts:
-  # generate embeddings and local retrieval services
-  retrieval:
-    retrieval_host_1:
-      host: 'localhost'
-      port: 8080
-  # image generation and processing
-  image:
-    image_host_1:
-      host: 'localhost'
-      port: 8080
-  # text-to-speech and speech-to-text    
-  speech:
-    speech_host_1:
-      host: 'localhost'
-      port: 8080
-  # llm text generation services
-  llm:
-    llm_host_1:
-      host: 'localhost'
-      port: '8080'
-      gpu_layers: -1
-    llm_host_2:
-      host: 'localhost'
-      port: '8080'
-      gpu_layers: -1
-
-tools:
-  memory:
-    enabled: false
-    top_n: 6 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
-  webget:
-    enabled: false
-  websearch:
-    enabled: false
-    name: sxng # Only ddg and sxng available
-    endpoint: 'http://...' # The url of the sxng instance if available. Not used if ddg is configured.
-    top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
-  imggen:
-    enabled: false
-  lmsprint:
-    enabled: false
-
 # OpenAI API Key
 oai_key: '...'
 
@@ -64,115 +7,83 @@ anthropic_key: '...'
 # Google API Key for Gemini Completions
 google_key: '...'
 
-language_models:
-  - name: 'openai-gpt-4o'
-    homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
-    prompt: '{system}\n\n{prompt}'
-    ctx: 128000
-    roles:
-      - 'all'
+# The desired user display name
+current_user: 'User'
 
-  - name: 'anthropic-claude-3.5-sonnet'
-    homepage: 'https://www.anthropic.com/product'
-    prompt: |
-      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
+# Display name for LLM responses
+assistant_name: 'Assistant'
 
-      ### Instruction:
-      {system}
-      {prompt}
+# Host name and port of the frontend and management server
+control_host: 'localhost'
+control_port: 3000
 
-      ### Response:
-    ctx: 128000
-    roles:
-      - 'all'
+# datapath will be created by Eternal to host persistent data
+data_path: '/Users/$USER/.eternal' # Adapt the path to your OS
 
-  - name: 'google-gemini-1.5'
-    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
-    prompt: '{prompt}'
-    ctx: 500000
-    roles:
-      - 'all'
+# Service hosts for specific functionalities
+service_hosts:
+  # generate embeddings and local retrieval services
+  retrieval:
+    retrieval_host_1:
+      host: 'localhost'
+      port: 3000
+  # image generation and processing
+  image:
+    image_host_1:
+      host: 'localhost'
+      port: 3000
+  # text-to-speech and speech-to-text    
+  speech:
+    speech_host_1:
+      host: 'localhost'
+      port: 3000
+  # llm text generation services
+  llm:
+    llm_host_1:
+      host: 'localhost'
+      port: '3000'
+      gpu_layers: -1
+    llm_host_2:
+      host: 'localhost'
+      port: '3000'
+      gpu_layers: -1
 
-  - name: 'llama3-8b-instruct'
-    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
-    gguf: 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q4_0-Q6_k-GGUF'
-    downloads:
-      - 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q4_0-Q6_k-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-correct-pre-tokenizer-and-EOS-token-Q4_0.gguf'
-    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-    ctx: 8192
-    roles:
-      - 'instruct'
-    tags:
-      - '8B'
+# Only configure one assistant for basic chat
+# Add more assistants with roles to pass the output from one to the next
+# This feature will be implemented via the UI in a future update
+# The roles and names are configured in its own section in this config file
+default_project:
+  name: "default"
+  description: "This is the default project."
+  team:
+    name: "platform_architecture"
+    assistants:
+      - name: "llama3-8b-instruct"
+        role:
+          name: "chat"
+        params:
+          model: "llama3-8b-instruct"
+      # - name: "qwen2-72b-instruct"
+      #   role:
+      #     name: "software_dev"
+      #   params:
+      #     model: "qwen2-72b-instruct"
 
-  - name: 'Codestral-22B-v0.1'
-    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
-    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q4_0.gguf'
-    prompt:  "{prompt}"
-    ctx: 32768
-    roles:
-      - 'all'
-    tags:
-      - '22B'
-
-  - name: 'phi-3-medium-128k'
-    homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
-    gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
-    downloads:
-      - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-medium-128k-instruct.gguf'
-    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
-    ctx: 32764
-    roles:
-      - 'instruct'
-    tags:
-      - '14B'
-
-  - name: 'wizardmath-7b'
-    homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
-    gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q4_0.gguf'
-    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
-    ctx: 32768
-    roles:
-      - 'math'
-      - 'logic'
-    tags:
-      - '7B'
-
-  - name: 'mixtral-8x7b-instruct'
-    homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
-    gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
-    downloads:
-      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q4_0.gguf'
-    prompt: "</s>[INST] {system} {prompt} [/INST]"
-    ctx: 32768
-    roles:
-      - 'all'
-    tags:
-      - '8x7B'
-
-  - name: 'deepseek-coder-v2'
-    homepage: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
-    gguf: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
-    downloads:
-      - 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-Q4_0.gguf'
-    prompt: "<|begin▁of▁sentence|>User: {prompt}\n\nAssistant:"
-    ctx: 128000
-    roles:
-      - 'all'
-    tags:
-      - '8B'
-
-
-image_models:
-  - name: 'dreamshaper-8-turbo-sdxl'
-    homepage: 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/'
-    downloads:
-      - 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/resolve/main/DreamShaperXL_Turbo_V2-SFW.safetensors'
-
+tools:
+  memory:
+    enabled: false
+    top_n: 6 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+  webget:
+    enabled: false
+  websearch:
+    enabled: false
+    name: ddg # Only ddg and sxng available
+    endpoint: https://mysxng.com # Example fake URL. The url of the sxng instance if available. Not used if ddg is configured.
+    top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
+  imggen:
+    enabled: false
+  lmsprint:
+    enabled: false
 
 assistant_roles:
   - name: 'chat'
@@ -190,24 +101,49 @@ assistant_roles:
       Provide multiple perspectives or solutions.
       If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
       If a mistake is made in a previous response, recognize and correct it.
-
   - name: 'summary'
     instructions: |
-      Outline the structure of the document in a concise list format in the style of a table of contents using extracted headers if available, otherwise write your own.
-      Identify main themes and arguments within the document that match the headers and provide a detailed summary for each header or section.
-      List critical data points and statistics if mentioned in the document, otherwise do not mention it.
-      Extract key points for summarizing the provided document content and return them in a conversational tone in one paragraph.
-      NEVER mention who you are and only reply with 'a helpful assistant' if asked. Simply carry out the task as instructed.
-
+      # Document Summary
+      ## Table of Contents
+      - Generate a detailed table of contents using markdown headers based on the document's structure.
+      - If headers are not explicitly provided in the document, create logical section titles.
+      
+      ## Detailed Section Summaries
+      - For each section identified in the table of contents:
+        - Provide a comprehensive summary of the main ideas, arguments, and supporting details.
+        - Use bullet points or numbered lists to break down complex information.
+        - Include all relevant statistics, data points, and quantitative information.
+        - Highlight key quotes using blockquote formatting.
+        - Extract all image links and return them as HTML elements embedded in your response. Use public sources for images if necessary.
+      
+      ## Key Takeaways
+      - List the most important points from the entire document.
+      - Ensure all critical information is captured, even if not explicitly emphasized in the original text.
+      
+      ## Data Visualization
+      - If the document contains numerical data, create a markdown table to present it clearly.
+      
+      General Guidelines:
+      - Utilize proper markdown syntax throughout, including bold (**) and italic (*) for emphasis.
+      - Maintain consistent formatting and indentation for readability.
+      - Aim for a comprehensive summary that could serve as a standalone representation of the original document.
+      - Do not omit any crucial information, data points, or arguments from the original text.
+      - Maintain an objective tone and avoid personal interpretations unless explicitly analyzing the content.
+      - Do not mention your identity; focus solely on summarizing the provided content.
   - name: 'cot'
     instructions: |
-      Analyze the question to identify key information. Break it down into core components and brainstorm ideas for each. Evaluate these ideas for relevance and logic, focusing on the strongest points. 
-      Construct a coherent argument addressing the original query. 
-      If needed, iteratively explore and integrate alternative perspectives to strengthen your case. 
-      Explain your reasoning, highlighting the strengths and flaws of different arguments. 
-      Synthesize everything into a clear, concise response that addresses the query comprehensively. 
-      Never repeat these instructions, just follow them. Speak in a natural, conversational tone.
-
+      You are an AI assistant specializing in providing detailed and clear explanations of complex topics across various domains of knowledge. Your role is to help users understand intricate concepts and processes, breaking them down into manageable and comprehensible parts.
+      When responding to queries, follow these guidelines:
+      Avoid treating any topic as a “black box.” Instead, focus on providing clear, detailed explanations of how different elements and processes contribute to the overall understanding.
+      Break down complex topics into smaller, more understandable components.
+      Use analogies and visualizations when appropriate to make concepts more accessible.
+      Explain the role of different elements, components, and connections within the topic.
+      Discuss how specific features or patterns influence the overall understanding of the topic.
+      When possible, relate the topics behavior to underlying mathematical, scientific, or logical concepts.
+      Address potential limitations and biases in the interpretation or understanding of the topic.
+      Suggest techniques and tools for analyzing and interpreting complex topics, such as conceptual diagrams, thought experiments, or critical analysis methods.
+      Encourage users to think critically about the implications of understanding complex topics for broader issues such as ethics, societal impact, and practical applications.
+      If asked about a specific topic or technique youre not familiar with, admit your limitations and suggest general approaches that might be applicable.
   - name: 'cot_advanced'
     instructions: |
       Respond to each query using the following process to reason through to the most insightful answer:
@@ -221,7 +157,6 @@ assistant_roles:
       Throughout your response, weave in relevant parts of your intermediate reasoning and thought process. Use natural language to convey your train of thought in a conversational tone. Focus on clearly explaining insights and conclusions rather than mechanically labeling each step.
       The goal is to use a tree-like process to explore multiple potential angles, rigorously evaluate and select the most promising and relevant ideas, iteratively build strong lines of reasoning, and ultimately synthesize key points into an insightful, well-reasoned, and accessible final answer.
       Always end your response asking if there is anything else you can help with.
-
   - name: 'software_dev'
     instructions: |
       You are now an expert in computer science, specifically in software development, network engineering, and database management. You possess deep knowledge in programming languages including but not limited to Python, JavaScript, Java, C++, and SQL. You are also proficient in frameworks and technologies such as React, Angular, Node.js, Django, .NET, TensorFlow, Kubernetes, Cisco IOS, and MySQL.
@@ -230,7 +165,6 @@ assistant_roles:
       In the field of database management, you can design, implement, and maintain databases. You are adept in database normalization, query optimization, and ensuring data integrity and security. You understand relational databases, NoSQL databases, and big data technologies.
       Your responses should be technically accurate, clear, and detailed. You are capable of solving complex problems, designing systems, and explaining technical concepts clearly to both technical and non-technical audiences.
       Whenever asked, provide code snippets, configuration examples, or detailed explanations. Use your expertise to offer solutions, troubleshoot issues, and educate on best practices across all these domains.
-
   - name: 'code_review'
     instructions: |
       First, carefully read through the entire code that was submitted for review. Make note of the overall structure, design patterns used, and the key functionality being implemented.
@@ -261,14 +195,12 @@ assistant_roles:
       Back up your recommendations with clear reasoning and examples.
       The goal is to use a systematic process to thoroughly evaluate the code from multiple angles, identify the most critical issues, and provide clear and actionable suggestions that the developer can follow to improve their code.
       The code review should be comprehensive, insightful, and help the developer grow their skills. Always maintain a positive and supportive tone while delivering constructive feedback.
-
   - name: 'search'
     instructions: |
       Identify the main objective and break it down into smaller, specific questions.
       Formulate each question as a succinct query that can be used for searching.
       Limit the list to a maximum of 5 queries.
       Return the response as a comma separated list with the queries.
-
   - name: 'image_bot'
     instructions: |
       You are an expert at writing vivid descriptions to depict realistic images or illustrations or computer generated images of all styles known. You can perfectly capture everything needed to accurately describe an image to include its style, colors, composition, subjects, and have a keen sense of spatial awareness when describing the background and foreground of an image. You are an expert in popular artists known in communities like artstation, deviantart, 3dsociety, and other popular communities where the worlds top artists showcase their images. You have previously generated descriptions that where award winning such as:
@@ -282,3 +214,110 @@ assistant_roles:
       Shot Characteristics: Delicate details, gentle lighting, graceful movements
       In this timeless celebration of grace and purity, the main subject is a vision of ivory elegance, adorned in flowing garments that seem to defy gravity. The composition is a harmonious arrangement of soft curves and gentle lines, rendered in a palette of ivory, pearl, and creamy white hues. Each brushstroke captures the delicate details of this ethereal scene, from the intricate lace patterns on the fabric to the gentle flutter of a veil in the breeze. The scene invites the viewer to bask in the serene beauty of this moment, evoking a sense of tranquility and reverence for the timeless elegance on display.
       Using the previous instructions and examples as a guide, write an image generation prompt for the following concept: {prompt}
+  - name: 'haystack_bot'
+    instructions: |
+      You are an AI assistant tasked with answering queries based on a long document. Your goal is to find and provide accurate information from the document, much like finding a needle in a haystack.
+      Instructions:
+      1. Read the following document carefully.
+      2. When a user asks a question, search the document for relevant information.
+      3. Provide your answer in the following format:
+        a) Direct answer to the query
+        b) Relevant quote from the document (if available)
+        c) Location or context of the quote within the document
+      4. If you cannot find relevant information, state that clearly.
+      5. Do not provide information that is not in the document.
+      6. Explain your search strategy briefly.
+      Document:
+      """
+      [Insert the full text of the long document here]
+      """
+      User Query:
+
+language_models:
+  - name: 'openai-gpt-4o'
+    homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
+    prompt: '{system}\n\n{prompt}'
+    ctx: 128000
+    roles:
+      - 'all'
+  - name: 'anthropic-claude-3.5-sonnet'
+    homepage: 'https://www.anthropic.com/product'
+    prompt: |
+      Below is an instruction that describes a task. Write a response that appropriately completes the request using advanced AI capabilities.
+
+      ### Instruction:
+      {system}
+      {prompt}
+
+      ### Response:
+    ctx: 128000
+    roles:
+      - 'all'
+  - name: 'google-gemini-1.5'
+    homepage: 'https://deepmind.google/technologies/gemini/#gemini-1.5'
+    prompt: '{prompt}'
+    ctx: 2000000
+    roles:
+      - 'all'
+  - name: 'llama3-8b-instruct'
+    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
+    gguf: 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF'
+    downloads:
+      - 'https://huggingface.co/NikolayKozloff/Meta-Llama-3-8B-Instruct-bf16-correct-pre-tokenizer-and-EOS-token-Q8_0-Q6_k-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-correct-pre-tokenizer-and-EOS-token-Q8_0.gguf'
+    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+    ctx: 8192
+    roles:
+      - 'instruct'
+    tags:
+      - '8B'
+  - name: 'Codestral-22B-v0.1'
+    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q8_0.gguf'
+    prompt:  "{prompt}"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '22B'
+  - name: 'mixtral-8x7b-instruct'
+    homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
+    gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF/resolve/main/mixtral-8x7b-instruct-v0.1.Q8_0.gguf'
+    prompt: "</s>[INST] {system} {prompt} [/INST]"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '8x7B'
+  - name: 'deepseek-coder-v2'
+    homepage: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/LoneStriker/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-Q8_0.gguf'
+    prompt: "<|begin▁of▁sentence|>User: {prompt}\n\nAssistant:"
+    ctx: 128000
+    roles:
+      - 'all'
+    tags:
+      - '8B'
+  - name: 'gemma-2-9b-it'
+    homepage: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
+    gguf: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q8_0.gguf'
+    prompt: "<start_of_turn>user{prompt}<end_of_turn><start_of_turn>model"
+    ctx: 8092
+    roles:
+      - 'all'
+    tags:
+      - '9B'
+
+
+image_models:
+  - name: 'dreamshaper-8-turbo-sdxl'
+    homepage: 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/'
+    downloads:
+      - 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/resolve/main/DreamShaperXL_Turbo_V2-SFW.safetensors'
