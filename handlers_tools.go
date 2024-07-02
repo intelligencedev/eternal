@@ -36,7 +36,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		// Return the image to the client.
 		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds.
-		imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/tmp/sd_out.png?%d' />", timestamp)
+		imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/uploads/sd_out.png?%d' />", timestamp)
 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
 		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
 			pterm.PrintOnError(err)
