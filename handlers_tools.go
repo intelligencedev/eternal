@@ -60,9 +60,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			pterm.Info.Println("Retrieving page content...")
 
 			document, _ = web.WebGetHandler(url[0])
-
-			// Add the page content to the chat message.
-
 		}
 	}
 

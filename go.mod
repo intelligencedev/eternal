@@ -16,7 +16,6 @@ require (
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47
 	github.com/google/generative-ai-go v0.10.0
-	github.com/google/uuid v1.6.0
 	github.com/jaypipes/ghw v0.12.0
 	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/nlpodyssey/cybertron v0.2.1
@@ -25,15 +24,14 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/afero v1.11.0
 	github.com/stretchr/testify v1.9.0
+	github.com/temoto/robotstxt v1.1.2
 	github.com/tursodatabase/libsql-client-go v0.0.0-20240628122535-1c47b26184e8
-	github.com/unidoc/unioffice v1.31.0
 	github.com/valyala/fasthttp v1.50.0
 	golang.org/x/crypto v0.22.0
 	golang.org/x/net v0.24.0
 	golang.org/x/text v0.14.0
 	google.golang.org/api v0.152.0
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
 	modernc.org/sqlite v1.30.1
 )
@@ -97,6 +95,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
@@ -115,7 +114,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
@@ -126,7 +124,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rs/zerolog v1.31.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect

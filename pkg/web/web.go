@@ -3,7 +3,9 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -17,6 +19,7 @@ import (
 	"github.com/chromedp/chromedp/kb"
 	"github.com/go-shiori/go-readability"
 	"github.com/pterm/pterm"
+	"github.com/temoto/robotstxt"
 )
 
 var (
@@ -56,6 +59,30 @@ var (
 )
 
 func WebGetHandler(address string) (string, error) {
+	// Parse the URL
+	parsedURL, err := url.Parse(address)
+	if err != nil {
+		return "", fmt.Errorf("error parsing URL: %v", err)
+	}
+
+	// Check robots.txt
+	robotsURL := fmt.Sprintf("%s://%s/robots.txt", parsedURL.Scheme, parsedURL.Host)
+	resp, err := http.Get(robotsURL)
+	if err != nil {
+		log.Printf("Error fetching robots.txt: %v", err)
+	} else {
+		defer resp.Body.Close()
+		robots, err := robotstxt.FromResponse(resp)
+		if err != nil {
+			log.Printf("Error parsing robots.txt: %v", err)
+		} else {
+			group := robots.FindGroup("ET Bot/1.0")
+			if !group.Test(parsedURL.Path) {
+				return "", fmt.Errorf("access to %s is disallowed by robots.txt", address)
+			}
+		}
+	}
+
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 	)
@@ -70,17 +97,16 @@ func WebGetHandler(address string) (string, error) {
 	defer cancel()
 
 	var docs string
-	err := chromedp.Run(ctx,
+	err = chromedp.Run(ctx,
 		chromedp.Navigate(address),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			headers := map[string]interface{}{
-				"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-				"Referer":         "https://www.google.com/",
-				"Accept-Language": "en-US,en;q=0.9",
-				"X-Forwarded-For": "203.0.113.195",
+				"User-Agent":      "ET Bot/1.0",
+				"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+				"Accept-Language": "en-US,en;q=0.5",
 				"Accept-Encoding": "gzip, deflate, br",
 				"Connection":      "keep-alive",
-				"DNT":             "1",
+				"Cache-Control":   "no-cache",
 			}
 			return network.SetExtraHTTPHeaders(network.Headers(headers)).Do(ctx)
 		}),
