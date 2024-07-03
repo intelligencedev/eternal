@@ -330,14 +330,22 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 		return fmt.Errorf("error getting model %s: %v", assistant.Name, err)
 	}
 
+	// Print the model name and role for the assistant
+	pterm.Info.Println("Model: ", model.Name)
+	pterm.Info.Println("Role: ", assistant.Role.Name)
+
 	role := assistant.Role.Name
 
 	// get the role from the config that matches the name of the assistant role
 	for _, r := range config.AssistantRoles {
+		pterm.Info.Println("Role: ", r.Name)
+		pterm.Info.Println("Role: ", role)
 		if r.Name == role {
 			config.CurrentRoleInstructions = r.Instructions
 		}
 	}
+
+	pterm.Info.Println(model)
 
 	promptTemplate := model.Options.Prompt
 	// fullInstructions := fmt.Sprintf("%s\n\n%s", config.CurrentRoleInstructions, chatMessage)

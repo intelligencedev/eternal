@@ -48,7 +48,7 @@ func handleModelDownloadUpdate() fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 		}
 
-		err := sqliteDB.UpdateDownloadedByName(modelName, payload.Downloaded)
+		err := sqliteDB.UpdateByName(modelName, payload.Downloaded)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to update model: %v", err)})
 		}
@@ -179,7 +179,7 @@ func handleModelDownload(config *AppConfig) fiber.Handler {
 			if err != nil {
 				log.Errorf("Error in download: %v", err)
 			} else {
-				err = sqliteDB.UpdateDownloadedByName(modelName, true)
+				err = sqliteDB.UpdateByName(modelName, true)
 				if err != nil {
 					log.Errorf("Failed to update model downloaded state: %v", err)
 				}

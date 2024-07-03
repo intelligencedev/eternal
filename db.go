@@ -1,41 +1,35 @@
-// db.go
-
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"eternal/pkg/llm"
 	"eternal/pkg/sd"
 	"fmt"
-	"reflect"
 	"time"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteDB struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-// TEST
 type ChatSession struct {
-	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	ID        int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	ChatTurns []ChatTurn `gorm:"foreignKey:SessionID"`
 }
 
 type ChatTurn struct {
-	ID         int64 `gorm:"primaryKey;autoIncrement"`
+	ID         int64
 	SessionID  int64
 	UserPrompt string
-	Responses  []ChatResponse `gorm:"foreignKey:TurnID"`
 }
 
 type ChatResponse struct {
-	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	ID        int64
 	TurnID    int64
 	Content   string
 	Model     string // Identifier for the LLM model used
@@ -61,158 +55,359 @@ type GPU struct {
 	MetalSupport       string `json:"metal_support"`
 }
 
-// END TEST
-
 type ModelParams struct {
-	ID         int              `gorm:"primaryKey;autoIncrement"`
-	Name       string           `yaml:"name"`
-	Homepage   string           `yaml:"homepage"`
-	GGUFInfo   string           `yaml:"gguf,omitempty"`
-	Downloads  string           `yaml:"downloads,omitempty"`
-	Downloaded bool             `yaml:"downloaded"`
-	Options    *llm.GGUFOptions `gorm:"embedded"`
+	ID         int              `json:"id"`
+	Name       string           `json:"name"`
+	Homepage   string           `json:"homepage"`
+	GGUFInfo   string           `json:"gguf,omitempty"`
+	Downloads  string           `json:"downloads,omitempty"`
+	Downloaded bool             `json:"downloaded"`
+	Options    *llm.GGUFOptions `json:"options"`
 }
 
 type ImageModel struct {
-	ID         int          `gorm:"primaryKey;autoIncrement"`
-	Name       string       `yaml:"name"`
-	Homepage   string       `yaml:"homepage"`
-	Prompt     string       `yaml:"prompt"`
-	Downloads  string       `yaml:"downloads,omitempty"`
-	Downloaded bool         `yaml:"downloaded"`
-	Options    *sd.SDParams `gorm:"embedded"`
+	ID         int          `json:"id"`
+	Name       string       `json:"name"`
+	Homepage   string       `json:"homepage"`
+	Prompt     string       `json:"prompt"`
+	Downloads  string       `json:"downloads,omitempty"`
+	Downloaded bool         `json:"downloaded"`
+	Options    *sd.SDParams `json:"options"`
 }
 
 type SelectedModels struct {
-	ID        int    `gorm:"primaryKey;autoIncrement"`
+	ID        int    `json:"id"`
 	ModelName string `json:"modelName"`
 	Action    string `json:"action"`
 }
 
 type Chat struct {
-	ID        int64 `gorm:"primaryKey;autoIncrement"`
-	Prompt    string
-	Response  string
-	ModelName string
+	ID        int64  `json:"id"`
+	Prompt    string `json:"prompt"`
+	Response  string `json:"response"`
+	ModelName string `json:"modelName"`
 }
 
 type ProjectTool struct {
-	gorm.Model
-	Name      string `gorm:"unique;not null"`
-	Enable    bool
-	ProjectID uint // Foreign key that refers to Project
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Enable    bool   `json:"enable"`
+	ProjectID uint   `json:"projectId"`
 }
 
-// type File struct {
-// 	gorm.Model
-// 	Path      string
-// 	Content   string
-// 	ProjectID uint // Foreign key that refers to Project
-// }
-
-// URLTracking represents the structure for tracking URLs
 type URLTracking struct {
-	ID  int64  `gorm:"primaryKey;autoIncrement"`
-	URL string `gorm:"unique;not null"`
+	ID  int64  `json:"id"`
+	URL string `json:"url"`
 }
 
 func NewSQLiteDB(dataPath string) (*SQLiteDB, error) {
-
-	// Silence gorm logs during this step
-	newLogger := logger.Default.LogMode(logger.Silent)
-
-	dbPath := fmt.Sprintf("%s/eternaldata.db", dataPath)
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
-		Logger: newLogger,
-	})
+	dbPath := fmt.Sprintf("file:%s/eternaldata.db", dataPath)
+	db, err := sql.Open("libsql", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %v", err)
 	}
 	return &SQLiteDB{db: db}, nil
 }
 
-func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
-	for _, model := range models {
-		if err := sqldb.db.AutoMigrate(model); err != nil {
-			return fmt.Errorf("error migrating schema for %v: %v", reflect.TypeOf(model), err)
+func (sqldb *SQLiteDB) AutoMigrate() error {
+	queries := []string{
+		`CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT
+        )`,
+		`CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL
+        )`,
+		`CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            instructions TEXT
+        )`,
+		`CREATE TABLE IF NOT EXISTS assistants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            role_id INTEGER,
+            team_id INTEGER,
+            FOREIGN KEY (role_id) REFERENCES roles (id),
+            FOREIGN KEY (team_id) REFERENCES teams (id)
+        )`,
+		`CREATE TABLE IF NOT EXISTS model_params (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            homepage TEXT,
+            gguf_info TEXT,
+            downloads TEXT,
+            downloaded BOOLEAN,
+			prompt TEXT
+        )`,
+		`CREATE TABLE IF NOT EXISTS image_models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            homepage TEXT,
+            downloads TEXT,
+            downloaded BOOLEAN
+        )`,
+		`CREATE TABLE IF NOT EXISTS selected_models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model_name TEXT NOT NULL UNIQUE
+        )`,
+		`CREATE TABLE IF NOT EXISTS chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prompt TEXT,
+            response TEXT,
+            model_name TEXT
+        )`,
+		`CREATE TABLE IF NOT EXISTS url_tracking (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT NOT NULL UNIQUE
+        )`,
+	}
+
+	for _, query := range queries {
+		_, err := sqldb.db.Exec(query)
+		if err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+func (sqldb *SQLiteDB) GetProjectByName(name string) (Project, error) {
+	var project Project
+	err := sqldb.db.QueryRow("SELECT id, name, description FROM projects WHERE name = ?", name).Scan(
+		&project.ID, &project.Name, &project.Description)
+	if err != nil {
+		return Project{}, err
+	}
+	return project, nil
+}
+
+func (sqldb *SQLiteDB) GetProjects() ([]Project, error) {
+	rows, err := sqldb.db.Query("SELECT * FROM projects")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []Project
+	for rows.Next() {
+		var p Project
+		err := rows.Scan(&p.ID, &p.Name, &p.Description)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, p)
+	}
+	return projects, nil
+}
+
+func (sqldb *SQLiteDB) CreateProject(project *Project) error {
+	_, err := sqldb.db.Exec("INSERT INTO projects (name, description) VALUES (?, ?)",
+		project.Name, project.Description)
+	return err
+}
+
+func (sqldb *SQLiteDB) DeleteProject(name string) error {
+	_, err := sqldb.db.Exec("DELETE FROM projects WHERE name = ?", name)
+	return err
+}
+
+func (sqldb *SQLiteDB) ListProjects() ([]Project, error) {
+	return sqldb.GetProjects()
+}
+
+func (sqldb *SQLiteDB) Create(record interface{}) error {
+	switch r := record.(type) {
+	case Project:
+		_, err := sqldb.db.Exec("INSERT INTO projects (name, description) VALUES (?, ?)", r.Name, r.Description)
+		return err
+	case ModelParams:
+		_, err := sqldb.db.Exec("INSERT INTO model_params (name, homepage, gguf_info, downloads, downloaded) VALUES (?, ?, ?, ?, ?)",
+			r.Name, r.Homepage, r.GGUFInfo, r.Downloads, r.Downloaded)
+		return err
+	case ImageModel:
+		_, err := sqldb.db.Exec("INSERT INTO image_models (name, homepage, prompt, downloads, downloaded) VALUES (?, ?, ?, ?, ?)",
+			r.Name, r.Homepage, r.Prompt, r.Downloads, r.Downloaded)
+		return err
+	default:
+		return errors.New("not implemented for this type")
+	}
+}
+
+func (sqldb *SQLiteDB) Find(out interface{}) error {
+	switch out := out.(type) {
+	case *[]Project:
+		rows, err := sqldb.db.Query("SELECT id, name, description FROM projects")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		var projects []Project
+		for rows.Next() {
+			var p Project
+			err := rows.Scan(&p.ID, &p.Name, &p.Description)
+			if err != nil {
+				return err
+			}
+			projects = append(projects, p)
+		}
+		*out = projects
+	case *[]ModelParams:
+		rows, err := sqldb.db.Query("SELECT id, name, homepage, gguf_info, downloads, downloaded FROM model_params")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		var models []ModelParams
+		for rows.Next() {
+			var m ModelParams
+			err := rows.Scan(&m.ID, &m.Name, &m.Homepage, &m.GGUFInfo, &m.Downloads, &m.Downloaded)
+			if err != nil {
+				return err
+			}
+			models = append(models, m)
+		}
+		*out = models
+	case *[]ImageModel:
+		rows, err := sqldb.db.Query("SELECT id, name, homepage, prompt, downloads, downloaded FROM image_models")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		var models []ImageModel
+		for rows.Next() {
+			var m ImageModel
+			err := rows.Scan(&m.ID, &m.Name, &m.Homepage, &m.Prompt, &m.Downloads, &m.Downloaded)
+			if err != nil {
+				return err
+			}
+			models = append(models, m)
+		}
+		*out = models
+	default:
+		return errors.New("not implemented for this type")
 	}
 	return nil
 }
 
-// GetProjects retrieves all projects from the database.
-func (sqldb *SQLiteDB) GetProjects() ([]Project, error) {
-	var projects []Project
-	err := sqldb.db.Find(&projects).Error
-
-	return projects, err
-}
-
-// CreateProject inserts a new project into the database.
-func (sqldb *SQLiteDB) CreateProject(project *Project) error {
-	return sqldb.db.Create(project).Error
-}
-
-// DeleteProject removes a project from the database.
-func (sqldb *SQLiteDB) DeleteProject(name string) error {
-	return sqldb.db.Where("name = ?", name).Delete(&Project{}).Error
-}
-
-// ListProjects retrieves all projects from the database.
-func (sqldb *SQLiteDB) ListProjects() ([]Project, error) {
-	var projects []Project
-	err := sqldb.db.Find(&projects).Error
-	return projects, err
-}
-
-func (sqldb *SQLiteDB) Create(record interface{}) error {
-	return sqldb.db.Create(record).Error
-}
-
-func (sqldb *SQLiteDB) Find(out interface{}) error {
-	return sqldb.db.Find(out).Error
-}
-
 func (sqldb *SQLiteDB) First(name string, out interface{}) error {
-	return sqldb.db.Where("name = ?", name).First(out).Error
+	switch out := out.(type) {
+	case *ModelParams:
+		err := sqldb.db.QueryRow("SELECT id, name, homepage, gguf_info, downloads, downloaded FROM model_params WHERE name = ?", name).Scan(
+			&out.ID, &out.Name, &out.Homepage, &out.GGUFInfo, &out.Downloads, &out.Downloaded)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("record not found")
+			}
+			return err
+		}
+	case *ImageModel:
+		err := sqldb.db.QueryRow("SELECT id, name, homepage, prompt, downloads, downloaded FROM image_models WHERE name = ?", name).Scan(
+			&out.ID, &out.Name, &out.Homepage, &out.Prompt, &out.Downloads, &out.Downloaded)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("record not found")
+			}
+			return err
+		}
+	default:
+		return errors.New("not implemented for this type")
+	}
+	return nil
 }
 
 func (sqldb *SQLiteDB) FindByID(id uint, out interface{}) error {
-	return sqldb.db.First(out, id).Error
+	switch out := out.(type) {
+	case *Project:
+		err := sqldb.db.QueryRow("SELECT id, name, description FROM projects WHERE id = ?", id).Scan(
+			&out.ID, &out.Name, &out.Description)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("record not found")
+			}
+			return err
+		}
+	case *ModelParams:
+		err := sqldb.db.QueryRow("SELECT id, name, homepage, gguf_info, downloads, downloaded FROM model_params WHERE id = ?", id).Scan(
+			&out.ID, &out.Name, &out.Homepage, &out.GGUFInfo, &out.Downloads, &out.Downloaded)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("record not found")
+			}
+			return err
+		}
+	case *ImageModel:
+		err := sqldb.db.QueryRow("SELECT id, name, homepage, prompt, downloads, downloaded FROM image_models WHERE id = ?", id).Scan(
+			&out.ID, &out.Name, &out.Homepage, &out.Prompt, &out.Downloads, &out.Downloaded)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("record not found")
+			}
+			return err
+		}
+	default:
+		return errors.New("not implemented for this type")
+	}
+	return nil
 }
 
 func (sqldb *SQLiteDB) UpdateByName(name string, updatedRecord interface{}) error {
-	// Assuming 'Name' is the field in your model that holds the model's name.
-	// The method first finds the record by name and then applies the updates.
-	return sqldb.db.Model(updatedRecord).Where("name = ?", name).Updates(updatedRecord).Error
-}
-
-func (sqldb *SQLiteDB) UpdateDownloadedByName(name string, downloaded bool) error {
-	return sqldb.db.Model(&ModelParams{}).Where("name = ?", name).Update("downloaded", downloaded).Error
+	switch record := updatedRecord.(type) {
+	case ModelParams:
+		_, err := sqldb.db.Exec("UPDATE model_params SET homepage = ?, gguf_info = ?, downloads = ?, downloaded = ? WHERE name = ?",
+			record.Homepage, record.GGUFInfo, record.Downloads, record.Downloaded, name)
+		return err
+	case ImageModel:
+		_, err := sqldb.db.Exec("UPDATE image_models SET homepage = ?, prompt = ?, downloads = ?, downloaded = ? WHERE name = ?",
+			record.Homepage, record.Prompt, record.Downloads, record.Downloaded, name)
+		return err
+	default:
+		return errors.New("not implemented for this type")
+	}
 }
 
 func (sqldb *SQLiteDB) Delete(id uint, model interface{}) error {
-	return sqldb.db.Delete(model, id).Error
+	switch model.(type) {
+	case Project:
+		_, err := sqldb.db.Exec("DELETE FROM projects WHERE id = ?", id)
+		return err
+	case ModelParams:
+		_, err := sqldb.db.Exec("DELETE FROM model_params WHERE id = ?", id)
+		return err
+	case ImageModel:
+		_, err := sqldb.db.Exec("DELETE FROM image_models WHERE id = ?", id)
+		return err
+	default:
+		return errors.New("not implemented for this type")
+	}
 }
 
 func LoadModelDataToDB(db *SQLiteDB, models []ModelParams) error {
 	for _, model := range models {
 		var existingModel ModelParams
-		result := db.db.Where("name = ?", model.Name).First(&existingModel)
+		err := db.db.QueryRow("SELECT id, name, homepage, gguf_info, downloads, downloaded FROM model_params WHERE name = ?", model.Name).Scan(
+			&existingModel.ID, &existingModel.Name, &existingModel.Homepage, &existingModel.GGUFInfo,
+			&existingModel.Downloads, &existingModel.Downloaded)
 
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		if err != nil {
+			if err == sql.ErrNoRows {
 				// If the model is not found, create a new one
-				if err := db.Create(&model); err != nil {
+				_, err := db.db.Exec("INSERT INTO model_params (name, homepage, gguf_info, downloads, downloaded) VALUES (?, ?, ?, ?, ?)",
+					model.Name, model.Homepage, model.GGUFInfo, model.Downloads, model.Downloaded)
+				if err != nil {
 					return err
 				}
 			} else {
-				// Other errors
-				return result.Error
+				return err
 			}
 		} else {
 			// If the model exists, update it
-			if err := db.db.Model(&existingModel).Updates(&model).Error; err != nil {
+			_, err := db.db.Exec("UPDATE model_params SET homepage = ?, gguf_info = ?, downloads = ?, downloaded = ? WHERE name = ?",
+				model.Homepage, model.GGUFInfo, model.Downloads, model.Downloaded, model.Name)
+			if err != nil {
 				return err
 			}
 		}
@@ -224,21 +419,26 @@ func LoadModelDataToDB(db *SQLiteDB, models []ModelParams) error {
 func LoadImageModelDataToDB(db *SQLiteDB, models []ImageModel) error {
 	for _, model := range models {
 		var existingModel ImageModel
-		result := db.db.Where("name = ?", model.Name).First(&existingModel)
+		err := db.db.QueryRow("SELECT id, name, homepage, prompt, downloads, downloaded FROM image_models WHERE name = ?", model.Name).Scan(
+			&existingModel.ID, &existingModel.Name, &existingModel.Homepage, &existingModel.Prompt,
+			&existingModel.Downloads, &existingModel.Downloaded)
 
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		if err != nil {
+			if err == sql.ErrNoRows {
 				// If the model is not found, create a new one
-				if err := db.Create(&model); err != nil {
+				_, err := db.db.Exec("INSERT INTO image_models (name, homepage, prompt, downloads, downloaded) VALUES (?, ?, ?, ?, ?)",
+					model.Name, model.Homepage, model.Prompt, model.Downloads, model.Downloaded)
+				if err != nil {
 					return err
 				}
 			} else {
-				// Other errors
-				return result.Error
+				return err
 			}
 		} else {
 			// If the model exists, update it
-			if err := db.db.Model(&existingModel).Updates(&model).Error; err != nil {
+			_, err := db.db.Exec("UPDATE image_models SET homepage = ?, prompt = ?, downloads = ?, downloaded = ? WHERE name = ?",
+				model.Homepage, model.Prompt, model.Downloads, model.Downloaded, model.Name)
+			if err != nil {
 				return err
 			}
 		}
@@ -247,137 +447,170 @@ func LoadImageModelDataToDB(db *SQLiteDB, models []ImageModel) error {
 	return nil
 }
 
-func AddSelectedModel(db *gorm.DB, modelName string) error {
+func AddSelectedModel(db *sql.DB, modelName string) error {
 	// Remove any existing selected model from the database
-	if err := db.Where("1 = 1").Delete(&SelectedModels{}).Error; err != nil {
+	_, err := db.Exec("DELETE FROM selected_models")
+	if err != nil {
 		return err
 	}
 
 	// Create a new selected model
-	selectedModel := SelectedModels{
-		ModelName: modelName,
+	_, err = db.Exec("INSERT INTO selected_models (model_name) VALUES (?)", modelName)
+	return err
+}
+
+func RemoveSelectedModel(db *sql.DB, modelName string) error {
+	_, err := db.Exec("DELETE FROM selected_models WHERE model_name = ?", modelName)
+	return err
+}
+
+func GetSelectedModels(db *sql.DB) ([]SelectedModels, error) {
+	rows, err := db.Query("SELECT id, model_name FROM selected_models")
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
 
-	// Add the new selected model to the database
-	return db.Create(&selectedModel).Error
-}
-
-func RemoveSelectedModel(db *gorm.DB, modelName string) error {
-	return db.Where("model_name = ?", modelName).Delete(&SelectedModels{}).Error
-}
-
-func GetSelectedModels(db *gorm.DB) ([]SelectedModels, error) {
 	var selectedModels []SelectedModels
-	err := db.Find(&selectedModels).Error
-	return selectedModels, err
+	for rows.Next() {
+		var sm SelectedModels
+		if err := rows.Scan(&sm.ID, &sm.ModelName); err != nil {
+			return nil, err
+		}
+		selectedModels = append(selectedModels, sm)
+	}
+	return selectedModels, nil
 }
 
-// CreateChat inserts a new chat into the database.
-func CreateChat(db *gorm.DB, prompt, response, model string) (Chat, error) {
+func CreateChat(db *sql.DB, prompt, response, model string) (Chat, error) {
 	chat := Chat{Prompt: prompt, Response: response, ModelName: model}
-	result := db.Create(&chat)
-	return chat, result.Error
+	result, err := db.Exec("INSERT INTO chats (prompt, response, model_name) VALUES (?, ?, ?)",
+		chat.Prompt, chat.Response, chat.ModelName)
+	if err != nil {
+		return chat, err
+	}
+	id, err := result.LastInsertId()
+	chat.ID = id
+	return chat, err
 }
 
-// GetChats retrieves all chat entries from the database.
-func GetChats(db *gorm.DB) ([]Chat, error) {
+func GetChats(db *sql.DB) ([]Chat, error) {
+	rows, err := db.Query("SELECT id, prompt, response, model_name FROM chats")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
 	var chats []Chat
-	result := db.Find(&chats)
-	return chats, result.Error
+	for rows.Next() {
+		var c Chat
+		if err := rows.Scan(&c.ID, &c.Prompt, &c.Response, &c.ModelName); err != nil {
+			return nil, err
+		}
+		chats = append(chats, c)
+	}
+	return chats, nil
 }
 
-// GetChatByID retrieves a chat by its ID.
-func GetChatByID(db *gorm.DB, id int64) (Chat, error) {
+func GetChatByID(db *sql.DB, id int64) (Chat, error) {
 	var chat Chat
-	result := db.First(&chat, id)
-	return chat, result.Error
+	err := db.QueryRow("SELECT id, prompt, response, model_name FROM chats WHERE id = ?", id).Scan(
+		&chat.ID, &chat.Prompt, &chat.Response, &chat.ModelName)
+	return chat, err
 }
 
-// UpdateChat updates an existing chat entry in the database without changing its ID.
-func UpdateChat(db *gorm.DB, id int64, newPrompt, newResponse, newModel string) error {
-	result := db.Model(&Chat{}).Where("id = ?", id).Updates(Chat{Prompt: newPrompt, Response: newResponse, ModelName: newModel})
-	return result.Error
+func UpdateChat(db *sql.DB, id int64, newPrompt, newResponse, newModel string) error {
+	_, err := db.Exec("UPDATE chats SET prompt = ?, response = ?, model_name = ? WHERE id = ?",
+		newPrompt, newResponse, newModel, id)
+	return err
 }
 
-// DeleteChat removes a chat entry from the database.
-func DeleteChat(db *gorm.DB, id int64) error {
-	result := db.Delete(&Chat{}, id)
-	return result.Error
+func DeleteChat(db *sql.DB, id int64) error {
+	_, err := db.Exec("DELETE FROM chats WHERE id = ?", id)
+	return err
 }
 
-// CreateURLTracking inserts a new URL into the URLTracking table
 func (sqldb *SQLiteDB) CreateURLTracking(url string) error {
-	var existingURLTracking URLTracking
-
-	// Check if the URL already exists in the table
-	err := sqldb.db.Where("url = ?", url).First(&existingURLTracking).Error
-	if err == nil {
-		// URL already exists, return without inserting
-		return nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		// An error other than "record not found" occurred
+	var count int
+	err := sqldb.db.QueryRow("SELECT COUNT(*) FROM url_tracking WHERE url = ?", url).Scan(&count)
+	if err != nil {
 		return err
 	}
 
-	// URL does not exist, proceed to insert
-	urlTracking := URLTracking{URL: url}
-	return sqldb.db.Create(&urlTracking).Error
-}
-
-// ListURLTrackings retrieves all URLs from the URLTracking table
-func (sqldb *SQLiteDB) ListURLTrackings() ([]URLTracking, error) {
-	var urlTrackings []URLTracking
-	err := sqldb.db.Find(&urlTrackings).Error
-	return urlTrackings, err
-}
-
-// DeleteURLTracking removes a URL from the URLTracking table
-func (sqldb *SQLiteDB) DeleteURLTracking(url string) error {
-	return sqldb.db.Where("url = ?", url).Delete(&URLTracking{}).Error
-}
-
-// UpdateModelDownloadedState updates the downloaded state of a model in the database.
-// func UpdateModelDownloadedState(db *gorm.DB, dataPath string, modelName string, downloaded bool) error {
-// 	db, err := NewSQLiteDB(dataPath)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to open database: %w", err)
-// 	}
-// 	defer db.Close()
-
-// 	err = db.UpdateDownloadedByName(modelName, downloaded)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to update model downloaded state: %w", err)
-// 	}
-
-// 	return nil
-// }
-
-func CreateDevTeam(sqldb *SQLiteDB) error {
-	// Create a new team
-	team := Team{
-		Name: "Dev Team",
-		Assistants: []Assistant{
-			{
-				Name: "Senior Developer",
-				Role: Role{
-					Name:         "Software Developer",
-					Instructions: "Help with software development tasks",
-				},
-			},
-			{
-				Name: "Code Reviewer",
-				Role: Role{
-					Name:         "Code Reviewer",
-					Instructions: "Review code changes and provide feedback",
-				},
-			},
-		},
-	}
-
-	// Create the team in the database
-	if err := sqldb.Create(&team).Error; err != nil {
-		return fmt.Errorf("failed to create team: %w", err)
+	if count == 0 {
+		_, err = sqldb.db.Exec("INSERT INTO url_tracking (url) VALUES (?)", url)
+		return err
 	}
 
 	return nil
+}
+
+func (sqldb *SQLiteDB) ListURLTrackings() ([]URLTracking, error) {
+	rows, err := sqldb.db.Query("SELECT * FROM url_tracking")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var urlTrackings []URLTracking
+	for rows.Next() {
+		var ut URLTracking
+		err := rows.Scan(&ut.ID, &ut.URL)
+		if err != nil {
+			return nil, err
+		}
+		urlTrackings = append(urlTrackings, ut)
+	}
+	return urlTrackings, nil
+}
+
+func (sqldb *SQLiteDB) DeleteURLTracking(url string) error {
+	_, err := sqldb.db.Exec("DELETE FROM url_tracking WHERE url = ?", url)
+	return err
+}
+
+func CreateDevTeam(sqldb *SQLiteDB) error {
+	tx, err := sqldb.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("INSERT INTO teams (name) VALUES (?)", "Dev Team")
+	if err != nil {
+		return err
+	}
+
+	var teamID int64
+	err = tx.QueryRow("SELECT last_insert_rowid()").Scan(&teamID)
+	if err != nil {
+		return err
+	}
+
+	assistants := []struct {
+		name, roleName, instructions string
+	}{
+		{"Senior Developer", "Software Developer", "Help with software development tasks"},
+		{"Code Reviewer", "Code Reviewer", "Review code changes and provide feedback"},
+	}
+
+	for _, a := range assistants {
+		_, err = tx.Exec("INSERT INTO roles (name, instructions) VALUES (?, ?)", a.roleName, a.instructions)
+		if err != nil {
+			return err
+		}
+
+		var roleID int64
+		err = tx.QueryRow("SELECT last_insert_rowid()").Scan(&roleID)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec("INSERT INTO assistants (name, role_id, team_id) VALUES (?, ?, ?)", a.name, roleID, teamID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

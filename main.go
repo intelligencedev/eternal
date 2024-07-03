@@ -47,6 +47,12 @@ type Tool struct {
 	Enabled bool   `json:"enabled"`
 }
 
+type Config struct {
+	Database struct {
+		URL string `yaml:"url"`
+	} `yaml:"database"`
+}
+
 func main() {
 	flag.BoolVar(&devMode, "devmode", false, "Run the application in development mode")
 	flag.Parse()
@@ -248,15 +254,14 @@ func initializeDatabase(config *AppConfig) error {
 		return err
 	}
 
-	err = sqliteDB.AutoMigrate(
-		&Project{},
-		&ModelParams{},
-		&ImageModel{},
-		&SelectedModels{},
-		&Chat{},
-		&URLTracking{},
-		&Assistant{},
-	)
+	// Create tables
+	err = sqliteDB.AutoMigrate()
+	if err != nil {
+		return err
+	}
+
+	// Create the default project if it doesn't exist
+	err = sqliteDB.CreateProject(&config.DefaultProjectConfig)
 	if err != nil {
 		return err
 	}
@@ -267,8 +272,8 @@ func initializeDatabase(config *AppConfig) error {
 }
 
 func setCurrentProject(projectName string) (Project, error) {
-	var project Project
-	if err := sqliteDB.First(projectName, &project); err != nil {
+	project, err := sqliteDB.GetProjectByName(projectName)
+	if err != nil {
 		return Project{}, err
 	}
 

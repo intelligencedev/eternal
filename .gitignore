@@ -30,7 +30,7 @@ examples/embeddings/cloudbox_api_schema.json
 examples/embeddings/embeddings.db
 examples/embeddings/*
 venv
-scripts/repoconcat/output.txt
+scripts/*
 public/js/node_modules/.package-lock.json
 public/js/node_modules/@antonz/codapi/LICENSE
 public/js/node_modules/@antonz/codapi/package.json
@@ -51,3 +51,8 @@ examples/web/search.bleve/store/*
 examples/web/search.bleve/store/root.bolt
 eternal
 tmp/*
+scripts/diffusers/main.py
+scripts/diffusers/out.png
+scripts/florence/main.py
+scripts/mlx-lm/main.go
+scripts/newconcat/result.txt

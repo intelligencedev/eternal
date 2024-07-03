@@ -1,12 +1,8 @@
-// projects.go
-
 package main
 
 import (
 	"fmt"
 	"os"
-
-	"gorm.io/gorm"
 )
 
 // Domain represents a knowledge domain or area of expertise
@@ -49,7 +45,7 @@ type Role struct {
 	Name         string
 	Instructions string
 	DomainID     uint   // Foreign key
-	Domain       Domain `gorm:"foreignKey:DomainID"`
+	Domain       Domain // `foreignKey:DomainID`
 }
 
 // LLMParams represents the configuration parameters for an LLM
@@ -64,8 +60,8 @@ type Assistant struct {
 	ID     uint
 	Name   string
 	RoleID uint
-	Role   Role      `gorm:"foreignKey:RoleID"`
-	Params LLMParams `gorm:"embedded"`
+	Role   Role      // `foreignKey:RoleID`
+	Params LLMParams `embedded`
 	TeamID uint      // Foreign key
 }
 
@@ -73,7 +69,7 @@ type Assistant struct {
 type Team struct {
 	ID         uint
 	Name       string
-	Assistants []Assistant `gorm:"foreignKey:TeamID"`
+	Assistants []Assistant // `foreignKey:TeamID`
 }
 
 // Workflow represents the sequence and connections between assistants
@@ -81,7 +77,7 @@ type Workflow struct {
 	ID          uint
 	Name        string
 	Description string
-	Steps       []WorkflowStep `gorm:"foreignKey:WorkflowID"`
+	Steps       []WorkflowStep // `foreignKey:WorkflowID`
 }
 
 // WorkflowStep represents a single step in a workflow
@@ -90,8 +86,8 @@ type WorkflowStep struct {
 	WorkflowID    uint
 	AssistantID   uint
 	Order         int
-	InputSources  []WorkflowStepSource `gorm:"foreignKey:StepID"`
-	OutputTargets []WorkflowStepTarget `gorm:"foreignKey:StepID"`
+	InputSources  []WorkflowStepSource // `foreignKey:StepID`
+	OutputTargets []WorkflowStepTarget // `foreignKey:StepID`
 }
 
 // WorkflowStepSource represents the source steps for a WorkflowStep
@@ -124,7 +120,7 @@ const (
 
 // File represents a file in the project
 type File struct {
-	gorm.Model
+	ID        uint
 	Name      string
 	Path      string
 	Type      FileType
@@ -134,24 +130,15 @@ type File struct {
 
 // Project represents the overall configuration for a goal
 type Project struct {
-	gorm.Model
-	Name        string `gorm:"unique;not null"`
+	ID          uint
+	Name        string // `unique;not null`
 	Description string
 	TeamID      uint
-	Team        Team `gorm:"foreignKey:TeamID"`
+	Team        Team
 	WorkflowID  uint
-	Workflow    Workflow `gorm:"foreignKey:WorkflowID"`
-	Files       []File   `gorm:"foreignKey:ProjectID"`
+	Workflow    Workflow
+	Files       []File
 }
-
-// DEPRECATED
-// DefaultProjectConfig is a struct for the default configuration of a project
-// type DefaultProjectConfig struct {
-// 	Name          string `yaml:"name"`
-// 	Description   string `yaml:"description"`
-// 	TeamName      string `yaml:"team_name"`
-// 	AssistantName string `yaml:"assistant_name"`
-// }
 
 // Processor is an interface for objects that can process files
 type Processor interface {
@@ -179,7 +166,7 @@ type ProjectManager interface {
 	DeleteProject(id uint) error
 }
 
-// CreateProject creates the resources associated with the project.
+// CreateProjectFolder creates the resources associated with the project.
 func CreateProjectFolder(config AppConfig, p *Project) error {
 	// Create the Project data in the database
 	if err := sqliteDB.CreateProject(p); err != nil {
@@ -189,13 +176,4 @@ func CreateProjectFolder(config AppConfig, p *Project) error {
 	// Create the project folder
 	projectPath := fmt.Sprintf("%s/projects/%s", config.DataPath, p.Name)
 	return os.MkdirAll(projectPath, os.ModePerm)
-}
-
-// GetProjectByName retrieves a project by its name
-func GetProjectByName(name string, db *gorm.DB) (Project, error) {
-	var project Project
-	if err := db.Where("name = ?", name).First(&project); err != nil {
-		return Project{}, err.Error
-	}
-	return project, nil
 }

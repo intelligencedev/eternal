@@ -1,6 +1,6 @@
 # This script requires flash attention
 # Example curl command:
-# curl -X POST -H "Content-Type: multipart/form-data" -F "file=@/Users/art/Desktop/dollface.png" http://192.168.0.148:8081/generate
+# curl -X POST -H "Content-Type: multipart/form-data" -F "file=@/myimagepath/image.png" http://192.168.0.148:8081/generate
 # Example response:
 # {"<OD>":{"bboxes":[[0.25600001215934753,0.25600001215934753,511.2320251464844,511.2320251464844],[113.92000579833984,68.86400604248047,415.4880065917969,435.968017578125]],"labels":["doll","human face"]}}
 
