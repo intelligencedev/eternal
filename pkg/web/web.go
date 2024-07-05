@@ -1,14 +1,16 @@
-// web.go
 package web
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
 	"net/url"
-	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"os"
+	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/cdp"
@@ -55,7 +57,39 @@ var (
 	resultURLs []string
 )
 
+// CheckRobotsTxt checks if the target website allows scraping by "et-bot".
+func checkRobotsTxt(ctx context.Context, u string) bool {
+	baseURL, err := url.Parse(u)
+	if err != nil {
+		log.Printf("Failed to parse baseURL: %v", err)
+		return false
+	}
+
+	robotsUrl := url.URL{Scheme: baseURL.Scheme, Host: baseURL.Host, Path: "/robots.txt"}
+	resp, err := http.Get(robotsUrl.String())
+	if err != nil {
+		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Check if the status code is 200
+	if resp.StatusCode != 200 {
+		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
+		return false
+	}
+
+	// Parse the robots.txt content if needed
+	// Print the URL and the content of the robots.txt
+	log.Printf("URL: %s\n", robotsUrl.String())
+	return true
+}
+
 func WebGetHandler(address string) (string, error) {
+	if !checkRobotsTxt(context.Background(), address) {
+		return "", errors.New("scraping not allowed according to robots.txt")
+	}
+
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 	)
@@ -74,8 +108,8 @@ func WebGetHandler(address string) (string, error) {
 		chromedp.Navigate(address),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			headers := map[string]interface{}{
-				"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-				"Referer":         "https://www.google.com/",
+				"User-Agent":      "et-bot", // Set user agent to et-bot
+				"Referer":         "https://www.duckduckgo.com/",
 				"Accept-Language": "en-US,en;q=0.9",
 				"X-Forwarded-For": "203.0.113.195",
 				"Accept-Encoding": "gzip, deflate, br",
@@ -151,7 +185,7 @@ func RemoveUrl(input []string) []string {
 }
 
 func cleanURL(url string) string {
-	illegalTrailingChars := []rune{'.', ',', ';', '!', '?', ')'}
+	illegalTrailingChars := []rune{'.', ',', ';', '!', '?'}
 
 	for _, char := range illegalTrailingChars {
 		if url[len(url)-1] == byte(char) {
