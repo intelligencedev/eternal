@@ -199,11 +199,3 @@ func (m *Model) Delete() error {
 
 	return nil
 }
-
-func IncrementTurnCounter() {
-	TurnCounter++
-}
-
-func GetTurnCounter() int {
-	return TurnCounter
-}

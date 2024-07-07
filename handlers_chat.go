@@ -67,7 +67,22 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			return c.JSON(fiber.Map{"error": "No models selected"})
 		}
 
+		if config.Tools.ImgGen.Enabled {
+			//wsroute = "ws://192.168.0.148:8188/ws"
+
+			imgTurn := strconv.Itoa(chatTurn)
+
+			imgFileName := fmt.Sprintf("%s_%s", imgTurn, "sd_out.png")
+
+			imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
+			res := performImageGen(c, imgPath, userPrompt)
+
+			// Return the image generation results as a JSON response.
+			c.JSON(fiber.Map{"results": res})
+		}
+
 		turnID := IncrementTurn()
+		chatTurn = int(turnID)
 
 		return c.Render("templates/chat", fiber.Map{
 			"username":  config.CurrentUser,
@@ -404,7 +419,7 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 
 // handleError handles errors that occur during message processing.
 func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err error) {
-	chatTurn++
+	//chatTurn++
 
 	log.Errorf("Chat turn finished: %v", err)
 
