@@ -126,7 +126,7 @@
 
               <!-- Tool Config -->
               <div class="col">
-                <button id="toolBtn" class="btn" onclick="getProjects()" data-bs-toggle="tooltip"
+                <button id="toolBtn" class="btn" hx-get="/tools" hx-target="#tool-view" data-bs-toggle="tooltip"
                   data-bs-title="Tool Settings">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                     <g fill="currentColor">
@@ -272,6 +272,8 @@
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
     var userHasScrolled = false;
+    var projects = [];
+    var roles = [];
 
     document.addEventListener('alpine:init', () => {
       Alpine.store('dataStore', {
@@ -284,7 +286,17 @@
             //await getTools()
             let response = await fetch('/config');
             this.data = await response.json();
-            console.log('Data fetched:', this.data);
+
+            for (let project of this.data.Projects) {
+              projects.push(project.Name);
+            }
+
+            for (let role of this.data.AssistantRoles) {
+              roles.push(role.Name);
+            }
+
+            console.log('Projects:', projects);
+            console.log('Roles:', roles);
 
             response = await fetch('/model/selected');
             let modelName = await response.json();

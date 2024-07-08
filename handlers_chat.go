@@ -67,19 +67,15 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			return c.JSON(fiber.Map{"error": "No models selected"})
 		}
 
-		if config.Tools.ImgGen.Enabled {
-			//wsroute = "ws://192.168.0.148:8188/ws"
+		// if config.Tools.ImgGen.Enabled {
+		// 	//wsroute = "ws://192.168.0.148:8188/ws"
+		// 	imgFileName := fmt.Sprintf("%s_00001_.png", chatId)
+		// 	imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
+		// 	res := performImageGen(c, chatId, imgPath, userPrompt)
 
-			imgTurn := strconv.Itoa(chatTurn)
-
-			imgFileName := fmt.Sprintf("%s_%s", imgTurn, "sd_out.png")
-
-			imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
-			res := performImageGen(c, imgPath, userPrompt)
-
-			// Return the image generation results as a JSON response.
-			c.JSON(fiber.Map{"results": res})
-		}
+		// 	// Return the image generation results as a JSON response.
+		// 	c.JSON(fiber.Map{"results": res})
+		// }
 
 		turnID := IncrementTurn()
 		chatTurn = int(turnID)
@@ -308,6 +304,8 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 	var responseBuffer bytes.Buffer
 	var wsMessage WebSocketMessage
 	var err error
+
+	// Generate uid for the chat turn
 
 	// Read and unmarshal the initial WebSocket message
 	wsMessage, err = readAndUnmarshalMessage(c)

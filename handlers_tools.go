@@ -10,6 +10,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -26,6 +27,271 @@ import (
 	socket "github.com/gorilla/websocket"
 )
 
+var currentChatUid string
+
+// handleGetTools returns a handler function that retrieves all tools
+func handleRenderTools(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.Render("templates/tools", fiber.Map{
+			"Tools": config.Tools,
+		})
+	}
+}
+
+// performToolWorkflow performs the tool workflow on a chat message.
+func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
+
+	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
+	var document string
+
+	if config.Tools.ImgGen.Enabled {
+		pterm.Info.Println("Generating image...")
+
+		chatId := uuid.New().String()
+
+		imgFileName := fmt.Sprintf("%s_00001_.png", chatId)
+		imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
+		res := performImageGen(chatId, imgPath, chatMessage)
+
+		// imgName := fmt.Sprintf("%s_00001_.png", currentChatUid)
+
+		// imgTurn := strconv.Itoa(chatTurn)
+		// imgPath := fmt.Sprintf("public/uploads/%s", imgName)
+
+		// imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='%s' />", imgPath)
+
+		// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", imgTurn, imgElement)
+		c.WriteMessage(socket.TextMessage, []byte(res))
+
+		chatTurn = chatTurn + 1
+		return chatMessage
+	}
+
+	if config.Tools.Memory.Enabled {
+		document, _ = handleChatMemory(config, chatMessage)
+	}
+
+	if config.Tools.WebGet.Enabled {
+		url := web.ExtractURLs(chatMessage)
+		if len(url) > 0 {
+			pterm.Info.Println("Retrieving page content...")
+
+			document, _ = web.WebGetHandler(url[0])
+
+			// Add the page content to the chat message.
+
+		}
+	}
+
+	if config.Tools.WebSearch.Enabled {
+		topN := config.Tools.WebSearch.TopN
+
+		pterm.Info.Println("Searching the web...")
+
+		var urls []string
+		switch config.Tools.WebSearch.Name {
+		case "ddg":
+			urls = web.SearchDDG(chatMessage)
+		case "sxng":
+			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
+		}
+
+		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+
+		ignoredURLs, err := sqliteDB.ListURLTrackings()
+		if err != nil {
+			log.Errorf("Error listing URL trackings: %v", err)
+		}
+
+		// match the ignored URLs with the fetched URLs and remove them from the list
+		for _, ignoredURL := range ignoredURLs {
+			for i, url := range urls {
+				if strings.Contains(url, ignoredURL.URL) {
+					urls = append(urls[:i], urls[i+1:]...)
+
+					pterm.Warning.Printf("Ignoring URL: %s\n", ignoredURL.URL)
+				}
+			}
+		}
+
+		var wg sync.WaitGroup
+		urlsChan := make(chan string, len(urls))
+		failedURLsChan := make(chan []string)
+		pagesChan := make(chan string, topN)
+		done := make(chan struct{})
+
+		// Fetch URLs concurrently
+		for _, url := range urls {
+			wg.Add(1)
+			go func(u string) {
+				defer wg.Done()
+				select {
+				case <-done:
+					return
+				default:
+					pterm.Info.Printf("Fetching URL: %s\n", u)
+					page, err := web.WebGetHandler(u)
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+
+							// Add the URL to the channel to be processed later
+							failedURLsChan <- []string{u}
+						} else {
+							log.Errorf("Error fetching URL: %v", err)
+
+							failedURLsChan <- []string{u}
+						}
+						return
+					}
+
+					// Prepent the URL to the page content
+					page = fmt.Sprintf("%s\n%s", u, page)
+
+					urlsChan <- page
+				}
+			}(url)
+		}
+
+		// Close urlsChan when all fetches are done
+		go func() {
+			wg.Wait()
+			close(urlsChan)
+			close(failedURLsChan)
+		}()
+
+		// Collect topN pages
+		go func() {
+			var pagesRetrieved int
+			for page := range urlsChan {
+				if pagesRetrieved >= topN {
+					close(done)
+					break
+				}
+				pagesChan <- page
+				pagesRetrieved++
+			}
+			close(pagesChan)
+		}()
+
+		// Process failed URLs
+		var failedURLs []string
+		for url := range failedURLsChan {
+			failedURLs = append(failedURLs, url...)
+
+			// Insert the failed URLs back into the URLTracking table
+			for _, failedURL := range failedURLs {
+				// Parse the top-level domain from the URL by splitting the URL by slashes and getting the second element.
+				tld := strings.Split(failedURL, "/")[2]
+
+				err := sqliteDB.CreateURLTracking(tld)
+				if err != nil {
+					log.Errorf("Error inserting failed URL into database: %v", err)
+				}
+			}
+		}
+
+		// Retreve the failed URLs from the URLTracking table
+		trackedURLs, err := sqliteDB.ListURLTrackings()
+		if err != nil {
+			log.Errorf("Error listing URL trackings: %v", err)
+		}
+
+		// Print the failed URLs
+		for _, trackedURL := range trackedURLs {
+			pterm.Warning.Printf("New failed URL: %s\n", trackedURL.URL)
+		}
+
+		// Process pages
+		var document string
+		for page := range pagesChan {
+			// Parse the first line of the page to get the URL
+			pageURL := strings.Split(page, "\n")[0]
+			documentTags := fmt.Sprintf("web, %s", pageURL)
+
+			// Remove any '403 Forbidden' text from the documentTags
+			documentTags = strings.ReplaceAll(documentTags, "403 Forbidden", "")
+
+			err := handleTextSplitAndIndex(documentTags, page, 1024, "avsolatorio/GIST-small-Embedding-v0")
+			if err != nil {
+				log.Errorf("Error handling text split and index: %v", err)
+			}
+			document = fmt.Sprintf("%s\n%s", document, page)
+		}
+
+		pterm.Error.Printf("Fetching web search chunks from memory...")
+		document, _ = handleChatMemory(config, chatMessage)
+		//pterm.Error.Printf("Web Search Document: %s\n", document)
+		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
+
+		pterm.Info.Println("Tool workflow complete")
+
+		return chatMessage
+	}
+
+	chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
+
+	pterm.Info.Println("Tool workflow complete")
+
+	return chatMessage
+}
+
+// handleToolToggle toggles the state of various tools based on the provided tool name.
+func handleToolToggle(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		toolName := c.Params("toolName")
+		enabled := c.Params("enabled")
+		topN := c.Params("topN")
+
+		pterm.Info.Println(enabled)
+
+		// Convert the enabled parameter to a boolean.
+		enabledBool, err := strconv.ParseBool(enabled)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid enabled parameter")
+		}
+
+		// Convert the topN parameter to an integer.
+		topNInt, err := strconv.Atoi(topN)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid topN parameter")
+		}
+
+		// Print the params to the console.
+		pterm.Info.Println("Params:")
+		pterm.Info.Println(toolName)
+
+		switch toolName {
+		case "memory":
+			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
+			config.Tools.Memory.Enabled = enabledBool
+			config.Tools.Memory.TopN = topNInt
+		case "webget":
+			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
+			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
+		case "websearch":
+			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
+			config.Tools.WebSearch.Enabled = enabledBool
+			config.Tools.WebSearch.TopN = topNInt
+		case "imggen":
+			config.Tools.ImgGen.Enabled = enabledBool
+		default:
+			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": fmt.Sprintf("Tool %s toggled", toolName)})
+	}
+}
+
+// handleToolList retrieves and returns a list of tools from the configuration with all parameters.
+func handleToolList(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(config.Tools)
+	}
+}
+
+// ComfyUI Service Handlers
 const serverAddress = "192.168.0.148:8188"
 
 const promptText = `{
@@ -70,7 +336,7 @@ const promptText = `{
   },
   "196": {
     "inputs": {
-      "text": "a weather worn statue of medusa in the middle of a dark cavern with volumetric light shining upon it as etheral mist envelops the scene"
+      "text": "In a serene sunlit meadow filled with vibrant wildflowers, a feminine figure made of vegetation stands adorned with climbing vines and blooming flowers in the style of Annihilation book covers."
     },
     "class_type": "CR Text",
     "_meta": {
@@ -86,21 +352,94 @@ const promptText = `{
       "title": "Negative Prompt"
     }
   },
-  "224": {
+  "206": {
     "inputs": {
-      "IMAGE": [
-        "65",
+      "text": [
+        "197",
         0
+      ],
+      "clip": [
+        "207",
+        1
       ]
     },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "207": {
+    "inputs": {
+      "ckpt_name": "juggernautXL_juggernautX.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Refiner Checkpoint"
+    }
+  },
+  "223": {
+    "inputs": {},
+    "class_type": "Anything Everywhere3",
+    "_meta": {
+      "title": "Anything Everywhere3"
+    }
+  },
+  "224": {
+    "inputs": {},
     "class_type": "Anything Everywhere",
     "_meta": {
       "title": "Anything Everywhere"
     }
   },
+  "236": {
+    "inputs": {
+      "samples": [
+        "239",
+        0
+      ],
+      "vae": [
+        "207",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "239": {
+    "inputs": {
+      "seed": 1001571165145744,
+      "steps": 20,
+      "cfg": 6,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "normal",
+      "denoise": 0.2,
+      "model": [
+        "298",
+        0
+      ],
+      "positive": [
+        "305",
+        0
+      ],
+      "negative": [
+        "206",
+        0
+      ],
+      "latent_image": [
+        "373:3",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Refining Sampler"
+    }
+  },
   "286": {
     "inputs": {
-      "seed": 443241436811402
+      "seed": 663911580443736
     },
     "class_type": "Seed Everywhere",
     "_meta": {
@@ -108,7 +447,9 @@ const promptText = `{
     }
   },
   "287": {
-    "inputs": {},
+    "inputs": {
+      "noise_seed": 357228689471302
+    },
     "class_type": "RandomNoise",
     "_meta": {
       "title": "RandomNoise"
@@ -123,12 +464,78 @@ const promptText = `{
       "title": "Steps"
     }
   },
+  "298": {
+    "inputs": {
+      "hard_mode": true,
+      "boost": false,
+      "model": [
+        "304",
+        0
+      ]
+    },
+    "class_type": "Automatic CFG",
+    "_meta": {
+      "title": "Automatic CFG"
+    }
+  },
+  "304": {
+    "inputs": {
+      "switch": "On",
+      "lora_name": "more_details.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "207",
+        0
+      ],
+      "clip": [
+        "326",
+        0
+      ]
+    },
+    "class_type": "CR Load LoRA",
+    "_meta": {
+      "title": "💊 CR Load LoRA"
+    }
+  },
+  "305": {
+    "inputs": {
+      "text": [
+        "196",
+        0
+      ],
+      "sculptor_intensity": 1,
+      "sculptor_method": "forward",
+      "token_normalization": "none",
+      "clip": [
+        "207",
+        1
+      ]
+    },
+    "class_type": "CLIP Vector Sculptor text encode",
+    "_meta": {
+      "title": "CLIP Vector Sculptor text encode"
+    }
+  },
+  "326": {
+    "inputs": {
+      "stop_at_clip_layer": -2,
+      "clip": [
+        "207",
+        1
+      ]
+    },
+    "class_type": "CLIPSetLastLayer",
+    "_meta": {
+      "title": "CLIP Set Last Layer"
+    }
+  },
   "345": {
     "inputs": {
       "add_noise": true,
       "noise_is_latent": false,
       "noise_type": "power",
-	  "noise_seed": "443241436811402",
+      "noise_seed": 509839556020717,
       "cfg": 7,
       "model": [
         "356",
@@ -311,7 +718,7 @@ const promptText = `{
     "inputs": {
       "filename_prefix": "eternal",
       "images": [
-        "65",
+        "236",
         0
       ]
     },
@@ -330,6 +737,15 @@ const promptText = `{
       "title": "PixArt Resolution Select"
     }
   },
+  "373:0": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
   "221:1": {
     "inputs": {
       "width": [
@@ -345,6 +761,52 @@ const promptText = `{
     "class_type": "EmptyLatentImage",
     "_meta": {
       "title": "Empty Latent Image"
+    }
+  },
+  "373:1": {
+    "inputs": {
+      "upscale_model": [
+        "373:0",
+        0
+      ],
+      "image": [
+        "65",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "373:2": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "scale_by": 0.5,
+      "image": [
+        "373:1",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "373:3": {
+    "inputs": {
+      "pixels": [
+        "373:2",
+        0
+      ],
+      "vae": [
+        "207",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
     }
   }
 }`
@@ -574,254 +1036,6 @@ func getImages(prompt map[string]interface{}) (map[string][][]byte, error) {
 	return outputImages, nil
 }
 
-// performToolWorkflow performs the tool workflow on a chat message.
-func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
-
-	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
-	var document string
-
-	if config.Tools.ImgGen.Enabled {
-		pterm.Info.Println("Generating image...")
-
-		//timestamp := time.Now().UnixNano()
-		//imgElement := "<img class='rounded-2 object-fit-scale' width='512' height='512' src='http://192.168.0.148:8081/ComfyUI_00001_.png' />"
-
-		imgTurn := strconv.Itoa(chatTurn)
-		imgPath := fmt.Sprintf("public/uploads/%s_%s", imgTurn, "sd_out.png")
-
-		imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='%s' />", imgPath)
-
-		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", imgTurn, imgElement)
-		c.WriteMessage(socket.TextMessage, []byte(formattedContent))
-
-		chatTurn = chatTurn + 1
-		return chatMessage
-	}
-
-	if config.Tools.Memory.Enabled {
-		document, _ = handleChatMemory(config, chatMessage)
-	}
-
-	if config.Tools.WebGet.Enabled {
-		url := web.ExtractURLs(chatMessage)
-		if len(url) > 0 {
-			pterm.Info.Println("Retrieving page content...")
-
-			document, _ = web.WebGetHandler(url[0])
-
-			// Add the page content to the chat message.
-
-		}
-	}
-
-	if config.Tools.WebSearch.Enabled {
-		topN := config.Tools.WebSearch.TopN
-
-		pterm.Info.Println("Searching the web...")
-
-		var urls []string
-		switch config.Tools.WebSearch.Name {
-		case "ddg":
-			urls = web.SearchDDG(chatMessage)
-		case "sxng":
-			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
-		}
-
-		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
-
-		ignoredURLs, err := sqliteDB.ListURLTrackings()
-		if err != nil {
-			log.Errorf("Error listing URL trackings: %v", err)
-		}
-
-		// match the ignored URLs with the fetched URLs and remove them from the list
-		for _, ignoredURL := range ignoredURLs {
-			for i, url := range urls {
-				if strings.Contains(url, ignoredURL.URL) {
-					urls = append(urls[:i], urls[i+1:]...)
-
-					pterm.Warning.Printf("Ignoring URL: %s\n", ignoredURL.URL)
-				}
-			}
-		}
-
-		var wg sync.WaitGroup
-		urlsChan := make(chan string, len(urls))
-		failedURLsChan := make(chan []string)
-		pagesChan := make(chan string, topN)
-		done := make(chan struct{})
-
-		// Fetch URLs concurrently
-		for _, url := range urls {
-			wg.Add(1)
-			go func(u string) {
-				defer wg.Done()
-				select {
-				case <-done:
-					return
-				default:
-					pterm.Info.Printf("Fetching URL: %s\n", u)
-					page, err := web.WebGetHandler(u)
-					if err != nil {
-						if errors.Is(err, context.DeadlineExceeded) {
-							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
-
-							// Add the URL to the channel to be processed later
-							failedURLsChan <- []string{u}
-						} else {
-							log.Errorf("Error fetching URL: %v", err)
-
-							failedURLsChan <- []string{u}
-						}
-						return
-					}
-
-					// Prepent the URL to the page content
-					page = fmt.Sprintf("%s\n%s", u, page)
-
-					urlsChan <- page
-				}
-			}(url)
-		}
-
-		// Close urlsChan when all fetches are done
-		go func() {
-			wg.Wait()
-			close(urlsChan)
-			close(failedURLsChan)
-		}()
-
-		// Collect topN pages
-		go func() {
-			var pagesRetrieved int
-			for page := range urlsChan {
-				if pagesRetrieved >= topN {
-					close(done)
-					break
-				}
-				pagesChan <- page
-				pagesRetrieved++
-			}
-			close(pagesChan)
-		}()
-
-		// Process failed URLs
-		var failedURLs []string
-		for url := range failedURLsChan {
-			failedURLs = append(failedURLs, url...)
-
-			// Insert the failed URLs back into the URLTracking table
-			for _, failedURL := range failedURLs {
-				// Parse the top-level domain from the URL by splitting the URL by slashes and getting the second element.
-				tld := strings.Split(failedURL, "/")[2]
-
-				err := sqliteDB.CreateURLTracking(tld)
-				if err != nil {
-					log.Errorf("Error inserting failed URL into database: %v", err)
-				}
-			}
-		}
-
-		// Retreve the failed URLs from the URLTracking table
-		trackedURLs, err := sqliteDB.ListURLTrackings()
-		if err != nil {
-			log.Errorf("Error listing URL trackings: %v", err)
-		}
-
-		// Print the failed URLs
-		for _, trackedURL := range trackedURLs {
-			pterm.Warning.Printf("New failed URL: %s\n", trackedURL.URL)
-		}
-
-		// Process pages
-		var document string
-		for page := range pagesChan {
-			// Parse the first line of the page to get the URL
-			pageURL := strings.Split(page, "\n")[0]
-			documentTags := fmt.Sprintf("web, %s", pageURL)
-
-			// Remove any '403 Forbidden' text from the documentTags
-			documentTags = strings.ReplaceAll(documentTags, "403 Forbidden", "")
-
-			err := handleTextSplitAndIndex(documentTags, page, 1024, "avsolatorio/GIST-small-Embedding-v0")
-			if err != nil {
-				log.Errorf("Error handling text split and index: %v", err)
-			}
-			document = fmt.Sprintf("%s\n%s", document, page)
-		}
-
-		pterm.Error.Printf("Fetching web search chunks from memory...")
-		document, _ = handleChatMemory(config, chatMessage)
-		//pterm.Error.Printf("Web Search Document: %s\n", document)
-		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
-
-		pterm.Info.Println("Tool workflow complete")
-
-		return chatMessage
-	}
-
-	chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
-
-	pterm.Info.Println("Tool workflow complete")
-
-	return chatMessage
-}
-
-// handleToolToggle toggles the state of various tools based on the provided tool name.
-func handleToolToggle(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		toolName := c.Params("toolName")
-		enabled := c.Params("enabled")
-		topN := c.Params("topN")
-
-		pterm.Info.Println(enabled)
-
-		// Convert the enabled parameter to a boolean.
-		enabledBool, err := strconv.ParseBool(enabled)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid enabled parameter")
-		}
-
-		// Convert the topN parameter to an integer.
-		topNInt, err := strconv.Atoi(topN)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid topN parameter")
-		}
-
-		// Print the params to the console.
-		pterm.Info.Println("Params:")
-		pterm.Info.Println(toolName)
-
-		switch toolName {
-		case "memory":
-			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
-			config.Tools.Memory.Enabled = enabledBool
-			config.Tools.Memory.TopN = topNInt
-		case "webget":
-			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
-			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
-		case "websearch":
-			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
-			config.Tools.WebSearch.Enabled = enabledBool
-			config.Tools.WebSearch.TopN = topNInt
-		case "imggen":
-			config.Tools.ImgGen.Enabled = true
-		default:
-			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
-		}
-
-		return c.JSON(fiber.Map{
-			"message": fmt.Sprintf("Tool %s toggled", toolName)})
-	}
-}
-
-// handleToolList retrieves and returns a list of tools from the configuration with all parameters.
-func handleToolList(config *AppConfig) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(config.Tools)
-	}
-}
-
 // handleRoleSelection handles the selection of assistant roles.
 func handleRoleSelection(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -866,48 +1080,6 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 
 		return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
 	}
-}
-
-func performImageGen(c *fiber.Ctx, imgPath string, chatMessage string) string {
-
-	var prompt map[string]interface{}
-	err := json.Unmarshal([]byte(promptText), &prompt)
-	if err != nil {
-		fmt.Println("Error unmarshaling prompt:", err)
-		return ""
-	}
-
-	prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = 5
-
-	res, err := queuePrompt(prompt, uuid.New().String())
-	if err != nil {
-		fmt.Println("Error queuing prompt:", err)
-	}
-
-	fmt.Println("Result:", res)
-
-	// http://192.168.0.148:8188/view?filename=eternal_00004_.png&subfolder&type=output
-	// Fetch the image from the server using rest api and display it in the chat.
-	// image, err := fetchURL(fmt.Sprintf("http://%s/view?filename=eternal_0000%s_.png&subfolder=&type=output", serverAddress, strconv.Itoa(chatTurn)))
-	// if err != nil {
-	// 	fmt.Println("Error fetching image:", err)
-	// }
-
-	imageUrl := fmt.Sprintf("http://%s/view?filename=eternal_0000%s_.png&subfolder=&type=output", serverAddress, strconv.Itoa(chatTurn))
-	image, err := pollURL(imageUrl, 30*time.Second)
-	if err != nil {
-		log.Fatalf("Error fetching image: %v", err)
-	}
-
-	// Save the image to a file.
-	_ = SaveBytesAsImage(image, imgPath)
-
-	imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/uploads/%s_sd_out.png' />", strconv.Itoa(chatTurn))
-	formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", strconv.Itoa(chatTurn), imgElement)
-
-	chatTurn = chatTurn + 1
-	return formattedContent
 }
 
 func fetchURL(url string) ([]byte, error) {
@@ -956,4 +1128,72 @@ func pollURL(url string, timeout time.Duration) ([]byte, error) {
 		fmt.Println("Error fetching URL, retrying:", err)
 		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
 	}
+}
+
+func performImageGen(chatId string, imgPath string, chatMessage string) string {
+
+	currentChatUid = chatId
+	var prompt map[string]interface{}
+	err := json.Unmarshal([]byte(promptText), &prompt)
+	if err != nil {
+		fmt.Println("Error unmarshaling prompt:", err)
+		return ""
+	}
+
+	// Generate a random seed between 1 and 999999999999999
+	seed := rand.Intn(999999999999999)
+
+	pterm.Info.Println("Generating image using seed:", seed)
+
+	// "374": {
+	//   "inputs": {
+	//     "filename_prefix": "eternal",
+	//     "images": [
+	//       "236",
+	//       0
+	//     ]
+	//   },
+	//   "class_type": "SaveImage",
+	//   "_meta": {
+	//     "title": "Save Image"
+	//   }
+	// },
+
+	prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+
+	prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
+
+	res, err := queuePrompt(prompt, chatId)
+	if err != nil {
+		fmt.Println("Error queuing prompt:", err)
+	}
+
+	fmt.Println("Result:", res)
+
+	// http://192.168.0.148:8188/view?filename=eternal_00004_.png&subfolder&type=output
+	// Fetch the image from the server using rest api and display it in the chat.
+	// image, err := fetchURL(fmt.Sprintf("http://%s/view?filename=eternal_0000%s_.png&subfolder=&type=output", serverAddress, strconv.Itoa(chatTurn)))
+	// if err != nil {
+	// 	fmt.Println("Error fetching image:", err)
+	// }
+
+	imgName := fmt.Sprintf("%s_00001_.png", chatId)
+
+	// We want to find the image using the UID and regex since we do not know the exact turn number
+	imageUrl := fmt.Sprintf("http://%s/view?filename=%s&subfolder=&type=output", serverAddress, imgName)
+	image, err := pollURL(imageUrl, 240*time.Second) // Timeout after 240 seconds since the workflow is complex, make this configurable in future commit
+	if err != nil {
+		fmt.Println("Error retrieving generated image:", err)
+	}
+
+	// Save the image to a file.
+	_ = SaveBytesAsImage(image, imgPath)
+
+	imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/uploads/%s_00001_.png' />", chatId)
+	formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", strconv.Itoa(chatTurn), imgElement)
+
+	chatTurn = chatTurn + 1
+	return formattedContent
 }

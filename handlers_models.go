@@ -316,3 +316,15 @@ func handleOpenAIModels(config *AppConfig) fiber.Handler {
 		})
 	}
 }
+
+func handleGetRoles(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var optionsHTML strings.Builder
+		for _, role := range config.AssistantRoles {
+			optionsHTML.WriteString(fmt.Sprintf("<option value='%s'>%s</option>", role, role))
+		}
+		return c.Render(optionsHTML.String(), fiber.Map{
+			"roles": config.AssistantRoles,
+		})
+	}
+}
