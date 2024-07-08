@@ -67,16 +67,6 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			return c.JSON(fiber.Map{"error": "No models selected"})
 		}
 
-		// if config.Tools.ImgGen.Enabled {
-		// 	//wsroute = "ws://192.168.0.148:8188/ws"
-		// 	imgFileName := fmt.Sprintf("%s_00001_.png", chatId)
-		// 	imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
-		// 	res := performImageGen(c, chatId, imgPath, userPrompt)
-
-		// 	// Return the image generation results as a JSON response.
-		// 	c.JSON(fiber.Map{"results": res})
-		// }
-
 		turnID := IncrementTurn()
 		chatTurn = int(turnID)
 

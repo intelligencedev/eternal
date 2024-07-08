@@ -46,23 +46,11 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 	if config.Tools.ImgGen.Enabled {
 		pterm.Info.Println("Generating image...")
-
 		chatId := uuid.New().String()
-
 		imgFileName := fmt.Sprintf("%s_00001_.png", chatId)
 		imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
 		res := performImageGen(chatId, imgPath, chatMessage)
-
-		// imgName := fmt.Sprintf("%s_00001_.png", currentChatUid)
-
-		// imgTurn := strconv.Itoa(chatTurn)
-		// imgPath := fmt.Sprintf("public/uploads/%s", imgName)
-
-		// imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='%s' />", imgPath)
-
-		// formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", imgTurn, imgElement)
 		c.WriteMessage(socket.TextMessage, []byte(res))
-
 		chatTurn = chatTurn + 1
 		return chatMessage
 	}
