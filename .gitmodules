@@ -7,3 +7,6 @@
 [submodule "services/vendor"]
 	path = services/vendor
 	url = https://github.com/searxng/searxng-docker.git
+[submodule "pkg/sd/comfyui"]
+	path = pkg/sd/comfyui
+	url = https://github.com/comfyanonymous/ComfyUI.git
