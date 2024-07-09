@@ -4,6 +4,7 @@ package main
 
 import (
 	"embed"
+	"eternal/pkg/ghdownloader"
 	"eternal/pkg/llm"
 	"eternal/pkg/sd"
 	"fmt"
@@ -141,6 +142,22 @@ func InitServer(configPath string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to set executable permission on file %s: %v", file.Name(), err)
 			}
+		}
+	}
+
+	// Check if comfyui folder exists
+	comfyuiPath := filepath.Join(configPath, "sd/comfyui")
+	if _, err := os.Stat(comfyuiPath); os.IsNotExist(err) {
+		// Create comfyui folder
+		err = os.MkdirAll(comfyuiPath, 0755)
+		if err != nil {
+			return "", fmt.Errorf("failed to create directory %s: %v", comfyuiPath, err)
+		}
+
+		// Download comfyui repo
+		err := ghdownloader.DownloadAndExtractRepo("comfyanonymous", "ComfyUI", "", imgGenPath)
+		if err != nil {
+			return "", err
 		}
 	}
 
