@@ -3,6 +3,7 @@
 package main
 
 import (
+	"eternal/pkg/llm"
 	"fmt"
 	"os"
 
@@ -41,6 +42,7 @@ type Tools struct {
 	WebGet    ToolWebGet    `yaml:"webget"`
 	WebSearch ToolWebSearch `yaml:"websearch"`
 	ImgGen    ToolImgGen    `yaml:"img_gen"`
+	Team      Team          `yaml:"team"`
 }
 
 // Role defines a template for an assistant's behavior
@@ -64,9 +66,9 @@ type Assistant struct {
 	ID     uint
 	Name   string
 	RoleID uint
-	Role   Role      `gorm:"foreignKey:RoleID"`
-	Params LLMParams `gorm:"embedded"`
-	TeamID uint      // Foreign key
+	Role   Role            `gorm:"foreignKey:RoleID"`
+	Params llm.GGUFOptions `gorm:"embedded"`
+	TeamID uint            // Foreign key
 }
 
 // Team is a collection of assistants
@@ -74,6 +76,7 @@ type Team struct {
 	ID         uint
 	Name       string
 	Assistants []Assistant `gorm:"foreignKey:TeamID"`
+	Enabled    bool        `gorm:"default:false"`
 }
 
 // Workflow represents the sequence and connections between assistants

@@ -261,6 +261,8 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 			config.Tools.WebSearch.TopN = topNInt
 		case "imggen":
 			config.Tools.ImgGen.Enabled = enabledBool
+		case "team":
+			config.Tools.Team.Enabled = enabledBool
 		default:
 			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
 		}

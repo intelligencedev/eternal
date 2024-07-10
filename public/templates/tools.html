@@ -1,5 +1,22 @@
 <div id="tools-container" class="row">
   <div class="col">
+    <!-- Teams Workflow Enable Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <div class="form-check-reverse form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" value="" id="team-switch" onclick="updateTeamTool()">
+          <label class="form-check-label" for="team-switch">
+            Teams Workflow
+          </label>
+        </div>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <div>
+          <p class="mb-0">Enable multi assistant workflow.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Image Generation Card -->
     <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
       <div class="card-header">
@@ -121,6 +138,11 @@
     } catch (error) {
       console.error('Error fetching tools:', error);
     }
+  }
+
+  function updateTeamTool() {
+    const enabled = document.getElementById('team-switch').checked;
+    postToolValue('team', enabled, 1); // Assuming team doesn't have a slider, we pass 1 as topN
   }
 
   function updateMemoryTool() {
