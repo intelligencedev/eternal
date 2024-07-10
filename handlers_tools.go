@@ -642,7 +642,10 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 	prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
 	prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
 	prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
+	prompt["239"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	prompt["287"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	prompt["345"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
 
 	_, err = queuePrompt(prompt, chatId)
 	if err != nil {
