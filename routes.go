@@ -37,6 +37,9 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Post("/imgmodel/download", handleImgModelDownload(config))
 	app.Post("/model/set/params", handleModelUpdate())
 
+	// Roles routes
+	app.Get("/roles", handleGetRoles(config))
+
 	// Model - Database routes
 	app.Get("/modeldata/:modelName", handleModelData())
 	app.Put("/modeldata/:modelName/downloaded", handleModelDownloadUpdate())
@@ -48,6 +51,7 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Delete("/chats/:id", handleDeleteChat())
 
 	// Tool routes
+	app.Get("/tools", handleRenderTools(config))
 	app.Get("/tools/list", handleToolList(config))
 	app.Post("/tool/:toolName/:enabled/:topN", handleToolToggle(config))
 	app.Get("/dpsearch", handleDPSearch())

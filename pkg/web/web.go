@@ -1,16 +1,16 @@
-// web.go
 package web
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
-	"regexp"
 	"strings"
 	"time"
+
+	"os"
+	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/cdp"
@@ -19,7 +19,6 @@ import (
 	"github.com/chromedp/chromedp/kb"
 	"github.com/go-shiori/go-readability"
 	"github.com/pterm/pterm"
-	"github.com/temoto/robotstxt"
 )
 
 var (
@@ -58,29 +57,37 @@ var (
 	resultURLs []string
 )
 
-func WebGetHandler(address string) (string, error) {
-	// Parse the URL
-	parsedURL, err := url.Parse(address)
+// CheckRobotsTxt checks if the target website allows scraping by "et-bot".
+func checkRobotsTxt(ctx context.Context, u string) bool {
+	baseURL, err := url.Parse(u)
 	if err != nil {
-		return "", fmt.Errorf("error parsing URL: %v", err)
+		log.Printf("Failed to parse baseURL: %v", err)
+		return false
 	}
 
-	// Check robots.txt
-	robotsURL := fmt.Sprintf("%s://%s/robots.txt", parsedURL.Scheme, parsedURL.Host)
-	resp, err := http.Get(robotsURL)
+	robotsUrl := url.URL{Scheme: baseURL.Scheme, Host: baseURL.Host, Path: "/robots.txt"}
+	resp, err := http.Get(robotsUrl.String())
 	if err != nil {
-		log.Printf("Error fetching robots.txt: %v", err)
-	} else {
-		defer resp.Body.Close()
-		robots, err := robotstxt.FromResponse(resp)
-		if err != nil {
-			log.Printf("Error parsing robots.txt: %v", err)
-		} else {
-			group := robots.FindGroup("ET Bot/1.0")
-			if !group.Test(parsedURL.Path) {
-				return "", fmt.Errorf("access to %s is disallowed by robots.txt", address)
-			}
-		}
+		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Check if the status code is 200
+	if resp.StatusCode != 200 {
+		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
+		return false
+	}
+
+	// Parse the robots.txt content if needed
+	// Print the URL and the content of the robots.txt
+	log.Printf("URL: %s\n", robotsUrl.String())
+	return true
+}
+
+func WebGetHandler(address string) (string, error) {
+	if !checkRobotsTxt(context.Background(), address) {
+		return "", errors.New("scraping not allowed according to robots.txt")
 	}
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -101,9 +108,10 @@ func WebGetHandler(address string) (string, error) {
 		chromedp.Navigate(address),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			headers := map[string]interface{}{
-				"User-Agent":      "ET Bot/1.0",
-				"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-				"Accept-Language": "en-US,en;q=0.5",
+				"User-Agent":      "et-bot", // Set user agent to et-bot
+				"Referer":         "https://www.duckduckgo.com/",
+				"Accept-Language": "en-US,en;q=0.9",
+				"X-Forwarded-For": "203.0.113.195",
 				"Accept-Encoding": "gzip, deflate, br",
 				"Connection":      "keep-alive",
 				"Cache-Control":   "no-cache",
@@ -177,7 +185,7 @@ func RemoveUrl(input []string) []string {
 }
 
 func cleanURL(url string) string {
-	illegalTrailingChars := []rune{'.', ',', ';', '!', '?', ')'}
+	illegalTrailingChars := []rune{'.', ',', ';', '!', '?'}
 
 	for _, char := range illegalTrailingChars {
 		if url[len(url)-1] == byte(char) {

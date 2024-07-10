@@ -16,6 +16,8 @@ require (
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47
 	github.com/google/generative-ai-go v0.10.0
+	github.com/google/uuid v1.4.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jaypipes/ghw v0.12.0
 	github.com/ledongthuc/pdf v0.0.0-20220302134840-0c2507a12d80
 	github.com/nlpodyssey/cybertron v0.2.1

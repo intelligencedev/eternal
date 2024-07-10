@@ -1,150 +1,129 @@
+<!-- projects.html -->
 <div id="projects-container" class="row">
-    <div class="h-auto">
-        <div class="h-auto dropdown dropdown-center mx-2">
-            <button class="btn btn-secondary bg-gradient dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false">
-                Projects
-            </button>
-            <ul class="dropdown-menu w-100" style="background-color: var(--et-card-bg);">
-                <li><a href="#" class="dropdown-item" onclick="createNewProject()">Create New Project</a></li>
-                <li>
-                    <hr class="dropdown-divider">
-                </li>
-                <li>
-                    <h6 class="dropdown-header">Existing Projects</h6>
-                </li>
-                <div id="project-list">
-                    <!-- Project list items will be rendered here -->
-                    {{range .projects}}
-                    <li><a href="#" class="dropdown-item" onclick="selectProject('{{.Name}}')">{{.Name}}</a></li>
-                    {{end}}
-                </div>
-            </ul>
-        </div>
+  <div class="col">
+    <!-- Projects Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <!-- Projects Header -->
+        <span class="fs-6">Projects</span>
+        <!-- Select Project -->
+        <select class="form-select" id="project-select" onchange="selectProject()">
+          <option value="">Select a project</option>
+          <!-- Project options will be populated dynamically -->
+        </select>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <button class="btn btn-primary bg-gradient mb-2" onclick="createNewProject()">Create New
+          Project</button>
+        <div id="selected-project-details"></div>
+      </div>
     </div>
+
+    <!-- Create Team Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <span class="fs-6">Create Team</span>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <form id="team-form">
+          <div class="mb-3">
+            <label for="team-name" class="form-label">Team Name</label>
+            <input type="text" id="team-name" class="form-control" required>
+          </div>
+          <div id="team-members-container">
+            <h6>Team Members</h6>
+            <div class="team-member-entry mb-2">
+              <div class="mb-2">
+                <label for="member-name-1" class="form-label">Member Name</label>
+                <input type="text" id="member-name-1" class="form-control member-name" required>
+                <div class="mb-2">
+                  <label for="member-role-1" class="form-label">Role</label>
+                  <select id="member-role-1" class="form-select member-role" required>
+                    <option value="">Select a role</option>
+                  </select>
+                </div>                
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary bg-gradient mb-2" onclick="addTeamMember()">Add
+              Team Member</button>
+            <button type="submit" class="btn btn-primary bg-gradient">Create Team</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Project Card -->
+    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
+      <div class="card-header">
+        <span class="fs-6">Create Project</span>
+      </div>
+      <div class="card-body tab-content mh-100">
+        <form id="project-form">
+          <div class="mb-3">
+            <label for="project-name" class="form-label">Project Name</label>
+            <input type="text" id="project-name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="project-description" class="form-label">Description</label>
+            <textarea id="project-description" class="form-control"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="project-team" class="form-label">Assign Team</label>
+            <select id="project-team" class="form-select" required>
+              <option value="">Select a team</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary bg-gradient">Create Project</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="selected-project-container" class="row mt-3"></div>
-
-<style>
-    .project-card {
-        background-color: var(--et-card-bg);
-        border-radius: 0.25rem;
-        margin-bottom: 1rem;
-    }
-
-    .project-card .card-header {
-        background-color: rgba(0, 0, 0, 0.1);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .project-card .card-body {
-        padding: 1rem;
-    }
-
-    .project-card .btn-group {
-        margin-top: 1rem;
-    }
-</style>
-
 <script>
-    function renderProjectList(projects) {
-        const projectList = document.getElementById('project-list');
-        //projectList.innerHTML = '';
-        projects.forEach(project => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="#" class="dropdown-item" onclick="selectProject('${project.Name}')">${project.Name}</a>`;
-            projectList.appendChild(li);
-        });
-    }
+  // Function to add a new team member entry
+  function addTeamMember() {
+    const teamMembersContainer = document.getElementById("team-members-container");
+    const teamMemberEntry = document.querySelector(".team-member-entry");
+    const newTeamMemberEntry = teamMemberEntry.cloneNode(true);
 
-    function renderProjectCards(projects) {
-        function renderProjectCards(projects) {
-            const container = document.getElementById('project-cards-container');
-            const selectedProjectContainer = document.getElementById('selected-project-container');
-            container.innerHTML = '';
-            selectedProjectContainer.innerHTML = ''; // Clear the selected project container
-            projects.forEach(project => {
-                console.log("Projects data:", project);
-                const card = document.createElement('div');
-                card.className = 'col-md-4';
-                card.innerHTML = `
-                    <div class="card project-card">
-                        <div class="card-header">
-                        <h5 class="card-title">${project.Name}</h5>
-                        </div>
-                        <div class="card-body">
-                        <p class="card-text">${project.Description}</p>
-                        <p><strong>Team:</strong> ${project.Team.Name}</p>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
-                            <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
-                        </div>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-    }
+    // Clear the input fields
+    newTeamMemberEntry.querySelector(".member-name").value = "";
+    newTeamMemberEntry.querySelector(".member-role").value = "";
 
-    function selectProject(projectName) {
-        console.log(`Selected project: ${projectName}`);
-        fetch(`/projects/${projectName}`)
-            .then(response => response.json())
-            .then(project => {
-                renderSelectedProjectCard(project);
-            })
-            .catch(error => console.error('Error fetching project details:', error));
-    }
+    teamMembersContainer.appendChild(newTeamMemberEntry);
+  }
 
-    function createNewProject() {
-        console.log('Creating new project');
-        // Implement new project creation logic here
-    }
+  // Function to populate the projects dropdown
+  function populateProjectsDropdown() {
+    const dropdown = document.getElementById("project-select");
 
-    function editProject(projectName) {
-        console.log(`Editing project: ${projectName}`);
-        // Implement project editing logic here
-    }
+    // Clear existing options
+    dropdown.innerHTML = "";
 
-    function deleteProject(projectName) {
-        if (confirm(`Are you sure you want to delete the project "${projectName}"?`)) {
-            fetch(`/projects/${projectName}`, { method: 'DELETE' })
-                .then(response => {
-                    if (response.ok) {
-                        console.log(`Deleted project: ${projectName}`);
-                        fetchProjects(); // Refresh the project list
-                    } else {
-                        console.error(`Failed to delete project: ${projectName}`);
-                    }
-                })
-                .catch(error => console.error('Error deleting project:', error));
-        }
-    }
+    // Create and append new options
+    projects.forEach((project) => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.text = project.name;
+      dropdown.appendChild(option);
+    });
+  }
 
-    function renderSelectedProjectCard(project) {
-        const container = document.getElementById('project-cards-container');
-        container.innerHTML = ''; // Clear existing content
-        const card = document.createElement('div');
-        card.className = 'col-md-4';
-        card.innerHTML = `
-                <div class="card project-card">
-                    <div class="card-header">
-                        <h5 class="card-title">${project.Name}</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">${project.Description}</p>
-                        <p><strong>Team:</strong> ${project.Team.Name}</p>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-primary bg-gradient" onclick="editProject('${project.Name}')">Edit</button>
-                            <button class="btn btn-danger bg-gradient" onclick="deleteProject('${project.Name}')">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        container.appendChild(card);
-    }
+  // Function to populate the roles dropdown
+  function populateRolesDropdown() {
+    const dropdown = document.getElementById("member-role-1");
 
+    // Clear existing options
+    dropdown.innerHTML = "";
 
+    // Create and append new options
+    roles.forEach((role) => {
+      const option = document.createElement("option");
+      option.value = role;
+      option.text = role;
+      dropdown.appendChild(option);
+    });
+  }
+
+  populateRolesDropdown();
 </script>

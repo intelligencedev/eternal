@@ -1,11 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	"eternal/pkg/sd"
 	"eternal/pkg/web"
 	"fmt"
+	"image"
+	"image/png"
+	"io"
+	"math/rand"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,8 +21,22 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/websocket/v2"
+	"github.com/google/uuid"
 	"github.com/pterm/pterm"
+
+	socket "github.com/gorilla/websocket"
 )
+
+var currentChatUid string
+
+// handleGetTools returns a handler function that retrieves all tools
+func handleRenderTools(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.Render("templates/tools", fiber.Map{
+			"Tools": config.Tools,
+		})
+	}
+}
 
 // performToolWorkflow performs the tool workflow on a chat message.
 func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
@@ -25,28 +46,10 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 	if config.Tools.ImgGen.Enabled {
 		pterm.Info.Println("Generating image...")
-		sdParams := &sd.SDParams{Prompt: chatMessage}
-
-		// Call the sd tool.
-		res := sd.Text2Image(config.DataPath, sdParams)
-		if res != nil {
-			pterm.Error.Println("Error generating image:", res)
-			return chatMessage
-		}
-
-		// Return the image to the client.
-		timestamp := time.Now().UnixNano() // Get the current timestamp in nanoseconds.
-		imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/uploads/sd_out.png?%d' />", timestamp)
-		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", fmt.Sprint(chatTurn), imgElement)
-		if err := c.WriteMessage(websocket.TextMessage, []byte(formattedContent)); err != nil {
-			pterm.PrintOnError(err)
-			return chatMessage
-		}
-
-		// Increment the chat turn counter.
+		chatId := uuid.New().String()
+		res := performImageGen(chatId, config, chatMessage)
+		c.WriteMessage(socket.TextMessage, []byte(res))
 		chatTurn = chatTurn + 1
-
-		// End the tool workflow.
 		return chatMessage
 	}
 
@@ -254,7 +257,9 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 			config.Tools.WebSearch.Enabled = enabledBool
 			config.Tools.WebSearch.TopN = topNInt
 		case "imggen":
-			config.Tools.ImgGen.Enabled = true
+			config.Tools.ImgGen.Enabled = enabledBool
+		case "team":
+			config.Tools.Team.Enabled = enabledBool
 		default:
 			return c.Status(fiber.StatusNotFound).SendString("Tool not found")
 		}
@@ -269,6 +274,250 @@ func handleToolList(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(config.Tools)
 	}
+}
+
+// ComfyUI Service Handlers
+const serverAddress = "192.168.0.148:8188"
+
+type Image struct {
+	Filename  string `json:"filename"`
+	Subfolder string `json:"subfolder"`
+	Type      string `json:"type"`
+}
+
+type Outputs struct {
+	Images []Image `json:"images"`
+}
+
+type Meta struct {
+	Title string `json:"title"`
+}
+
+type Inputs struct {
+	Cfg            int           `json:"cfg,omitempty"`
+	Denoise        int           `json:"denoise,omitempty"`
+	LatentImage    []interface{} `json:"latent_image,omitempty"`
+	Model          []interface{} `json:"model,omitempty"`
+	Negative       []interface{} `json:"negative,omitempty"`
+	Positive       []interface{} `json:"positive,omitempty"`
+	SamplerName    string        `json:"sampler_name,omitempty"`
+	Scheduler      string        `json:"scheduler,omitempty"`
+	Seed           int           `json:"seed,omitempty"`
+	Steps          int           `json:"steps,omitempty"`
+	CkptName       string        `json:"ckpt_name,omitempty"`
+	BatchSize      int           `json:"batch_size,omitempty"`
+	Height         int           `json:"height,omitempty"`
+	Width          int           `json:"width,omitempty"`
+	Clip           []interface{} `json:"clip,omitempty"`
+	Text           string        `json:"text,omitempty"`
+	Samples        []interface{} `json:"samples,omitempty"`
+	Vae            []interface{} `json:"vae,omitempty"`
+	Images         []interface{} `json:"images,omitempty"`
+	FilenamePrefix string        `json:"filename_prefix,omitempty"`
+}
+
+type PromptData struct {
+	Meta      Meta   `json:"_meta"`
+	ClassType string `json:"class_type"`
+	Inputs    Inputs `json:"inputs"`
+}
+
+type Status struct {
+	Completed bool            `json:"completed"`
+	Messages  [][]interface{} `json:"messages"`
+	StatusStr string          `json:"status_str"`
+}
+
+type HistoryEntry struct {
+	Outputs  Outputs                `json:"outputs"`
+	Prompt   map[string]interface{} `json:"prompt"`
+	Status   Status                 `json:"status"`
+	ClientID string                 `json:"client_id,omitempty"`
+}
+
+type History struct {
+	Entries HistoryEntry
+}
+
+type Prompt struct {
+	Prompt   map[string]interface{} `json:"prompt"`
+	ClientID string                 `json:"client_id"`
+}
+
+type Message struct {
+	Type string                 `json:"type"`
+	Data map[string]interface{} `json:"data"`
+}
+
+// Load the prompt text from json file
+func loadPromptText(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+func SaveBytesAsImage(data []byte, filename string) error {
+	fmt.Println("Saving image to file:", filename)
+
+	reader := bytes.NewReader(data)
+
+	img, _, err := image.Decode(reader)
+	if err != nil {
+		fmt.Println("Error decoding image:", err)
+		return err
+	}
+
+	out, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return err
+	}
+	defer out.Close()
+
+	err = png.Encode(out, img)
+	if err != nil {
+		fmt.Println("Error encoding image:", err)
+		return err
+	}
+
+	fmt.Println("Image saved successfully to file:", filename)
+	return nil
+}
+
+func queuePrompt(prompt map[string]interface{}, clientID string) (map[string]interface{}, error) {
+	p := Prompt{
+		Prompt:   prompt,
+		ClientID: clientID,
+	}
+	jsonData, err := json.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(fmt.Sprintf("http://%s/prompt", serverAddress), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+
+	fmt.Println("Result:", result)
+
+	return result, err
+}
+
+func getHistory() (History, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s/history", serverAddress))
+	if err != nil {
+		return History{}, err
+	}
+	defer resp.Body.Close()
+
+	// Print the body
+	body, _ := io.ReadAll(resp.Body)
+	//fmt.Println(string(body))
+
+	var result History
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		fmt.Println("Error unmarshalling history:", err)
+	}
+
+	return result, err
+}
+
+func getImage(filename, subfolder, folderType string) ([]byte, error) {
+	data := map[string]string{
+		"filename":  filename,
+		"subfolder": subfolder,
+		"type":      folderType,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(fmt.Sprintf("http://%s/view", serverAddress), "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result []byte
+	err = json.NewDecoder(resp.Body).Decode(&result)
+
+	imgTurn := strconv.Itoa(chatTurn)
+	imgPath := fmt.Sprintf("public/uploads/%s_%s", imgTurn, "sd_out.png")
+
+	SaveBytesAsImage(result, imgPath)
+
+	return result, err
+}
+
+func getImages(prompt map[string]interface{}) (map[string][][]byte, error) {
+
+	ws, _, err := socket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/ws", serverAddress), nil)
+	if err != nil {
+		fmt.Println("Error dialing websocket:", err)
+		return nil, err
+	}
+	defer ws.Close()
+
+	clientID := uuid.New().String()
+	result, err := queuePrompt(prompt, clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	promptID := result["prompt_id"].(string)
+	outputImages := make(map[string][][]byte)
+	currentNode := ""
+
+	for {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			fmt.Println("Error reading message:", err)
+			return nil, err
+		}
+
+		if msg[0] == '{' {
+			var message Message
+			err = json.Unmarshal(msg, &message)
+			if err != nil {
+				fmt.Println("Error unmarshalling message:", err)
+				return nil, err
+			}
+
+			if message.Type == "executing" {
+				data := message.Data
+				if data["prompt_id"] == promptID {
+					if data["node"] == nil {
+						break
+					} else {
+						currentNode = data["node"].(string)
+					}
+				}
+			}
+		} else {
+			if currentNode == "save_image_websocket_node" {
+				outputImages[currentNode] = append(outputImages[currentNode], msg[8:])
+			}
+		}
+	}
+
+	return outputImages, nil
 }
 
 // handleRoleSelection handles the selection of assistant roles.
@@ -315,4 +564,106 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 
 		return c.Status(fiber.StatusInternalServerError).SendString("Server Error")
 	}
+}
+
+func fetchURL(url string) ([]byte, error) {
+	// Create a new HTTP client
+	client := &http.Client{}
+
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Perform the request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Check if the request was successful
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch URL: %s, status code: %d", url, resp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func pollURL(url string, timeout time.Duration) ([]byte, error) {
+	startTime := time.Now()
+	for {
+		if time.Since(startTime) > timeout {
+			return nil, fmt.Errorf("timed out after %v seconds", timeout.Seconds())
+		}
+
+		data, err := fetchURL(url)
+		if err == nil {
+			return data, nil
+		}
+
+		fmt.Println("Error fetching URL, retrying:", err)
+		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
+	}
+}
+
+func performImageGen(chatId string, config *AppConfig, chatMessage string) string {
+
+	currentChatUid = chatId
+	var prompt map[string]interface{}
+	workflowPath := fmt.Sprintf("%s/web/pixart.json", config.DataPath)
+	promptText, err := loadPromptText(workflowPath)
+	if err != nil {
+		fmt.Println("Error loading prompt text:", err)
+		return ""
+	}
+
+	err = json.Unmarshal([]byte(promptText), &prompt)
+	if err != nil {
+		fmt.Println("Error unmarshaling prompt:", err)
+		return ""
+	}
+
+	// Generate a random seed between 1 and 999999999999999
+	seed := rand.Intn(999999999999999)
+
+	pterm.Info.Println("Generating image using seed:", seed)
+
+	prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+	prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
+
+	_, err = queuePrompt(prompt, chatId)
+	if err != nil {
+		log.Errorf("Error queuing prompt: %v", err)
+		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", strconv.Itoa(chatTurn), err)
+		return formattedContent
+	}
+
+	imgFileName := fmt.Sprintf("%s_00001_.png", chatId)
+	imgPath := fmt.Sprintf("%s/web/uploads/%s", config.DataPath, imgFileName)
+
+	// We want to find the image using the UID and regex since we do not know the exact turn number
+	imageUrl := fmt.Sprintf("http://%s/view?filename=%s&subfolder=&type=output", serverAddress, imgFileName)
+	image, err := pollURL(imageUrl, 240*time.Second) // Timeout after 240 seconds since the workflow is complex, make this configurable in future commit
+	if err != nil {
+		fmt.Println("Error retrieving generated image:", err)
+	}
+
+	// Save the image to a file.
+	_ = SaveBytesAsImage(image, imgPath)
+
+	imgElement := fmt.Sprintf("<img class='rounded-2 object-fit-scale' width='512' height='512' src='public/uploads/%s_00001_.png' />", chatId)
+	formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", strconv.Itoa(chatTurn), imgElement)
+
+	chatTurn = chatTurn + 1
+	return formattedContent
 }

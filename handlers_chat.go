@@ -45,29 +45,37 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 		userPrompt := c.FormValue("userprompt")
 		var wsroute string
 
-		// selectedModels, err := GetSelectedModels(sqliteDB.db)
-		// if err != nil {
-		// 	log.Errorf("Error getting selected models: %v", err)
-		// 	return c.Status(500).SendString("Server Error")
-		// }
-
 		var model ModelParams
-		// Retrieve the model parameters from the database.
-		err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
-		if err != nil {
-			log.Errorf("Error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
-			return err
-		}
 
-		pterm.Info.Println("Team: ", currentProject.Team)
+		if config.Tools.Team.Enabled {
+			pterm.Info.Println("Team: ", currentProject.Team)
 
-		if len(currentProject.Team.Assistants) > 0 {
-			wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
+			// Retrieve the model parameters from the database.
+			err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
+			if err != nil {
+				log.Errorf("Error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
+				return err
+			}
+
 		} else {
-			return c.JSON(fiber.Map{"error": "No models selected"})
+			selectedModels, err := GetSelectedModels(sqliteDB.db)
+			if err != nil {
+				log.Errorf("Error getting selected models: %v", err)
+				return c.Status(500).SendString("Server Error")
+			}
+
+			// Retrieve the model parameters from the database.
+			err = sqliteDB.First(selectedModels[0].ModelName, &model)
+			if err != nil {
+				log.Errorf("Error getting model %s: %v", selectedModels[0].ModelName, err)
+				return err
+			}
 		}
+
+		wsroute = fmt.Sprintf("ws://%s:%s/ws", config.ServiceHosts["llm"]["llm_host_1"].Host, config.ServiceHosts["llm"]["llm_host_1"].Port)
 
 		turnID := IncrementTurn()
+		chatTurn = int(turnID)
 
 		return c.Render("templates/chat", fiber.Map{
 			"username":  config.CurrentUser,
@@ -294,6 +302,8 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 	var wsMessage WebSocketMessage
 	var err error
 
+	// Generate uid for the chat turn
+
 	// Read and unmarshal the initial WebSocket message
 	wsMessage, err = readAndUnmarshalMessage(c)
 	if err != nil {
@@ -308,15 +318,37 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		chatMessage = performToolWorkflow(c, config, chatMessage)
 	}
 
-	// Loop through each assistant in the group and process the chat message
-	for _, assistant := range currentProject.Team.Assistants {
+	if config.Tools.Team.Enabled {
+		// Loop through each assistant in the group and process the chat message
+		for _, assistant := range currentProject.Team.Assistants {
+			err = handleAssistantTurn(c, config, wsMessage, chatMessage, &responseBuffer, assistant)
+			if err != nil {
+				log.Errorf("Error processing model: %v", err)
+				// return
+			}
+
+			pterm.Info.Println("Assistant finished turn: ", assistant.Name)
+		}
+	} else {
+		// Process the chat message with the selected model
+		role := Role{
+			Name:         "selected",
+			Instructions: config.CurrentRoleInstructions,
+		}
+
+		// Get the model params from the database
+		model := ModelParams{}
+		err = sqliteDB.First(wsMessage.Model, &model)
+
+		assistant := Assistant{
+			Name: wsMessage.Model,
+			Role: role,
+		}
 		err = handleAssistantTurn(c, config, wsMessage, chatMessage, &responseBuffer, assistant)
 		if err != nil {
 			log.Errorf("Error processing model: %v", err)
 			// return
 		}
-
-		pterm.Info.Println("Assistant finished turn: ", assistant.Name)
 	}
 
 	// Handle the completed chat turn
@@ -325,7 +357,7 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 
 func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSocketMessage, chatMessage string, responseBuffer *bytes.Buffer, assistant Assistant) error {
 	var model ModelParams
-	err := sqliteDB.First(assistant.Name, &model)
+	err := sqliteDB.First(wsMessage.Model, &model)
 	if err != nil {
 		return fmt.Errorf("error getting model %s: %v", assistant.Name, err)
 	}
@@ -412,7 +444,7 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 
 // handleError handles errors that occur during message processing.
 func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err error) {
-	chatTurn++
+	//chatTurn++
 
 	log.Errorf("Chat turn finished: %v", err)
 
