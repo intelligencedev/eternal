@@ -158,7 +158,8 @@
                 placeholder="Type your message..." rows="2" style="outline: none;">write a haiku</textarea>
               <!-- Clear textarea after submit -->
               <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
-                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
+                hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend"
+                hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
                 <div id="send-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path fill="#ffffff" fill-rule="evenodd"
@@ -347,6 +348,39 @@
       this.style.height = `${Math.min(this.scrollHeight, this.clientHeight * maxRows)}px`;
     });
 
+    document.getElementById('message').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        if (!event.shiftKey) {
+          event.preventDefault(); // Prevent the default behavior of the Enter key
+
+          // Trigger the HTMX request manually
+          htmx.trigger('#send', 'click');
+
+          // Clear the textarea and reset its height
+          this.value = '';
+          this.style.height = 'auto';
+          this.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;
+        } else {
+          // Shift+Enter: Insert a new line
+          // The default behavior will insert a new line, so we don't need to do anything here
+        }
+      }
+    });
+
+    document.getElementById('send').addEventListener('click', () => {
+      const sendIcon = document.getElementById('send-icon');
+      sendIcon.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2c4.714 0 7.071 0 8.535 1.464C22 4.93 22 7.286 22 12c0 4.714 0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12Z"/>
+        </svg>
+    `;
+    });
+
+    document.getElementById('imgGenBtn').addEventListener('click', () => {
+      toggleButtonState('imgGenBtn');
+      downloadImageModel('dreamshaper-8-turbo-sdxl'); // Keep existing functionality
+    });
+
     const tooltipTriggerList = document.querySelectorAll(
       "[data-bs-toggle='tooltip']"
     );
@@ -359,11 +393,6 @@
       const button = document.getElementById(buttonId);
       button.style.border = button.style.border ? '' : '2px solid purple'; // Toggle border
     }
-
-    document.getElementById('imgGenBtn').addEventListener('click', () => {
-      toggleButtonState('imgGenBtn');
-      downloadImageModel('dreamshaper-8-turbo-sdxl'); // Keep existing functionality
-    });
 
     function downloadImageModel(modelName) {
       // Toggle a border on the imgGenBtn
@@ -391,23 +420,6 @@
         });
     }
 
-    document.getElementById('message').addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' || event.key === 'Return') {
-        if (!event.shiftKey) {
-          var messageInput = document.getElementById('message');
-          messageInput.value += docContent;
-          event.preventDefault(); // Prevent the default behavior of the Enter key
-          document.getElementById('send').click(); // Trigger the click event on the submit button
-          textarea.style.height = 'auto';
-          textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;
-        } else {
-          // Insert a new line instead of submitting the form
-          var messageInput = document.getElementById('message');
-          messageInput.value += '\n';
-        }
-      }
-    });
-
     function setRole(role) {
       fetch(`/chat/role/${role}`, {
         method: 'POST',
@@ -423,15 +435,6 @@
           console.error('Error:', error);
         })
     }
-
-    document.getElementById('send').addEventListener('click', () => {
-      const sendIcon = document.getElementById('send-icon');
-      sendIcon.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2c4.714 0 7.071 0 8.535 1.464C22 4.93 22 7.286 22 12c0 4.714 0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12Z"/>
-        </svg>
-    `;
-    });
 
     // htmx.on('htmx:afterRequest', () => {
     //   const sendIcon = document.getElementById('send-icon');

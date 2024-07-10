@@ -1,32 +1,24 @@
 <div id="models-container" class="row">
   <div class="h-auto">
-    <div class="h-auto dropdown dropdown-center mx-2">
-      <button class="btn btn-secondary bg-gradient dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
-        aria-expanded="false">
-        Language Models
-      </button>
-      <ul class="dropdown-menu w-100" style="background-color: var(--et-card-bg);">
-        <li>
-          <h6 class="dropdown-header">Public Models</h6>
-        </li>
-        {{range .models}}
-        {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
-        <li><a href="/modelcards" hx-get="/modelcards" class="dropdown-item"
-            onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
-        {{end}}
-        {{end}}
-        <li>
-          <hr class="dropdown-divider">
-        </li>
-        <li>
-          <h6 class="dropdown-header">Local Models</h6>
-        </li>
-        {{range .models}}
-        {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
-        <li><a href="#" class="dropdown-item" onclick="selectModel('{{.Name}}')">{{.Name}}</a></li>
-        {{end}}
-        {{end}}
-      </ul>
+    <div class="h-auto mx-2">
+      <select id="model-select" class="form-select" aria-label="Select Language Model">
+        <option selected disabled>Language Models</option>
+        <optgroup label="Public Models">
+          {{range .models}}
+          {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
+          <option value="{{.Name}}">{{.Name}}</option>
+          {{end}}
+          {{end}}
+        </optgroup>
+        <optgroup label="Local Models">
+          {{range .models}}
+          {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name
+          "anthropic-claude-3.5-sonnet"))}}
+          <option value="{{.Name}}">{{.Name}}</option>
+          {{end}}
+          {{end}}
+        </optgroup>
+      </select>
     </div>
   </div>
   <div class="w-100 d-none" id="progress-download" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'
@@ -39,6 +31,9 @@
 </div>
 
 <script>
+  document.getElementById('model-select').addEventListener('change', function () {
+    selectModel(this.value);
+  });
   async function selectModel(modelName) {
     try {
       // Set the selected model in the database
