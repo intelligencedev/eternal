@@ -3,30 +3,28 @@
     <div class="container-fluid h-100">
       <div class="row h-100">
         <div class="col-12 h-100">
-          <div class="card h-100" style="background-color: var(--et-card-bg);">
-            <div class="card-body d-flex flex-column p-0">
-              <div class="px-4 py-3 border-bottom">
-                <select id="model-select" class="form-select" aria-label="Select Language Model">
-                  <option selected disabled>Language Models</option>
-                  <optgroup label="Public Models">
-                    {{range .models}}
-                    {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
-                    <option value="{{.Name}}">{{.Name}}</option>
-                    {{end}}
-                    {{end}}
-                  </optgroup>
-                  <optgroup label="Local Models">
-                    {{range .models}}
-                    {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
-                    <option value="{{.Name}}">{{.Name}}</option>
-                    {{end}}
-                    {{end}}
-                  </optgroup>
-                </select>
-              </div>
-              <div id="model-info-container" class="flex-grow-1 overflow-auto px-4 py-3">
-                <!-- Model info will be dynamically inserted here -->
-              </div>
+          <div class="panel h-100 d-flex flex-column" style="background-color: var(--et-galactic-bg);">
+            <div class="panel-header px-4 py-3 border-bottom">
+              <select id="model-select" class="form-select" aria-label="Select Language Model">
+                <option selected disabled>Language Models</option>
+                <optgroup label="Public Models">
+                  {{range .models}}
+                  {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
+                  <option value="{{.Name}}">{{.Name}}</option>
+                  {{end}}
+                  {{end}}
+                </optgroup>
+                <optgroup label="Local Models">
+                  {{range .models}}
+                  {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
+                  <option value="{{.Name}}">{{.Name}}</option>
+                  {{end}}
+                  {{end}}
+                </optgroup>
+              </select>
+            </div>
+            <div id="model-info-container" class="panel-body flex-grow-1 overflow-auto px-4 py-3">
+              <!-- Model info will be dynamically inserted here -->
             </div>
           </div>
         </div>

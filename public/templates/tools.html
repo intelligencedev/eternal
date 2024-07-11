@@ -1,10 +1,8 @@
-<div id="tools-container" class="row">
-  <div class="col">
-    <div class="card mx-2 mb-2" style="background-color: var(--et-card-bg);">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Tools</h5>
-      </div>
-      <div class="card-body">
+<div id="tools-container" class="row h-100">
+  <div class="col h-100">
+    <div class="panel h-100 p-3" style="background-color: var(--et-galactic-bg);">
+      <h5 class="mb-3">Tools</h5>
+      <div class="panel-body">
         <!-- Teams Workflow -->
         <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center">
           <label class="form-check-label" for="team-switch">Teams Workflow</label>
@@ -19,7 +17,8 @@
           <label class="form-check-label" for="img-switch">Image Generation</label>
           <input class="form-check-input" type="checkbox" role="switch" id="img-switch" onclick="updateImgTool()">
         </div>
-        <p class="mb-3 small">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.</p>
+        <p class="mb-3 small">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.
+        </p>
 
         <hr>
 
@@ -30,7 +29,8 @@
         </div>
         <p class="mb-2 small"><strong>TopN:</strong></p>
         <div class="d-flex align-items-center">
-          <input type="range" class="form-range me-2" min="1" max="25" step="2" value="1" id="memory-slider" oninput="updateMemoryTool()">
+          <input type="range" class="form-range me-2" min="1" max="25" step="2" value="1" id="memory-slider"
+            oninput="updateMemoryTool()">
           <span id="memory-topn-value" class="small">1</span>
         </div>
 
@@ -41,14 +41,16 @@
           <label class="form-check-label" for="webget-switch">Web Retrieval</label>
           <input class="form-check-input" type="checkbox" role="switch" id="webget-switch" onclick="updateWebgetTool()">
         </div>
-        <p class="mb-3 small">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as reference for an LLM response.</p>
+        <p class="mb-3 small">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as
+          reference for an LLM response.</p>
 
         <hr>
 
         <!-- Web Search -->
         <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center">
           <label class="form-check-label" for="websearch-switch">Web Search</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="websearch-switch" onclick="updateSearchTool()">
+          <input class="form-check-input" type="checkbox" role="switch" id="websearch-switch"
+            onclick="updateSearchTool()">
         </div>
         <p class="mb-2 small">Web Search fetches search results as reference for LLM response.</p>
         <label class="form-label small">Search Backend</label>
@@ -62,7 +64,8 @@
         </div>
         <p class="mb-2 small"><strong>TopN - Number of web search results to retrieve:</strong></p>
         <div class="d-flex align-items-center">
-          <input type="range" class="form-range me-2" min="1" max="6" step="1" value="1" id="websearch-slider" oninput="updateSearchTool()">
+          <input type="range" class="form-range me-2" min="1" max="6" step="1" value="1" id="websearch-slider"
+            oninput="updateSearchTool()">
           <span id="websearch-topn-value" class="small">1</span>
         </div>
       </div>
@@ -79,13 +82,13 @@
         'Content-Type': 'application/json'
       }
     })
-    .then(response => response.json())
-    .then(data => {
-      console.log(data.message);
-    })
-    .catch(error => {
-      console.error('Error:', error);
-    });
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
   }
 
   async function getTools() {
