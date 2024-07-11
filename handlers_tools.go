@@ -558,6 +558,7 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 
 		if foundRole != nil {
 			config.CurrentRoleInstructions = foundRole.Instructions
+			config.CurrentRoleName = foundRole.Name
 			pterm.Info.Printf("Role set to: %s\n", foundRole.Name)
 			pterm.Info.Println(foundRole.Instructions)
 			return c.JSON(fiber.Map{

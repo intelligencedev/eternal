@@ -336,9 +336,20 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 			pterm.Info.Println("Assistant finished turn: ", assistant.Name)
 		}
 	} else {
-		// Process the chat message with the selected model
+		// Set chat as the default role if no role is selected
+		if config.CurrentRoleName == "" {
+			config.CurrentRoleName = "chat"
+
+			// Get the role from the config that matches the name of the assistant role
+			for _, r := range config.AssistantRoles {
+				if r.Name == config.CurrentRoleName {
+					config.CurrentRoleInstructions = r.Instructions
+				}
+			}
+		}
+
 		role := Role{
-			Name:         "selected",
+			Name:         config.CurrentRoleName,
 			Instructions: config.CurrentRoleInstructions,
 		}
 
