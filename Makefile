@@ -2,7 +2,7 @@
 OS := $(shell uname -s)
 
 # Path variables
-LLAMA_BUILD_TARGETS := llama-baby-llama llama-batched llama-batched-bench llama-bench llama-benchmark-matmult llama-cli llama-convert-llama2c-to-ggml llama-cvector-generator llama-embedding llama-eval-callback llama-export-lora llama-finetune llama-gbnf-validator llama-gguf llama-gguf-split llama-gritlm llama-imatrix llama-infill llama-llava-cli llama-lookahead llama-lookup llama-lookup-create llama-lookup-merge llama-lookup-stats llama-parallel llama-passkey llama-perplexity llama-q8dot llama-quantize llama-quantize-stats llama-retrieval llama-save-load-state llama-server llama-simple llama-speculative llama-tokenize llama-train-text-from-scratch llama-vdot
+LLAMA_BUILD_TARGETS := llama-baby-llama llama-batched llama-batched-bench llama-bench llama-cli llama-convert-llama2c-to-ggml llama-cvector-generator llama-embedding llama-eval-callback llama-export-lora llama-finetune llama-gbnf-validator llama-gguf llama-gguf-split llama-gritlm llama-imatrix llama-infill llama-llava-cli llama-lookahead llama-lookup llama-lookup-create llama-lookup-merge llama-lookup-stats llama-parallel llama-passkey llama-perplexity llama-q8dot llama-quantize llama-quantize-stats llama-retrieval llama-save-load-state llama-server llama-simple llama-speculative llama-tokenize llama-train-text-from-scratch llama-vdot
 
 # Directory variables
 LLAMA_DIR := pkg/llm/local/gguf
@@ -20,10 +20,14 @@ endif
 
 # Build commands
 ifeq ($(OS),Darwin) # macOS
+	# Add llama-benchmark-matmult to the list of targets
+	LLAMA_BUILD_TARGETS += llama-benchmark-matmult
 	LLAMA_BUILD_CMD = make -C $(LLAMA_DIR)
 	COPY_LLAMA_CMD = cp $(addprefix $(LLAMA_DIR)/, $(LLAMA_BUILD_TARGETS)) $(ARTIFACTS_DIR)
 	SD_BUILD_CMD = cmake -S $(SD_DIR) -B $(SD_BUILD_DIR) -DSD_METAL=ON -DSD_FLASH_ATTN=ON && cmake --build $(SD_BUILD_DIR) --config Release
 else ifeq ($(OS),Linux)
+	# Add llama-bench-matmult to the list of targets
+	LLAMA_BUILD_TARGETS += llama-bench-matmult
 	LLAMA_BUILD_CMD = cmake -S $(LLAMA_DIR) -B $(LLAMA_BUILD_DIR) -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER:PATH=/usr/local/cuda/bin/nvcc && cmake --build $(LLAMA_BUILD_DIR) --config Release
     FILTERED_LLAMA_BUILD_TARGETS := $(filter-out libllava.a ggml-metal.metal ggml-common.h benchmark-matmult,$(LLAMA_BUILD_TARGETS))
     COPY_LLAMA_CMD = cp $(addprefix $(LLAMA_BUILD_DIR)/bin/,$(FILTERED_LLAMA_BUILD_TARGETS)) $(ARTIFACTS_DIR)

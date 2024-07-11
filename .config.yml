@@ -11,14 +11,14 @@ google_key: '...'
 current_user: 'User'
 
 # Display name for LLM responses
-assistant_name: 'Assistant'
+assistant_name: 'Eternal'
 
 # Host name and port of the frontend and management server
 control_host: 'localhost'
-control_port: 3000
+control_port: 38765
 
 # datapath will be created by Eternal to host persistent data
-data_path: '/Users/$USER/.eternal' # Adapt the path to your OS
+data_path: '/Users/$USER/.eternal-v1'
 
 # Service hosts for specific functionalities
 service_hosts:
@@ -26,32 +26,28 @@ service_hosts:
   retrieval:
     retrieval_host_1:
       host: 'localhost'
-      port: 3000
+      port: 38765
   # image generation and processing
   image:
     image_host_1:
       host: 'localhost'
-      port: 3000
+      port: 38765
   # text-to-speech and speech-to-text    
   speech:
     speech_host_1:
       host: 'localhost'
-      port: 3000
+      port: 38765
   # llm text generation services
   llm:
     llm_host_1:
       host: 'localhost'
-      port: '3000'
+      port: '38765'
       gpu_layers: -1
     llm_host_2:
       host: 'localhost'
-      port: '3000'
+      port: '38765'
       gpu_layers: -1
 
-# Only configure one assistant for basic chat
-# Add more assistants with roles to pass the output from one to the next
-# This feature will be implemented via the UI in a future update
-# The roles and names are configured in its own section in this config file
 default_project:
   name: "default"
   description: "This is the default project."
@@ -63,11 +59,11 @@ default_project:
           name: "chat"
         params:
           model: "llama3-8b-instruct"
-      # - name: "qwen2-72b-instruct"
-      #   role:
-      #     name: "software_dev"
-      #   params:
-      #     model: "qwen2-72b-instruct"
+      - name: "gemma-2-9b-it"
+        role:
+          name: "cot"
+        params:
+          model: "gemma-2-9b-it" 
 
 tools:
   memory:
@@ -77,15 +73,17 @@ tools:
     enabled: false
   websearch:
     enabled: false
-    name: ddg # Only ddg and sxng available
-    endpoint: https://mysxng.com # Example fake URL. The url of the sxng instance if available. Not used if ddg is configured.
+    name: sxng # Only ddg and sxng available
+    endpoint: https://search.intelligence.dev/search # The url of the sxng instance if available. Not used if ddg is configured.
     top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
   imggen:
     enabled: false
-  lmsprint:
+  team:
     enabled: false
 
 assistant_roles:
+  - name: 'default'
+    instructions: ""
   - name: 'chat'
     instructions: |
       Adopt the role of [job title(s) of 1 or more subject matter EXPERTs most qualified to provide authoritative, nuanced answer].
@@ -132,8 +130,7 @@ assistant_roles:
       - Do not mention your identity; focus solely on summarizing the provided content.
   - name: 'cot'
     instructions: |
-      You are an AI assistant specializing in providing detailed and clear explanations of complex topics across various domains of knowledge. Your role is to help users understand intricate concepts and processes, breaking them down into manageable and comprehensible parts.
-      When responding to queries, follow these guidelines:
+      You are an AI assistant specializing in providing detailed and clear explanations of complex topics across various domains of knowledge. Your role is to help users understand intricate concepts and processes, breaking them down into manageable and comprehensible parts. When responding to queries, follow these guidelines:
       Avoid treating any topic as a “black box.” Instead, focus on providing clear, detailed explanations of how different elements and processes contribute to the overall understanding.
       Break down complex topics into smaller, more understandable components.
       Use analogies and visualizations when appropriate to make concepts more accessible.
@@ -195,43 +192,10 @@ assistant_roles:
       Back up your recommendations with clear reasoning and examples.
       The goal is to use a systematic process to thoroughly evaluate the code from multiple angles, identify the most critical issues, and provide clear and actionable suggestions that the developer can follow to improve their code.
       The code review should be comprehensive, insightful, and help the developer grow their skills. Always maintain a positive and supportive tone while delivering constructive feedback.
-  - name: 'search'
-    instructions: |
-      Identify the main objective and break it down into smaller, specific questions.
-      Formulate each question as a succinct query that can be used for searching.
-      Limit the list to a maximum of 5 queries.
-      Return the response as a comma separated list with the queries.
   - name: 'image_bot'
     instructions: |
-      You are an expert at writing vivid descriptions to depict realistic images or illustrations or computer generated images of all styles known. You can perfectly capture everything needed to accurately describe an image to include its style, colors, composition, subjects, and have a keen sense of spatial awareness when describing the background and foreground of an image. You are an expert in popular artists known in communities like artstation, deviantart, 3dsociety, and other popular communities where the worlds top artists showcase their images. You have previously generated descriptions that where award winning such as:
-      - A juicy, perfectly grilled hamburger sits on a white ceramic plate. The burger is topped with melted cheddar cheese, crisp lettuce, ripe tomato slices, and tangy pickles, all nestled between a golden, toasted brioche bun. Next to the burger, a generous serving of golden, crispy fries is artfully arranged. The fries are seasoned to perfection and still steaming hot. A small cup of creamy, homemade aioli and a dollop of rich ketchup sit beside the fries, ready for dipping. The plate is set on a rustic wooden table, adding a touch of warmth and coziness to the scene. A cold, refreshing glass of soda with ice and a slice of lemon can be seen in the background, completing the mouthwatering meal.
-      Masterpiece,best quality, photo, realistic, very aesthetic
-      - professional cute style amigurumi by Alayna Lemmer of a cat wearing small hat. There are pretty flowers around. It is spring evening time and clear weather. Dynamic pose, dynamic background, dynamic composition, dynamic lighting, realistic proportions, intricate details, hdr, raytracing.  
-      - A photorealistic portrait of Disney's Bambi, the young fawn, standing amidst a whimsical forest bursting with vibrant colors. Sunlight filters through the lush canopy of leaves, casting a dappled light on the forest floor. Flowers of every imaginable color bloom in profusion around Bambi's hooves, their petals catching the last rays of the setting sun. Fireflies dance playfully in the air, adding a touch of magic to the scene. Bambi himself looks curious and full of wonder, his large brown eyes taking in the beauty of his surroundings. Butterflies with iridescent wings flutter around him, and a gentle breeze rustles the leaves, creating a sense of peaceful tranquility. The overall mood is one of pure enchantment, capturing the innocence and joy of childhood in a fantastical forest setting.
-      - zavy-splsh, water splash, an icecube falling in water creating a huge splash of iredescent water , 8k photo , detailed 
-      - Ivory Elegance: A Timeless Celebration of Grace and Purity
-      Camera: Soft focus, shallow depth of field
-      Shot Characteristics: Delicate details, gentle lighting, graceful movements
-      In this timeless celebration of grace and purity, the main subject is a vision of ivory elegance, adorned in flowing garments that seem to defy gravity. The composition is a harmonious arrangement of soft curves and gentle lines, rendered in a palette of ivory, pearl, and creamy white hues. Each brushstroke captures the delicate details of this ethereal scene, from the intricate lace patterns on the fabric to the gentle flutter of a veil in the breeze. The scene invites the viewer to bask in the serene beauty of this moment, evoking a sense of tranquility and reverence for the timeless elegance on display.
-      Using the previous instructions and examples as a guide, write an image generation prompt for the following concept: {prompt}
-  - name: 'haystack_bot'
-    instructions: |
-      You are an AI assistant tasked with answering queries based on a long document. Your goal is to find and provide accurate information from the document, much like finding a needle in a haystack.
-      Instructions:
-      1. Read the following document carefully.
-      2. When a user asks a question, search the document for relevant information.
-      3. Provide your answer in the following format:
-        a) Direct answer to the query
-        b) Relevant quote from the document (if available)
-        c) Location or context of the quote within the document
-      4. If you cannot find relevant information, state that clearly.
-      5. Do not provide information that is not in the document.
-      6. Explain your search strategy briefly.
-      Document:
-      """
-      [Insert the full text of the long document here]
-      """
-      User Query:
+      You are an expert at writing vivid descriptions to depict realistic images or illustrations or computer generated images of all styles known. You can perfectly capture everything needed to accurately describe an image to include its style, colors, composition, subjects, and have a keen sense of spatial awareness when describing the background and foreground of an image. You are an expert in popular artists known in communities like artstation, deviantart, 3dsociety, and other popular communities where the worlds top artists showcase their images. 
+      Use the previous instructions to write a one paragraph image generation prompt, adding tags for popular artists for the style or medium for the following concept: {prompt}
 
 language_models:
   - name: 'openai-gpt-4o'
@@ -270,17 +234,51 @@ language_models:
       - 'instruct'
     tags:
       - '8B'
-  - name: 'Codestral-22B-v0.1'
-    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
-    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+  - name: 'llama3-70b-instruct'
+    homepage: 'https://ai.meta.com/blog/meta-llama-3/'
+    gguf: 'https://huggingface.co/mradermacher/Smaug-Llama-3-70B-Instruct-GGUF'
     downloads:
-      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q8_0.gguf'
-    prompt:  "{prompt}"
+      - 'https://huggingface.co/LoneStriker/Meta-Llama-3-70B-Instruct-GGUF/resolve/main/Meta-Llama-3-70B-Instruct-Q6_K.gguf'
+    prompt: "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+    ctx: 8192
+    roles:
+      - 'instruct'
+    tags:
+      - '70B'
+  - name: 'phi-3-medium-128k'
+    homepage: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    gguf: 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/LoneStriker/Phi-3-medium-128k-instruct-GGUF/resolve/main/Phi-3-medium-128k-instruct.gguf'
+    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
+    ctx: 32764
+    roles:
+      - 'instruct'
+    tags:
+      - '14B'
+  - name: 'phi-3-mini-128k'
+    homepage: 'https://huggingface.co/bartowski/Phi-3.1-mini-4k-instruct-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Phi-3.1-mini-4k-instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/Phi-3.1-mini-4k-instruct-GGUF/resolve/main/Phi-3.1-mini-4k-instruct-Q8_0.gguf'
+    prompt: "<|user|>\n{system}\n{prompt} <|end|>\n<|assistant|>"
+    ctx: 120000
+    roles:
+      - 'instruct'
+    tags:
+      - '7B'
+  - name: 'wizardmath-7b'
+    homepage: 'https://huggingface.co/WizardLM/WizardMath-7B-V1.1'
+    gguf: 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/TheBloke/WizardMath-7B-V1.1-GGUF/resolve/main/wizardmath-7b-v1.1.Q8_0.gguf'
+    prompt: "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:"
     ctx: 32768
     roles:
-      - 'all'
+      - 'math'
+      - 'logic'
     tags:
-      - '22B'
+      - '7B'
   - name: 'mixtral-8x7b-instruct'
     homepage: 'https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1'
     gguf: 'https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF'
@@ -303,6 +301,28 @@ language_models:
       - 'all'
     tags:
       - '8B'
+  - name: 'Codestral-22B-v0.1'
+    homepage: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-Q8_0.gguf'
+    prompt:  "{prompt}"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '22B'
+  - name: 'qwen2-72b-instruct'
+    homepage: 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF'
+    gguf: 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF'
+    downloads:
+      - 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF/resolve/main/qwen2-72b-instruct-q8_0-00001-of-00002.gguf'
+    prompt: "<|im_start|>system You are a helpful assistant.<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
+    ctx: 32768
+    roles:
+      - 'all'
+    tags:
+      - '72B'
   - name: 'gemma-2-9b-it'
     homepage: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
     gguf: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
@@ -314,6 +334,28 @@ language_models:
       - 'all'
     tags:
       - '9B'
+  - name: 'gemma-2-27b-it'
+    homepage: 'https://huggingface.co/bartowski/gemma-2-27b-it-GGUF'
+    gguf: 'https://huggingface.co/bartowski/gemma-2-27b-it-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/gemma-2-27b-it-GGUF/resolve/main/gemma-2-27b-it-Q8_0.gguf'
+    prompt: "<start_of_turn>user{prompt}<end_of_turn><start_of_turn>model"
+    ctx: 8092
+    roles:
+      - 'all'
+    tags:
+      - '27B'
+  - name: 'internlm2-1m'
+    homepage: 'https://huggingface.co/ZeroWw/internlm2_5-7b-chat-1m-GGUF'
+    gguf: 'https://huggingface.co/ZeroWw/internlm2_5-7b-chat-1m-GGUF'
+    downloads:
+      - 'https://huggingface.co/ZeroWw/internlm2_5-7b-chat-1m-GGUF/resolve/main/internlm2_5-7b-chat-1m.q8_0.gguf'
+    prompt: "{prompt}"
+    ctx: 500000
+    roles:
+      - 'all'
+    tags:
+      - '7B'
 
 
 image_models:

@@ -146,16 +146,10 @@ func InitServer(configPath string) (string, error) {
 	}
 
 	// Check if comfyui folder exists
-	comfyuiPath := filepath.Join(configPath, "sd/comfyui")
+	comfyuiPath := filepath.Join(configPath, "sd/ComfyUI-master")
 	if _, err := os.Stat(comfyuiPath); os.IsNotExist(err) {
-		// Create comfyui folder
-		err = os.MkdirAll(comfyuiPath, 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create directory %s: %v", comfyuiPath, err)
-		}
-
 		// Download comfyui repo
-		err := ghdownloader.DownloadAndExtractRepo("comfyanonymous", "ComfyUI", "", imgGenPath)
+		err := ghdownloader.DownloadAndExtractRepo("intelligencedev", "ComfyUI", "", imgGenPath)
 		if err != nil {
 			return "", err
 		}
