@@ -63,7 +63,7 @@
         if (!modelData.Downloaded && !['openai-gpt-4o', 'google-gemini-1.5', 'anthropic-claude-3.5-sonnet'].includes(modelData.Name)) {
           modelInfoContainer.innerHTML = `
             <div class="text-center">
-              <p><a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-primary">Model Homepage</a></p>
+              <p><a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-secondary bg-gradient">Model Homepage</a></p>
               <div id="model-download">
                 <button id="model-download-btn" class="btn btn-primary" onclick="downloadModel('${modelData.Name}')">Download</button>
               </div>
@@ -75,7 +75,7 @@
         } else {
           modelInfoContainer.innerHTML = `
             <div class="mb-4">
-              <a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-primary btn-block">Model Homepage</a>
+              <a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-secondary btn-block bg-gradient">Model Homepage</a>
             </div>
             <div class="form-group">
               <label for="ctx-size-slider" class="form-label">Context Size: <span id="ctx-size-value">${modelData.Options.ctx_size}</span></label>
@@ -101,7 +101,7 @@
               <label for="promptTemplate" class="form-label">Prompt Template</label>
               <textarea id="promptTemplate" class="form-control" rows="5" readonly>${modelData.Options.prompt}</textarea>
             </div>
-            <button id="saveModelParamsBtn" class="btn btn-primary btn-block mt-3">Save</button>
+            <button id="saveModelParamsBtn" class="btn btn-secondary btn-block bg-gradient mt-3">Save</button>
           `;
 
           // Add event listeners to update the displayed value as the slider is moved
