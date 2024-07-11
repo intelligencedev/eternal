@@ -87,6 +87,7 @@
         </div>
 
         <div id="info" class="col-3">
+          {{template "templates/model" .}}
         </div>
 
       </div>
@@ -109,39 +110,6 @@
           </div>
           <div class="hstack">
             <div class="row ms-auto w-25">
-              <!-- Spacing columns -->
-              <div class="col"></div>
-              <div class="col"></div>
-
-              <!-- Project Config -->
-              <div class="col">
-                <button id="projectBtn" class="btn" hx-post="/projects" hx-target="#tool-view" data-bs-toggle="tooltip"
-                  data-bs-title="Project Settings">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                    <g fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path stroke-linecap="round" d="M10 14h2m0 0h2m-2 0v2m0-2v-2" />
-                      <path
-                        d="M2 6.95c0-.883 0-1.324.07-1.692A4 4 0 0 1 5.257 2.07C5.626 2 6.068 2 6.95 2c.386 0 .58 0 .766.017a4 4 0 0 1 2.18.904c.144.119.28.255.554.529L11 4c.816.816 1.224 1.224 1.712 1.495a4 4 0 0 0 .848.352C14.098 6 14.675 6 15.828 6h.374c2.632 0 3.949 0 4.804.77c.079.07.154.145.224.224c.77.855.77 2.172.77 4.804V14c0 3.771 0 5.657-1.172 6.828C19.657 22 17.771 22 14 22h-4c-3.771 0-5.657 0-6.828-1.172C2 19.657 2 17.771 2 14V6.95Z" />
-                    </g>
-                  </svg>
-                </button>
-              </div>
-
-              <!-- Tool Config -->
-              <div class="col">
-                <button id="toolBtn" class="btn" hx-get="/tools" hx-target="#tool-view" data-bs-toggle="tooltip"
-                  data-bs-title="Tool Settings">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                    <g fill="currentColor">
-                      <path fill-rule="evenodd"
-                        d="M10 6v12c0 1.4 0 2.1-.272 2.635a2.5 2.5 0 0 1-1.093 1.092C8.1 22 7.4 22 6 22c-1.4 0-2.1 0-2.635-.273a2.5 2.5 0 0 1-1.093-1.092C2 20.1 2 19.4 2 18V6c0-1.4 0-2.1.272-2.635a2.5 2.5 0 0 1 1.093-1.093C3.9 2 4.6 2 6 2c1.4 0 2.1 0 2.635.272a2.5 2.5 0 0 1 1.093 1.093C10 3.9 10 4.6 10 6ZM7 19.75a.75.75 0 0 0 0-1.5H5a.75.75 0 0 0 0 1.5h2Z"
-                        clip-rule="evenodd" />
-                      <path
-                        d="m19.06 10.614l-5.838 6.09c-.73.761-1.095 1.142-1.409 1.016c-.313-.126-.313-.653-.313-1.708V7.774a2.5 2.5 0 0 1 .73-1.76l1.054-1.055l.43-.33c1.004-.767 1.506-1.15 2.053-1.269a2.5 2.5 0 0 1 1.353.085c.528.184.979.627 1.88 1.514c1 1 1.5 1.5 1.685 2.072a2.5 2.5 0 0 1 .011 1.503c-.176.575-.663 1.077-1.636 2.08ZM12.79 22h5.11c1.4 0 2.1 0 2.634-.273a2.5 2.5 0 0 0 1.093-1.092c.272-.535.272-1.235.272-2.635c0-1.4 0-2.1-.272-2.635a2.5 2.5 0 0 0-1.093-1.092C20 14 19.3 14 17.9 14h-.22l-5.801 5.798a1.224 1.224 0 0 0-.378.883c0 .713.577 1.319 1.29 1.319Z" />
-                    </g>
-                  </svg>
-                </button>
-              </div>
             </div>
 
             <!-- PROMPT BAR -->
@@ -173,7 +141,7 @@
 
             </div>
 
-            <div class="row ms-auto w-25">
+            <div class="row ms-auto w-25" hx-post="/modelcards" hx-trigger="load" hx-target="#info">
               <div class="col">
                 <div class="dropup dropup-center">
                   <!-- ROLES -->
@@ -201,26 +169,12 @@
                 </div>
               </div>
 
-              <!-- Models Config -->
-              <div class="col">
-                <button class="btn" hx-post="/modelcards" hx-target="#info" hx-preserve="#chat"
-                  hx-swap="innerHTML transition:true" data-bs-toggle="tooltip" data-bs-title="Language Models">
-                  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <g fill="none">
-                      <path stroke="#ffffff" stroke-linecap="round" stroke-width="1.5"
-                        d="M9 16c.85.63 1.885 1 3 1s2.15-.37 3-1" />
-                      <ellipse cx="15" cy="10.5" fill="#ffffff" rx="1" ry="1.5" />
-                      <ellipse cx="9" cy="10.5" fill="#ffffff" rx="1" ry="1.5" />
-                      <path stroke="#ffffff" stroke-linecap="round" stroke-width="1.5"
-                        d="M22 14c0 3.771 0 5.657-1.172 6.828C19.657 22 17.771 22 14 22m-4 0c-3.771 0-5.657 0-6.828-1.172C2 19.657 2 17.771 2 14m8-12C6.229 2 4.343 2 3.172 3.172C2 4.343 2 6.229 2 10m12-8c3.771 0 5.657 0 6.828 1.172C22 4.343 22 6.229 22 10" />
-                    </g>
-                  </svg>
-                </button>
-              </div>
+
 
               <!-- SETTINGS -->
               <div class="col-auto">
-                <button class="btn" data-bs-target="#modal-settings" data-bs-toggle="tooltip" data-bs-title="Settings">
+                <button id="settingsBtn" class="btn" data-bs-target="#modal-settings" data-bs-toggle="tooltip"
+                  data-bs-title="Settings" hx-on:click="toggleSettings()">
                   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none" stroke="#ffffff" stroke-width="1.5">
                       <circle cx="12" cy="12" r="3" />
@@ -277,10 +231,6 @@
             //await getTools()
             let response = await fetch('/config');
             this.data = await response.json();
-
-            for (let project of this.data.Projects) {
-              projects.push(project.Name);
-            }
 
             for (let role of this.data.AssistantRoles) {
               roles.push(role.Name);
@@ -446,6 +396,29 @@
     // `;
     // });
     // htmx.logAll();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const toolView = document.getElementById('tools-container');
+      const modelView = document.getElementById('info');
+      let settingsVisible = true;
+
+      window.toggleSettings = function () {
+        settingsVisible = !settingsVisible;
+
+        if (settingsVisible) {
+          toolView.style.display = 'block';
+          modelView.style.display = 'block';
+        } else {
+          toolView.style.display = 'none';
+          modelView.style.display = 'none';
+        }
+
+        // Trigger a resize event to make sure the layout adjusts
+        window.dispatchEvent(new Event('resize'));
+      };
+    });
   </script>
 </body>
 

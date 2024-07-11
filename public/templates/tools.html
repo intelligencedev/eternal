@@ -8,7 +8,7 @@
           <label class="form-check-label" for="team-switch">Teams Workflow</label>
           <input class="form-check-input" type="checkbox" role="switch" id="team-switch" onclick="updateTeamTool()">
         </div>
-        <p class="mb-3 small">Enable multi assistant workflow. Teams are configured in config.yml.</p>
+        <p class="mb-3 medium">Enable multi assistant workflow. Teams are configured in config.yml.</p>
 
         <hr>
 
@@ -17,7 +17,7 @@
           <label class="form-check-label" for="img-switch">Image Generation</label>
           <input class="form-check-input" type="checkbox" role="switch" id="img-switch" onclick="updateImgTool()">
         </div>
-        <p class="mb-3 small">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.
+        <p class="mb-3 medium">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.
         </p>
 
         <hr>
@@ -27,11 +27,11 @@
           <label class="form-check-label" for="memory-switch">Chat Memory</label>
           <input class="form-check-input" type="checkbox" role="switch" id="memory-switch" onclick="updateMemoryTool()">
         </div>
-        <p class="mb-2 small"><strong>TopN:</strong></p>
+        <p class="mb-2 medium"><strong>TopN:</strong></p>
         <div class="d-flex align-items-center">
           <input type="range" class="form-range me-2" min="1" max="25" step="2" value="1" id="memory-slider"
             oninput="updateMemoryTool()">
-          <span id="memory-topn-value" class="small">1</span>
+          <span id="memory-topn-value" class="medium">1</span>
         </div>
 
         <hr>
@@ -41,7 +41,7 @@
           <label class="form-check-label" for="webget-switch">Web Retrieval</label>
           <input class="form-check-input" type="checkbox" role="switch" id="webget-switch" onclick="updateWebgetTool()">
         </div>
-        <p class="mb-3 small">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as
+        <p class="mb-3 medium">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as
           reference for an LLM response.</p>
 
         <hr>
@@ -52,21 +52,21 @@
           <input class="form-check-input" type="checkbox" role="switch" id="websearch-switch"
             onclick="updateSearchTool()">
         </div>
-        <p class="mb-2 small">Web Search fetches search results as reference for LLM response.</p>
-        <label class="form-label small">Search Backend</label>
+        <p class="mb-2 medium">Web Search fetches search results as reference for LLM response.</p>
+        <label class="form-label medium">Search Backend</label>
         <div class="form-check">
           <input class="form-check-input" type="radio" value="backend" name="radio-group-search" id="ddg-radio">
-          <label class="form-check-label small" for="ddg-radio">DDG</label>
+          <label class="form-check-label medium" for="ddg-radio">DDG</label>
         </div>
         <div class="form-check mb-2">
           <input class="form-check-input" type="radio" value="frontend" name="radio-group-search" id="sxng-radio">
-          <label class="form-check-label small" for="sxng-radio">SXNG</label>
+          <label class="form-check-label medium" for="sxng-radio">SXNG</label>
         </div>
-        <p class="mb-2 small"><strong>TopN - Number of web search results to retrieve:</strong></p>
+        <p class="mb-2 medium"><strong>TopN - Number of web search results to retrieve:</strong></p>
         <div class="d-flex align-items-center">
           <input type="range" class="form-range me-2" min="1" max="6" step="1" value="1" id="websearch-slider"
             oninput="updateSearchTool()">
-          <span id="websearch-topn-value" class="small">1</span>
+          <span id="websearch-topn-value" class="medium">1</span>
         </div>
       </div>
     </div>
