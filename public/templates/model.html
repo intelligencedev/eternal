@@ -1,43 +1,49 @@
-<div id="models-container" class="row">
-  <div class="h-auto">
-    <div class="h-auto mx-2">
-      <select id="model-select" class="form-select" aria-label="Select Language Model">
-        <option selected disabled>Language Models</option>
-        <optgroup label="Public Models">
-          {{range .models}}
-          {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
-          <option value="{{.Name}}">{{.Name}}</option>
-          {{end}}
-          {{end}}
-        </optgroup>
-        <optgroup label="Local Models">
-          {{range .models}}
-          {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name
-          "anthropic-claude-3.5-sonnet"))}}
-          <option value="{{.Name}}">{{.Name}}</option>
-          {{end}}
-          {{end}}
-        </optgroup>
-      </select>
+<div class="content-wrapper h-100 d-flex flex-column">
+  <div class="content h-100">
+    <div class="container-fluid h-100">
+      <div class="row h-100">
+        <div class="col-12 h-100">
+          <div class="card h-100" style="background-color: var(--et-card-bg);">
+            <div class="card-body d-flex flex-column p-0">
+              <div class="px-4 py-3 border-bottom">
+                <select id="model-select" class="form-select" aria-label="Select Language Model">
+                  <option selected disabled>Language Models</option>
+                  <optgroup label="Public Models">
+                    {{range .models}}
+                    {{if (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
+                    <option value="{{.Name}}">{{.Name}}</option>
+                    {{end}}
+                    {{end}}
+                  </optgroup>
+                  <optgroup label="Local Models">
+                    {{range .models}}
+                    {{if not (or (eq .Name "openai-gpt-4o") (eq .Name "google-gemini-1.5") (eq .Name "anthropic-claude-3.5-sonnet"))}}
+                    <option value="{{.Name}}">{{.Name}}</option>
+                    {{end}}
+                    {{end}}
+                  </optgroup>
+                </select>
+              </div>
+              <div id="model-info-container" class="flex-grow-1 overflow-auto px-4 py-3">
+                <!-- Model info will be dynamically inserted here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="w-100 d-none" id="progress-download" hx-ext='sse' sse-connect='/sseupdates' sse-swap='message'
-    hx-trigger='load'>
-  </div>
-</div>
-
-<!-- Container to display selected model information -->
-<div id="model-info-container">
 </div>
 
 <script>
   document.getElementById('model-select').addEventListener('change', function () {
     selectModel(this.value);
   });
+
   async function selectModel(modelName) {
     try {
       // Set the selected model in the database
-      const selectedModelResponse = await fetch(`/model/select/${modelName}/add`, {
+      await fetch(`/model/select/${modelName}/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -58,126 +64,57 @@
 
         if (!modelData.Downloaded && !['openai-gpt-4o', 'google-gemini-1.5', 'anthropic-claude-3.5-sonnet'].includes(modelData.Name)) {
           modelInfoContainer.innerHTML = `
-        <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
-          <div class="card-header">${modelData.Name}</div>
-          <div class="card-body tab-content mh-100">
-            <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
-            <div id="model-download">
-              <button id="model-download-btn" class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);" onclick="downloadModel('${modelData.Name}')">Download</button>
-              </button>
+            <div class="text-center">
+              <p><a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-primary">Model Homepage</a></p>
+              <div id="model-download">
+                <button id="model-download-btn" class="btn btn-primary" onclick="downloadModel('${modelData.Name}')">Download</button>
               </div>
             </div>
+            <div id="progress-download" class="progress mt-3 d-none" style="height: 25px;">
+              <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
             </div>
-          </div>
-        </div>
-        `;
+          `;
         } else {
-          // Handle already downloaded models
           modelInfoContainer.innerHTML = `
-        <div class="card h-100 mx-2" style="background-color: var(--et-card-bg);" data-model-name="${modelData.Name}">
-          <div class="card-header">${modelData.Name}</div>
-          <div class="card-body tab-content mh-100">
-            <p><a href="${modelData.GGUFInfo}" target="_blank">Model Homepage</a></p>
-            <p><strong>Context:</strong> 
-              <input type="range" class="form-range" min="2048" max="${modelData.Options.ctx_size}" step="1024" value="${modelData.Options.ctx_size}" id="ctx-size-slider">
-              <span id="ctx-size-value">${modelData.Options.ctx_size}</span>
-            </p>
-            <p><strong>Temperature:</strong> 
-              <input type="range" class="form-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
-              <span id="temp-value">${modelData.Options.temp}</span>
-            </p>
-            <p><strong>TopP:</strong> 
-              <input type="range" class="form-range" min="0.0" max="1.0" step="0.1" value="${modelData.Options.top_p}" id="topp-slider">
-              <span id="topp-value">${modelData.Options.top_p}</span>
-            </p>
-            <p><strong>TopK:</strong> 
-              <input type="range" class="form-range" min="5" max="100" step="5" value="${modelData.Options.top_k}" id="topk-slider">
-              <span id="topk-value">${modelData.Options.top_k}</span>
-            </p>
-            <p><strong>Repetition Penalty:</strong> 
-              <input type="range" class="form-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
-              <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span>
-            </p>
-            
-            <div class="accordion" id="promptTemplateAccordion">
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#promptTemplateContent" aria-expanded="false" aria-controls="promptTemplateContent">
-                    Prompt Template
-                  </button>
-                </h2>
-                // Style the pre element so it displays scrollbars by default
-                <div id="promptTemplateContent" class="accordion-collapse collapse" data-bs-parent="#promptTemplateAccordion">
-                  <div class="accordion-body" style="overflow: auto;">
-                    <pre>${modelData.Options.prompt}</pre>
-                  </div>
-                </div>
-              </div>
+            <div class="mb-4">
+              <a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-primary btn-block">Model Homepage</a>
             </div>
-          </div>
-          <button id="saveModelParamsBtn" class="btn btn-primary bg-gradient" style="background-color: var(--et-btn-info);">Save</button>
-        </div>
-        `;
+            <div class="form-group">
+              <label for="ctx-size-slider" class="form-label">Context Size: <span id="ctx-size-value">${modelData.Options.ctx_size}</span></label>
+              <input type="range" class="form-range custom-range" min="2048" max="${modelData.Options.ctx_size}" step="1024" value="${modelData.Options.ctx_size}" id="ctx-size-slider">
+            </div>
+            <div class="form-group">
+              <label for="temp-slider" class="form-label">Temperature: <span id="temp-value">${modelData.Options.temp}</span></label>
+              <input type="range" class="form-range custom-range" min="0.0" max="0.9" step="0.1" value="${modelData.Options.temp}" id="temp-slider">
+            </div>
+            <div class="form-group">
+              <label for="topp-slider" class="form-label">TopP: <span id="topp-value">${modelData.Options.top_p}</span></label>
+              <input type="range" class="form-range custom-range" min="0.0" max="1.0" step="0.1" value="${modelData.Options.top_p}" id="topp-slider">
+            </div>
+            <div class="form-group">
+              <label for="topk-slider" class="form-label">TopK: <span id="topk-value">${modelData.Options.top_k}</span></label>
+              <input type="range" class="form-range custom-range" min="5" max="100" step="5" value="${modelData.Options.top_k}" id="topk-slider">
+            </div>
+            <div class="form-group">
+              <label for="repeat-penalty-slider" class="form-label">Repetition Penalty: <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span></label>
+              <input type="range" class="form-range custom-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
+            </div>
+            <div class="form-group">
+              <label for="promptTemplate" class="form-label">Prompt Template</label>
+              <textarea id="promptTemplate" class="form-control" rows="5" readonly>${modelData.Options.prompt}</textarea>
+            </div>
+            <button id="saveModelParamsBtn" class="btn btn-primary btn-block mt-3">Save</button>
+          `;
 
           // Add event listeners to update the displayed value as the slider is moved
-          document.getElementById('ctx-size-slider').addEventListener('input', function () {
-            document.getElementById('ctx-size-value').textContent = this.value;
-          });
-
-          document.getElementById('temp-slider').addEventListener('input', function () {
-            document.getElementById('temp-value').textContent = this.value;
-          });
-
-          document.getElementById('topp-slider').addEventListener('input', function () {
-            document.getElementById('topp-value').textContent = this.value;
-          });
-
-          document.getElementById('topk-slider').addEventListener('input', function () {
-            document.getElementById('topk-value').textContent = this.value;
-          });
-
-          document.getElementById('repeat-penalty-slider').addEventListener('input', function () {
-            document.getElementById('repeat-penalty-value').textContent = this.value;
+          ['ctx-size', 'temp', 'topp', 'topk', 'repeat-penalty'].forEach(param => {
+            document.getElementById(`${param}-slider`).addEventListener('input', function() {
+              document.getElementById(`${param}-value`).textContent = this.value;
+            });
           });
 
           // Add event listener to save the model parameters
-          const saveButton = document.getElementById('saveModelParamsBtn');
-          saveButton.addEventListener('click', async () => {
-            try {
-              const ctxSize = parseInt(document.getElementById('ctx-size-slider').value);
-              const temp = parseFloat(document.getElementById('temp-slider').value);
-              const top_p = parseFloat(document.getElementById('topp-slider').value);
-              const top_k = parseInt(document.getElementById('topk-slider').value);
-              const repeat_penalty = parseFloat(document.getElementById('repeat-penalty-slider').value);
-
-              const modelParams = {
-                Name: modelData.Name,
-                Options: {
-                  ctx_size: ctxSize,
-                  temp: temp,
-                  top_p: top_p,
-                  top_k: top_k,
-                  repeat_penalty: repeat_penalty,
-                },
-              };
-
-              const response = await fetch('/model/set/params', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(modelParams),
-              });
-
-              if (response.ok) {
-                console.log('Settings saved successfully');
-              } else {
-                console.error('Error saving settings');
-              }
-            } catch (error) {
-              console.error('Error sending request:', error);
-            }
-          });
+          document.getElementById('saveModelParamsBtn').addEventListener('click', saveModelParams);
         }
       } else {
         console.error('Error fetching model data');
@@ -187,23 +124,54 @@
     }
   }
 
+  async function saveModelParams() {
+    try {
+      const modelName = document.getElementById('model-select').value;
+      const ctxSize = parseInt(document.getElementById('ctx-size-slider').value);
+      const temp = parseFloat(document.getElementById('temp-slider').value);
+      const top_p = parseFloat(document.getElementById('topp-slider').value);
+      const top_k = parseInt(document.getElementById('topk-slider').value);
+      const repeat_penalty = parseFloat(document.getElementById('repeat-penalty-slider').value);
+
+      const modelParams = {
+        Name: modelName,
+        Options: {
+          ctx_size: ctxSize,
+          temp: temp,
+          top_p: top_p,
+          top_k: top_k,
+          repeat_penalty: repeat_penalty,
+        },
+      };
+
+      const response = await fetch('/model/set/params', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(modelParams),
+      });
+
+      if (response.ok) {
+        console.log('Settings saved successfully');
+        // You can add a visual feedback here, like a toast notification
+      } else {
+        console.error('Error saving settings');
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+    }
+  }
+
   function downloadModel(modelName) {
-    // Display the progress bar
-    const buttonDownload = document.getElementById(`model-download-btn`);
-    const progressContainer = document.getElementById(`progress-download`);
-    const downloadContainer = document.getElementById(`model-download`);
+    const progressContainer = document.getElementById('progress-download');
+    const downloadButton = document.getElementById('model-download-btn');
 
-    // Move the downloadContainer to the progressContainer
-    downloadContainer.appendChild(progressContainer);
-
-    // Delete the download button and show the download progress
-    buttonDownload.remove();
+    downloadButton.classList.add('d-none');
     progressContainer.classList.remove('d-none');
 
-    // Send a request to download the model
     console.log("Downloading model: ", modelName);
 
-    // Fetch the download route
     fetch(`/model/download?model=${modelName}`, {
       method: 'POST',
       headers: {
@@ -218,6 +186,8 @@
       })
       .catch(error => {
         console.error('Error:', error);
+        downloadButton.classList.remove('d-none');
+        progressContainer.classList.add('d-none');
       });
   }
 </script>
