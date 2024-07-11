@@ -74,7 +74,7 @@ tools:
   websearch:
     enabled: false
     name: sxng # Only ddg and sxng available
-    endpoint: https://search.intelligence.dev/search # The url of the sxng instance if available. Not used if ddg is configured.
+    endpoint: ... # The url of the sxng instance if available. Not used if ddg is configured. Deploy your own or look in https://searx.space/
     top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
   imggen:
     enabled: false
