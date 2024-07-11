@@ -1,13 +1,21 @@
 :root {
     /* Default Accents */
-    --et-purple: #BB29BB; /* Medium Purple */
-    --et-green: #66cdaa; /* Medium Aquamarine */
-    --et-blue: #87cefa; /* Light Sky Blue */
-    --et-red: #ff6347; /* Tomato */
-    --et-yellow: #ffd700; /* Gold (unchanged) */
-    --et-light: #d3d3d3; /* Light Gray */
-    --et-card-bg: #252525; /* Dark Gray */
-    --et-btn-info: #6cbfbf; /* Soft Cyan */
+    --et-purple: #BB29BB;
+    /* Medium Purple */
+    --et-green: #66cdaa;
+    /* Medium Aquamarine */
+    --et-blue: #87cefa;
+    /* Light Sky Blue */
+    --et-red: #ff6347;
+    /* Tomato */
+    --et-yellow: #ffd700;
+    /* Gold (unchanged) */
+    --et-light: #d3d3d3;
+    /* Light Gray */
+    --et-card-bg: #252525;
+    /* Dark Gray */
+    --et-btn-info: #6cbfbf;
+    /* Soft Cyan */
 
     /* Galactic Gray Theme */
     --et-galactic-primary: #b0b0b0;
@@ -17,18 +25,27 @@
     --et-galactic-border-highlight: #d0d0d0;
 
     /* Aurora Theme */
-    --et-aurora-primary: #00ffa3; /* Bright Aqua */
-    --et-aurora-secondary: #00875f; /* Deep Aqua Green */
-    --et-aurora-accent: #191919; /* Dark Teal */
-    --et-aurora-background: #0F0F0F; /* Very Dark Green */
-    --et-aurora-border-highlight: #00ffc4; /* Bright Teal */
+    --et-aurora-primary: #00ffa3;
+    /* Bright Aqua */
+    --et-aurora-secondary: #00875f;
+    /* Deep Aqua Green */
+    --et-aurora-accent: #191919;
+    /* Dark Teal */
+    --et-aurora-background: #0F0F0F;
+    /* Very Dark Green */
+    --et-aurora-border-highlight: #00ffc4;
+    /* Bright Teal */
 
     /* Celestial Theme */
-    --et-celestial-primary: #4b8f8c; /* Teal Blue */
-    --et-celestial-secondary: #32717a; /* Sea Green Blue */
-    --et-celestial-accent: #1b3a41; /* Dark Cyan */
-    --et-celestial-background: #081a1c; /* Almost Black Cyan */
-    
+    --et-celestial-primary: #4b8f8c;
+    /* Teal Blue */
+    --et-celestial-secondary: #32717a;
+    /* Sea Green Blue */
+    --et-celestial-accent: #1b3a41;
+    /* Dark Cyan */
+    --et-celestial-background: #081a1c;
+    /* Almost Black Cyan */
+
 }
 
 ::-webkit-scrollbar {
@@ -36,14 +53,17 @@
 }
 
 html {
-    scrollbar-width: none;  /* Firefox */
+    scrollbar-width: none;
+    /* Firefox */
 }
 
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--et-galactic-background);
-    -ms-overflow-style: none;  /* IE and Edge */
-    overflow: hidden; /* Ensure no scrollbars on body */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    overflow: hidden;
+    /* Ensure no scrollbars on body */
 }
 
 #scroll-to-bottom-btn {
@@ -54,7 +74,7 @@ body {
     transform: translateX(-50%);
     z-index: 1000;
 }
-  
+
 
 .bg-primary {
     --bs-bg-opacity: 1;
@@ -69,12 +89,14 @@ body {
 #chat-view,
 #info {
     height: 100%;
-    overflow-y: hidden; /* Hide scrollbars */
+    overflow-y: hidden;
+    /* Hide scrollbars */
 }
 
 .main-content {
     flex: 1;
-    overflow-y: hidden; /* Hide scrollbars */
+    overflow-y: hidden;
+    /* Hide scrollbars */
 }
 
 @font-face {
@@ -89,31 +111,6 @@ body {
     src: url('../fonts/monaspace/MonaspaceRadon-Regular.woff') format('woff');
     font-weight: normal;
     font-style: normal;
-}
-
-.fade-me-out.htmx-swapping {
-    opacity: 0;
-    transition: opacity 1s ease-out;
-}
-
-@keyframes fade-in {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes fade-out {
-    from {
-        opacity: 1;
-    }
-
-    to {
-        opacity: 0;
-    }
 }
 
 codapi-ref {
@@ -135,18 +132,7 @@ codapi-toolbar button {
     border-radius: 6px;
 }
 
-.fade-it {
-    view-transition-name: fade-it;
-    animation-duration: 300ms;
-}
 
-::view-transition-old(fade-it) {
-    animation: 600ms ease both fade-out;
-}
-
-::view-transition-new(fade-it) {
-    animation: 600ms ease both fade-in;
-}
 
 .model-container {
     margin-bottom: 20px;
@@ -175,9 +161,67 @@ pre code {
     margin-bottom: 0px;
 }
 
-.card-selected {
-    border: 2px solid var(--et-blue);
+/*                    */
+/* Transitions        */
+/*                    */
+
+.fade-me-out.htmx-swapping {
+    opacity: 0;
+    transition: opacity 1s ease-out;
 }
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.fade-it {
+    view-transition-name: fade-in;
+    animation-duration: 300ms;
+}
+
+::view-transition-old(fade-it) {
+    animation: 600ms ease both fade-out;
+}
+
+::view-transition-new(fade-it) {
+    animation: 600ms ease both fade-in;
+}
+
+#tools-container,
+#info {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#tools-container.show,
+#info.show {
+    opacity: 1;
+}
+
+#tools-container.hide,
+#info.hide {
+    opacity: 0;
+}
+
+/*                    */
+/* HighlightJS Styles */
+/*                    */
 
 .hljs {
     background: #1e1e1e;

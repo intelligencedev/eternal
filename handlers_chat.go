@@ -54,7 +54,7 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			err := sqliteDB.First(currentProject.Team.Assistants[0].Name, &model)
 			if err != nil {
 				log.Errorf("Error getting model %s: %v", currentProject.Team.Assistants[0].Name, err)
-				return err
+				return c.Status(500).SendString("No model selected")
 			}
 
 		} else {
@@ -62,6 +62,12 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 			if err != nil {
 				log.Errorf("Error getting selected models: %v", err)
 				return c.Status(500).SendString("Server Error")
+			}
+
+			if len(selectedModels) == 0 {
+				log.Errorf("No models selected")
+				errHtml := "<div class='alert alert-danger alert-dismissible fade show' role='alert'>No model selected <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button></div>"
+				return c.SendString(errHtml)
 			}
 
 			// Retrieve the model parameters from the database.
