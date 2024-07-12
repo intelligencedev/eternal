@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -346,6 +347,24 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	}
 
 	if _, err := os.Stat(modelPath); err != nil {
+		// If the default model is not present, we assume this is the first time the app runs
+		// Run a python command to install the Comfy requirements.txt
+		reqPath := fmt.Sprintf("%s/sd/ComfyUI-master/requirements.txt", config.DataPath)
+		cmdArgs := []string{
+			"install",
+			"-r", reqPath,
+		}
+
+		cmd := exec.Command("pip3", cmdArgs...)
+
+		// Set the standard output and error to the app's standard output and error
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("Failed to run pip command: %v", err)
+		}
+
 		pterm.Warning.Println("Downloading default image model, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
