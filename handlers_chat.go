@@ -15,6 +15,7 @@ import (
 	"eternal/pkg/web"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -516,6 +517,25 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 
 	topN := config.Tools.Memory.TopN
 
+	// Remove any leading or trailing whitespace from the chat message.
+	chatMessage = strings.TrimSpace(chatMessage)
+
+	// Remove line breaks from the chat message.
+	chatMessage = strings.ReplaceAll(chatMessage, "\n", "")
+
+	// Create a regular expression to remove special characters (keeping alphanumeric and spaces)
+	reg, err := regexp.Compile("[^a-zA-Z0-9 ]+")
+	if err != nil {
+		return "", err
+	}
+
+	// Apply the regex to sanitize the chat message
+	chatMessage = reg.ReplaceAllString(chatMessage, " ")
+
+	// Print the chat message
+	pterm.Info.Println("Chat message:")
+	pterm.Info.Println(chatMessage)
+
 	// Create a search query
 	query := bleve.NewQueryStringQuery(chatMessage)
 
@@ -526,7 +546,7 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	searchResults, err := searchIndex.Search(searchRequest)
 	if err != nil {
 		log.Errorf("Error searching index: %v", err)
-		return "", err
+		// return "", err
 	}
 
 	// Print the search results
