@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"embed"
 	"errors"
@@ -12,10 +13,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/gofiber/fiber/v2"
@@ -33,6 +36,7 @@ import (
 //go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 var embedfs embed.FS
 var currentProject Project
+var comfyUICmd *exec.Cmd
 
 // WebSocketMessage represents the structure of a WebSocket message
 type WebSocketMessage struct {
@@ -171,20 +175,20 @@ func main() {
 	pterm.DefaultTable.WithData(tableData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
 
 	// Load image models
-	imageModels, err := loadImageModels(config)
+	err = DownloadDefaultImageModel(config)
 	if err != nil {
-		pterm.Error.Println("Failed to load image model data to database:", err)
-		os.Exit(1)
-	}
-
-	// Print the name of the image model
-	for _, model := range imageModels {
-		pterm.Info.Println("Image model:", model.Name)
+		pterm.Error.Println("Failed to download default image model:", err)
 	}
 
 	// Setup context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// Start ComfyUI
+	if err := startComfyUI(ctx, config); err != nil {
+		pterm.Error.Println("Failed to start ComfyUI:", err)
+		os.Exit(1)
+	}
 
 	pterm.Info.Printf("Serving frontend on: %s:%s\n", config.ControlHost, config.ControlPort)
 	pterm.Info.Println("Press Ctrl+C to stop")
@@ -193,6 +197,12 @@ func main() {
 	runFrontendServer(ctx, config, modelParams)
 
 	pterm.Warning.Println("Shutdown signal received")
+
+	// Stop ComfyUI
+	if err := stopComfyUI(ctx); err != nil {
+		pterm.Error.Println("Failed to stop ComfyUI:", err)
+	}
+
 	os.Exit(0)
 }
 
@@ -335,14 +345,21 @@ func loadModelParams(config *AppConfig) ([]ModelParams, error) {
 func loadImageModels(config *AppConfig) ([]ImageModel, error) {
 	var imageModels []ImageModel
 	for _, model := range config.ImageModels {
+		// Print the download state
+		pterm.Info.Printf("Image model: %s, Downloaded: %t\n", model.Name, model.Downloaded)
+
 		if model.Downloads != nil {
 			fileName := strings.Split(model.Downloads[0], "/")
-			model.LocalPath = fmt.Sprintf("%s/models/%s/%s", config.DataPath, model.Name, fileName[len(fileName)-1])
+			pterm.Info.Printf("File name: %s\n", fileName[len(fileName)-1])
+			// /Users/arturoaquino/.eternal-v1/sd/ComfyUI-master/models/checkpoints
+			model.LocalPath = fmt.Sprintf("%s/sd/ComfyUI-master/models/checkpoints/%s", config.DataPath, fileName[len(fileName)-1])
 		}
 
 		var downloaded bool
 		if _, err := os.Stat(model.LocalPath); err == nil {
 			downloaded = true
+		} else {
+			pterm.Warning.Printf("Image model not found: %s\n", model.LocalPath)
 		}
 
 		imageModels = append(imageModels, ImageModel{
@@ -441,4 +458,98 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	}
 
 	pterm.Info.Println("Server gracefully shutdown")
+}
+
+func startComfyUI(ctx context.Context, config *AppConfig) error {
+	comfyPort := config.ServiceHosts["image"]["image_host_1"].Port
+	cmdArgs := []string{
+		"main.py",
+		"--listen",
+		"--port", comfyPort,
+	}
+
+	comfyUIPath := filepath.Join(config.DataPath, "sd/ComfyUI-master")
+	comfyUICmd = exec.CommandContext(ctx, "python", cmdArgs...)
+	comfyUICmd.Dir = comfyUIPath
+
+	// Set up pipes for stdout and stderr
+	stdout, err := comfyUICmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %v", err)
+	}
+	stderr, err := comfyUICmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stderr pipe: %v", err)
+	}
+
+	// Start ComfyUI
+	if err := comfyUICmd.Start(); err != nil {
+		return fmt.Errorf("failed to start ComfyUI: %v", err)
+	}
+
+	// Monitor ComfyUI output
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			log.Info("ComfyUI: ", scanner.Text())
+		}
+	}()
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			log.Error("ComfyUI Error: ", scanner.Text())
+		}
+	}()
+
+	// Wait for ComfyUI to be ready
+	if err := waitForComfyUI(comfyPort); err != nil {
+		return fmt.Errorf("ComfyUI failed to start: %v", err)
+	}
+
+	return nil
+}
+
+func waitForComfyUI(comfyPort string) error {
+	comfyUrl := fmt.Sprintf("http://localhost:%s", comfyPort)
+	client := &http.Client{Timeout: 1 * time.Second}
+	for i := 0; i < 30; i++ {
+		resp, err := client.Get(comfyUrl)
+		if err == nil {
+			resp.Body.Close()
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return errors.New("timeout waiting for ComfyUI to start")
+}
+
+func stopComfyUI(ctx context.Context) error {
+	if comfyUICmd == nil || comfyUICmd.Process == nil {
+		return nil
+	}
+
+	// Send SIGTERM
+	if err := comfyUICmd.Process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("failed to send SIGTERM to ComfyUI: %v", err)
+	}
+
+	// Wait for the process to exit with a timeout
+	done := make(chan error, 1)
+	go func() {
+		done <- comfyUICmd.Wait()
+	}()
+
+	select {
+	case <-time.After(10 * time.Second):
+		// Force kill if it doesn't exit within the timeout
+		if err := comfyUICmd.Process.Kill(); err != nil {
+			return fmt.Errorf("failed to kill ComfyUI process: %v", err)
+		}
+		return errors.New("ComfyUI did not exit gracefully, forcefully terminated")
+	case err := <-done:
+		if err != nil {
+			return fmt.Errorf("ComfyUI exited with error: %v", err)
+		}
+		return nil
+	}
 }

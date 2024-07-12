@@ -280,7 +280,9 @@ func handleToolList(config *AppConfig) fiber.Handler {
 }
 
 // ComfyUI Service Handlers
-const serverAddress = "192.168.0.148:8188"
+// var comfyPort = config.ServiceHosts["image"]["image_host_1"].Port
+
+// const serverAddress = fmt.Sprintf("localhost:%s", comfyPort)
 
 type Image struct {
 	Filename  string `json:"filename"`
@@ -396,7 +398,7 @@ func SaveBytesAsImage(data []byte, filename string) error {
 	return nil
 }
 
-func queuePrompt(prompt map[string]interface{}, clientID string) (map[string]interface{}, error) {
+func queuePrompt(prompt map[string]interface{}, clientID string, serverAddress string) (map[string]interface{}, error) {
 	p := Prompt{
 		Prompt:   prompt,
 		ClientID: clientID,
@@ -420,7 +422,7 @@ func queuePrompt(prompt map[string]interface{}, clientID string) (map[string]int
 	return result, err
 }
 
-func getHistory() (History, error) {
+func getHistory(serverAddress string) (History, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/history", serverAddress))
 	if err != nil {
 		return History{}, err
@@ -440,7 +442,7 @@ func getHistory() (History, error) {
 	return result, err
 }
 
-func getImage(filename, subfolder, folderType string) ([]byte, error) {
+func getImage(filename, subfolder, folderType string, serverAddress string) ([]byte, error) {
 	data := map[string]string{
 		"filename":  filename,
 		"subfolder": subfolder,
@@ -469,7 +471,7 @@ func getImage(filename, subfolder, folderType string) ([]byte, error) {
 	return result, err
 }
 
-func getImages(prompt map[string]interface{}) (map[string][][]byte, error) {
+func getImages(prompt map[string]interface{}, serverAddress string) (map[string][][]byte, error) {
 
 	ws, _, err := socket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/ws", serverAddress), nil)
 	if err != nil {
@@ -479,7 +481,7 @@ func getImages(prompt map[string]interface{}) (map[string][][]byte, error) {
 	defer ws.Close()
 
 	clientID := uuid.New().String()
-	result, err := queuePrompt(prompt, clientID)
+	result, err := queuePrompt(prompt, clientID, serverAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -619,10 +621,11 @@ func pollURL(url string, timeout time.Duration) ([]byte, error) {
 }
 
 func performImageGen(chatId string, config *AppConfig, chatMessage string) string {
+	serverAddress := fmt.Sprintf("%s:%s", config.ServiceHosts["image"]["image_host_1"].Host, config.ServiceHosts["image"]["image_host_1"].Port)
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	workflowPath := fmt.Sprintf("%s/web/pixart.json", config.DataPath)
+	workflowPath := fmt.Sprintf("%s/web/basic.json", config.DataPath) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
 		fmt.Println("Error loading prompt text:", err)
@@ -640,15 +643,21 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	pterm.Info.Println("Generating image using seed:", seed)
 
-	prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
-	prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	prompt["239"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	prompt["287"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	prompt["345"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
+	// pixart workflow values
+	// prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+	// prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	// prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	// prompt["239"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	// prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	// prompt["287"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	// prompt["345"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
 
-	_, err = queuePrompt(prompt, chatId)
+	// basic workflow values
+	prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+
+	_, err = queuePrompt(prompt, chatId, serverAddress)
 	if err != nil {
 		log.Errorf("Error queuing prompt: %v", err)
 		formattedContent := fmt.Sprintf("<div id='response-content-%s' class='mx-1' hx-trigger='load'>%s</div>", strconv.Itoa(chatTurn), err)

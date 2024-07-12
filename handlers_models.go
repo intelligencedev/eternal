@@ -328,3 +328,41 @@ func handleGetRoles(config *AppConfig) fiber.Handler {
 		})
 	}
 }
+
+func DownloadDefaultImageModel(config *AppConfig) error {
+
+	//modelName := config.ImageModels[0].Name
+	downloadURL := config.ImageModels[0].Downloads[0]
+	fileName := strings.Split(downloadURL, "/")[len(strings.Split(downloadURL, "/"))-1]
+
+	//modelRoot := fmt.Sprintf("%s/models/%s", config.DataPath, modelName)
+	modelPath := fmt.Sprintf("%s/sd/ComfyUI-master/models/checkpoints/%s", config.DataPath, fileName)
+	tmpPath := fmt.Sprintf("%s/tmp", config.DataPath)
+
+	if _, err := os.Stat(tmpPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(tmpPath, 0755); err != nil {
+			log.Errorf("Error creating tmp directory: %v", err)
+		}
+	}
+
+	if _, err := os.Stat(modelPath); err != nil {
+		pterm.Warning.Println("Downloading default image model, please wait...")
+		dm := hfutils.ConcurrentDownloadManager{
+			FileName:    fileName,
+			URL:         downloadURL,
+			Destination: modelPath,
+			NumParts:    1,
+			TempDir:     tmpPath,
+		}
+
+		go dm.PrintProgress()
+
+		if err := dm.Download(); err != nil {
+			fmt.Println("Download failed:", err)
+		} else {
+			fmt.Println("Download successful!")
+		}
+	}
+
+	return nil
+}
