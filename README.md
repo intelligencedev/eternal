@@ -11,22 +11,22 @@ Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./public/img/chat.png">
-    <img alt="logo" src="./public/img/chat.png" style="width:50%; height:50%"
+    <source media="(prefers-color-scheme: dark)" srcset="./public/img/chat_s.jpg">
+    <img alt="logo" src="./public/img/chat_s.jpg" style="width:50%; height:50%"
   </picture>
 </div>
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./public/img/models.png">
-    <img alt="logo" src="./public/img/models.png" style="width:50%; height:50%"
+    <source media="(prefers-color-scheme: dark)" srcset="./public/img/teams_s.jpg">
+    <img alt="logo" src="./public/img/teams_s.jpg" style="width:50%; height:50%"
   </picture>
 </div>
 
 NOTE: This app is a work in progress and not stable. Please consider this repo for your reference. We
 welcome contributors and constructive feedback. You are also welcome to use it as reference for your own projects.
 
-Eternal integrates various projects such as `llama.cpp`, `stable diffusion.cpp` and `codapi` among many other projects whose
+Eternal integrates various projects such as `llama.cpp`, `ComfyUI` and `codapi` among many other projects whose
 developers were kind enough to share with the world. All credit belongs to the respective contributors of all dependencies this
 repo relies on. Thank you for sharing your projects with the world.
 
@@ -38,11 +38,11 @@ Configure the quant level of the models in your `config.yml` appropriately for y
 
 ## Features
 
-- Language model catalog for easy download and configuration.
-- Text generation using local language models, OpenAI GPT-4 an Google Gemini 1.5 Pro.
+- Easy ML model configuration and download. See default model catalog example in `.config.yml`
+- Text generation using local language models such as Llama-3-8b-Instruct by Meta, Codestral by Mistral AI and powerful public OpenAI GPT-4o, Anthropic Sonnet 3.5, Google Gemini. (Public models require your own API keys)
 - Web retrieval that fetches URL content for LLM to reference.
-- Web Search to automatically retrieve top results for a user's prompt for LLM to reference. _Requires Chrome browser installation._
-- Image generation using Stable Diffusion backend.
+- Web Search to automatically retrieve top results for a user's prompt for LLM to reference. _Requires Chrome browser installation. The browser does not need to be opened as Eternal will manage a headless instance automatically._
+- Advanced image generation using ComfyUI backend with custom workflows. Eternal will deploy and manage ComfyUI automatically.
 
 ## Getting Started
 
@@ -61,8 +61,8 @@ _Requires Chrome browser installation._
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web.png">
-    <img alt="logo" height="400px" src="./public/img/web.png" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web_s.jpg">
+    <img alt="logo" height="400px" src="./public/img/web_s.jpg" style="width:50%; height:50%">
   </picture>
 </div>
 
@@ -72,22 +72,24 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code_fixed.png">
-    <img alt="logo" height="400px" src="./public/img/code_fixed.png" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code_s.jpg">
+    <img alt="logo" height="400px" src="./public/img/code_s.jpg" style="width:50%; height:50%">
   </picture>
 </div>
 
 ### Image Generation
 
-Embedded Stable Diffusion for easy high quality image generation.
+Eternal can generate images using powerful custom ComfyUI workflows that are automatically managed and tuned for high quality output. No more tweaking hundreds of parameters. Describe and generate. Set the role to `image_bot` and select any local or public LLM to enhance your prompts.
 <div align="center">
+  <h5>Basic image prompt</h5>
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen1.png">
-    <img alt="logo" height="400px" src="./public/img/imggen1.png" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen1_s.jpg">
+    <img alt="logo" height="400px" src="./public/img/imggen1_s.jpg" style="width:50%; height:50%">
   </picture>
+  <h5>Large language model enhanced prompt</h5>
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen2.png">
-    <img alt="logo" height="400px" src="./public/img/imggen2.png" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen2_s.jpg">
+    <img alt="logo" height="400px" src="./public/img/imggen2_s.jpg" style="width:50%; height:50%">
   </picture>
 </div>
 
