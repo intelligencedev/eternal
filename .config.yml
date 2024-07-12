@@ -18,7 +18,7 @@ control_host: 'localhost'
 control_port: 38765
 
 # datapath will be created by Eternal to host persistent data
-data_path: '/Users/$USER/.eternal-v1'
+data_path: '/Users/$USER/.eternal'
 
 # Service hosts for specific functionalities
 service_hosts:
@@ -54,28 +54,28 @@ default_project:
   team:
     name: "default_team"
     assistants:
-      - name: "llama3-8b-instruct"
+      - name: "deepseek-coder-v2"
         role:
-          name: "chat"
+          name: "default"
         params:
-          model: "llama3-8b-instruct"
-      - name: "gemma-2-9b-it"
+          model: "deepseek-coder-v2"
+      - name: "Codestral-22B-v0.1"
         role:
-          name: "cot"
+          name: "code_review"
         params:
-          model: "gemma-2-9b-it" 
+          model: "Codestral-22B-v0.1"
 
 tools:
   memory:
     enabled: false
-    top_n: 6 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
+    top_n: 3 # Number of similar chunks to retrieve from memory. Higher numbers require models with much higher context.
   webget:
     enabled: false
   websearch:
     enabled: false
     name: sxng # Only ddg and sxng available
     endpoint: ... # The url of the sxng instance if available. Not used if ddg is configured. Deploy your own or look in https://searx.space/
-    top_n: 9 # Number of page results to retrieve. Higher numbers require models with much higher context.
+    top_n: 3 # Number of page results to retrieve. Higher numbers require models with much higher context.
   imggen:
     enabled: false
   team:
@@ -197,6 +197,10 @@ assistant_roles:
       You are an expert at writing vivid descriptions to depict realistic images or illustrations or computer generated images of all styles known. You can perfectly capture everything needed to accurately describe an image to include its style, colors, composition, subjects, and have a keen sense of spatial awareness when describing the background and foreground of an image. You are an expert in popular artists known in communities like artstation, deviantart, 3dsociety, and other popular communities where the worlds top artists showcase their images. 
       Use the previous instructions to write a one paragraph image generation prompt, adding tags for popular artists for the style or medium for the following concept: {prompt}
 
+# IMPORTANT #
+# The defaults download Q8 versions of the GGUF models. Generally, you want to run the best version of each model that can fit in your GPU.
+# If the defaults do not run on your system due to limited memory, change the model file from Q8_0 to Q4_0.
+# We will implement more robust model selection and automatic version recommendations based on your system specs in the future.
 language_models:
   - name: 'openai-gpt-4o'
     homepage: 'https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo'
@@ -312,17 +316,6 @@ language_models:
       - 'all'
     tags:
       - '22B'
-  - name: 'qwen2-72b-instruct'
-    homepage: 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF'
-    gguf: 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF'
-    downloads:
-      - 'https://huggingface.co/Qwen/Qwen2-72B-Instruct-GGUF/resolve/main/qwen2-72b-instruct-q8_0-00001-of-00002.gguf'
-    prompt: "<|im_start|>system You are a helpful assistant.<|im_end|><|im_start|>user{prompt}<|im_end|><|im_start|>assistant"
-    ctx: 32768
-    roles:
-      - 'all'
-    tags:
-      - '72B'
   - name: 'gemma-2-9b-it'
     homepage: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
     gguf: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF'
