@@ -112,6 +112,26 @@ $ make all
 
 Please submit an issue if you encounter any issues with the build process.
 
+## Troubleshooting
+
+It is recommended that a new Python 3.10 conda environment and virtual environment be created prior to initial application launch. This will avoid error messages related to required package installations such as `error: externally-managed-environment`.
+
+If Eternal fails to launch, run the following commands to configure a new Conda environment and Python venv:
+```
+$ conda create -n eternal python=3.10
+$ conda activate eternal
+$ python python-m venv .
+$ source bin/activate
+
+# Apply execute permissions
+$ sudo chmod +x ./eternal
+
+# Run the Eternal binary
+$ ./eternal
+```
+
+NOTE: Remember to rename the included `.config.yml` to `config.yml`, modify the settings for your environment, and save the file in the same path as the Eternal binary.
+
 ## Disclaimer
 
 This README is a high-level overview of the Eternal application. Detailed setup instructions and a complete list of features, dependencies, and configurations should be consulted in the actual application documentation.
