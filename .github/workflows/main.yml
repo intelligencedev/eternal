@@ -19,10 +19,10 @@ jobs:
       run: |
         # Install CUDA Toolkit (replace with your specific installation commands)
         sudo apt-get update
-        sudo apt-get install -y cuda-toolkit-11.8
+        sudo apt-get install -y cuda-toolkit-12-3
 
     - name: Install CMake
-      run: sudo apt-get install -y cmake
+      run: sudo apt-get install -y cmake build-essential libtool autoconf unzip wget checkinstall zlib1g-dev libssl-dev
 
     - name: Set Build Environment
       run: |
