@@ -97,7 +97,7 @@ Rename the provided `.config.yml` file to `config.yml` and place it in the same 
 
 ## Build
 
-Eternal currently supports building on Linux or Windows WSL using CUDA (nVidia GPU required) or MacOS/Metal (M-series Max required).
+Eternal currently supports building on Linux or Windows WSL using CUDA (nVidia GPU required) or MacOS/Metal (M-series Mac required).
 
 To build the application:
 
