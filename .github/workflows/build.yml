@@ -1,6 +1,10 @@
 name: Go - Build and Test (CUDA)
 
-on: workflow_dispatch
+on:
+  push:
+    branches: [ "cicd" ]
+  pull_request:
+    branches: [ "cicd" ]
 
 jobs:
   build:
