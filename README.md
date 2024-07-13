@@ -50,9 +50,7 @@ Basic [documentation](https://github.com/intelligencedev/eternal/blob/main/docs/
 
 ## Showcase
 
-### Web Retrieval - Search
-
-Web tools can be enabled via the `config.yml` file.  
+### Web Retrieval - Search 
 
 - `webget`: Attempts to fetch a URL passed in as part of the prompt.
 - `websearch`: Searches the public web for pages related to your prompt.
