@@ -625,7 +625,7 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	workflowPath := fmt.Sprintf("%s/web/basic.json", config.DataPath) //Make this configurable later
+	workflowPath := fmt.Sprintf("%s/web/basic_sdxl.json", config.DataPath) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
 		fmt.Println("Error loading prompt text:", err)
