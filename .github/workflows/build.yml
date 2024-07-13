@@ -1,0 +1,49 @@
+# Makefile already defines the build process, ensuring consistency between local development and CI.
+
+name: Build and Test (CUDA)
+
+on:
+  push:
+    branches:
+      - cicd
+  pull_request:
+    branches:
+      - cicd
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.1
+
+      - name: Install CUDA Toolkit
+        run: |
+          # Install CUDA Toolkit (replace with your specific installation commands)
+          sudo apt-get update
+          sudo apt-get install -y cuda-toolkit-11.8
+
+      - name: Install CMake
+        run: sudo apt-get install -y cmake
+
+      - name: Build with Makefile
+        run: make all
+
+      - name: Create Artifacts
+        run: |
+          mkdir -p artifacts
+          cp eternal artifacts/
+          cp pkg/llm/local/gguf/build/bin/* artifacts/
+          cp pkg/sd/sdcpp/build/bin/* artifacts/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: artifacts
