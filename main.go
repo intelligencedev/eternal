@@ -8,7 +8,6 @@ import (
 	"embed"
 	"errors"
 	"eternal/pkg/llm"
-	"eternal/pkg/sd"
 	"flag"
 	"fmt"
 	"net/http"
@@ -339,45 +338,6 @@ func loadModelParams(config *AppConfig) ([]ModelParams, error) {
 		return nil, err
 	}
 	return modelParams, nil
-}
-
-// loadImageModels loads the image models from the configuration
-func loadImageModels(config *AppConfig) ([]ImageModel, error) {
-	var imageModels []ImageModel
-	for _, model := range config.ImageModels {
-		// Print the download state
-		pterm.Info.Printf("Image model: %s, Downloaded: %t\n", model.Name, model.Downloaded)
-
-		if model.Downloads != nil {
-			fileName := strings.Split(model.Downloads[0], "/")
-			pterm.Info.Printf("File name: %s\n", fileName[len(fileName)-1])
-			// /Users/arturoaquino/.eternal-v1/sd/ComfyUI-master/models/checkpoints
-			model.LocalPath = fmt.Sprintf("%s/sd/ComfyUI-master/models/checkpoints/%s", config.DataPath, fileName[len(fileName)-1])
-		}
-
-		var downloaded bool
-		if _, err := os.Stat(model.LocalPath); err == nil {
-			downloaded = true
-		} else {
-			pterm.Warning.Printf("Image model not found: %s\n", model.LocalPath)
-		}
-
-		imageModels = append(imageModels, ImageModel{
-			Name:       model.Name,
-			Homepage:   model.Homepage,
-			Prompt:     model.Prompt,
-			Downloaded: downloaded,
-			Options: &sd.SDParams{
-				Model:  model.LocalPath,
-				Prompt: model.Prompt,
-			},
-		})
-	}
-
-	if err := LoadImageModelDataToDB(sqliteDB, imageModels); err != nil {
-		return nil, err
-	}
-	return imageModels, nil
 }
 
 // runFrontendServer runs the frontend server

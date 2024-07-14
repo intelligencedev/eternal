@@ -383,5 +383,32 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 		}
 	}
 
+	// Check if the upscale model exists and if not, download it
+	fileName = "4x-UltraSharp.pth"
+	downloadURL = "https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth"
+	modelPath = fmt.Sprintf("%s/sd/ComfyUI-master/models/upscale_models/%s", config.DataPath, fileName)
+	if _, err := os.Stat(modelPath); err == nil {
+		pterm.Info.Printf("Upscale model found: %s\n", modelPath)
+	} else {
+		pterm.Warning.Printf("Upscale model not found: %s\n", modelPath)
+
+		pterm.Warning.Println("Downloading default image model, please wait...")
+		dm := hfutils.ConcurrentDownloadManager{
+			FileName:    fileName,
+			URL:         downloadURL,
+			Destination: modelPath,
+			NumParts:    1,
+			TempDir:     tmpPath,
+		}
+
+		go dm.PrintProgress()
+
+		if err := dm.Download(); err != nil {
+			fmt.Println("Download failed:", err)
+		} else {
+			fmt.Println("Download successful!")
+		}
+	}
+
 	return nil
 }
