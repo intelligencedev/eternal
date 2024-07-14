@@ -103,13 +103,6 @@ type ProjectTool struct {
 	ProjectID uint // Foreign key that refers to Project
 }
 
-// type File struct {
-// 	gorm.Model
-// 	Path      string
-// 	Content   string
-// 	ProjectID uint // Foreign key that refers to Project
-// }
-
 // URLTracking represents the structure for tracking URLs
 type URLTracking struct {
 	ID  int64  `gorm:"primaryKey;autoIncrement"`

@@ -34,7 +34,7 @@ func startComfyUI(ctx context.Context, config *AppConfig) error {
 		return err
 	}
 
-	return waitForComfyUI(comfyPort)
+	return waitForComfyUI(config)
 }
 
 // installComfyUIRequirements installs the necessary Python packages for ComfyUI.
@@ -94,8 +94,10 @@ func scanAndLog(r io.Reader, prefix string, logFunc func(...interface{})) {
 }
 
 // waitForComfyUI waits for the ComfyUI service to become available.
-func waitForComfyUI(comfyPort string) error {
-	comfyUrl := fmt.Sprintf("http://localhost:%s", comfyPort)
+func waitForComfyUI(config *AppConfig) error {
+	comfyHost := config.ServiceHosts["image"]["image_host_1"].Host
+	comfyPort := config.ServiceHosts["image"]["image_host_1"].Port
+	comfyUrl := fmt.Sprintf("http://%s:%s", comfyHost, comfyPort)
 	client := &http.Client{Timeout: 1 * time.Second}
 	for i := 0; i < 120; i++ {
 		if resp, err := client.Get(comfyUrl); err == nil {
