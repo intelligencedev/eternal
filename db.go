@@ -140,6 +140,13 @@ func (sqldb *SQLiteDB) AutoMigrate(models ...interface{}) error {
 	return nil
 }
 
+// Get the app config
+func (sqldb *SQLiteDB) GetAppConfig() *AppConfig {
+	var config AppConfig
+	sqldb.db.First(&config)
+	return &config
+}
+
 // GetProjects retrieves all projects from the database.
 func (sqldb *SQLiteDB) GetProjects() ([]Project, error) {
 	var projects []Project

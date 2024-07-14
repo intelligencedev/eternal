@@ -1,21 +1,17 @@
-// eternal/config.go
-
+// config.go
 package main
 
 import (
 	"embed"
-	"eternal/pkg/ghdownloader"
 	"eternal/pkg/llm"
 	"eternal/pkg/sd"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"sync/atomic"
 	"time"
 
+	"github.com/blevesearch/bleve/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -23,11 +19,14 @@ import (
 )
 
 var (
-	LocalFs        = new(afero.OsFs)
-	MemFs          = afero.NewMemMapFs()
+	sqliteDB       *SQLiteDB
+	searchIndex    bleve.Index
+	localFs        = afero.NewOsFs()
+	chatTurn       = 1
 	messageCounter int64
 )
 
+// AppConfig holds the application configuration.
 type AppConfig struct {
 	ServerID                string                            `yaml:"server_id"`
 	CurrentUser             string                            `yaml:"current_user"`
@@ -66,157 +65,95 @@ type BackendHost struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index" yaml:"-"`
 }
 
-// LoadConfig loads configuration from a YAML file.
-func LoadConfig(fs afero.Fs, path string) (*AppConfig, error) {
-	config := &AppConfig{}
+// WebSocketMessage represents a message sent over WebSocket.
+type WebSocketMessage struct {
+	ChatMessage string                 `json:"chat_message"`
+	Model       string                 `json:"model"`
+	Headers     map[string]interface{} `json:"HEADERS"`
+}
 
-	// Use Afero to read the file
+// loadConfig loads configuration from a YAML file.
+//
+// Parameters:
+// - fs: The filesystem to read the configuration file from.
+// - path: The path to the configuration file.
+//
+// Returns:
+// - A pointer to the loaded AppConfig.
+// - An error if the configuration file could not be read or unmarshaled.
+func loadConfig(fs afero.Fs, path string) (*AppConfig, error) {
+	config := &AppConfig{}
 	file, err := afero.ReadFile(fs, path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	err = yaml.Unmarshal(file, config)
-	if err != nil {
-		return nil, err
+	if err := yaml.Unmarshal(file, config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	return config, nil
 }
 
-func InitServer(configPath string) (string, error) {
-
-	// WEB FILES
-	webPath := filepath.Join(configPath, "web")
-	err := os.MkdirAll(webPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create directory %s: %v", webPath, err)
-	}
-	err = CopyFiles(embedfs, "public", webPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to copy files: %v", err)
-	}
-
-	// GGUF FILES
-	ggufPath := filepath.Join(configPath, "gguf")
-	err = os.MkdirAll(ggufPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create directory %s: %v", ggufPath, err)
-	}
-	err = CopyFiles(embedfs, "pkg/llm/local/bin", ggufPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to copy files: %v", err)
+// createModelParam creates a ModelParams object from a llm.Model and data path.
+//
+// Parameters:
+// - model: The llm.Model to create parameters for.
+// - dataPath: The path to the data directory.
+//
+// Returns:
+// - A ModelParams object populated with the model's parameters.
+func createModelParam(model *llm.Model, dataPath string) ModelParams {
+	var localPath string
+	if model.Downloads != nil {
+		fileName := filepath.Base(model.Downloads[0])
+		localPath = filepath.Join(dataPath, "models", model.Name, fileName)
 	}
 
-	files, err := os.ReadDir(ggufPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read directory %s: %v", ggufPath, err)
+	downloaded := fileExists(localPath)
+
+	return ModelParams{
+		Name:       model.Name,
+		Homepage:   model.Homepage,
+		GGUFInfo:   model.GGUF,
+		Downloaded: downloaded,
+		Options: &llm.GGUFOptions{
+			Model:         localPath,
+			Prompt:        model.Prompt,
+			CtxSize:       model.Ctx,
+			Temp:          0.7,
+			RepeatPenalty: 1.1,
+		},
 	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			err = os.Chmod(filepath.Join(ggufPath, file.Name()), 0755)
-			if err != nil {
-				return "", fmt.Errorf("failed to set executable permission on file %s: %v", file.Name(), err)
-			}
-		}
-	}
-
-	// IMG GEN
-	imgGenPath := filepath.Join(configPath, "sd")
-	err = os.MkdirAll(imgGenPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create directory %s: %v", imgGenPath, err)
-	}
-
-	err = CopyFiles(embedfs, "pkg/sd/sdcpp/build/bin", imgGenPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to copy files: %v", err)
-	}
-
-	files, err = os.ReadDir(imgGenPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read directory %s: %v", imgGenPath, err)
-	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			err = os.Chmod(filepath.Join(imgGenPath, file.Name()), 0755)
-			if err != nil {
-				return "", fmt.Errorf("failed to set executable permission on file %s: %v", file.Name(), err)
-			}
-		}
-	}
-
-	// Check if comfyui folder exists
-	comfyuiPath := filepath.Join(configPath, "sd/ComfyUI-master")
-	if _, err := os.Stat(comfyuiPath); os.IsNotExist(err) {
-		// Download comfyui repo
-		err := ghdownloader.DownloadAndExtractRepo("intelligencedev", "ComfyUI", "", imgGenPath)
-		if err != nil {
-			return "", err
-		}
-
-		// Run a python command to install the Comfy requirements.txt
-		reqPath := fmt.Sprintf("%s/sd/ComfyUI-master/requirements.txt", configPath)
-		cmdArgs := []string{
-			"install",
-			"-r", reqPath,
-		}
-
-		cmd := exec.Command("pip3", cmdArgs...)
-
-		// Set the standard output and error to the app's standard output and error
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			log.Fatalf("Failed to run pip command: %v", err)
-		}
-	}
-
-	// Bootstrap custom nodes
-	// Impact Pack
-	impactPackPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI-Impact-Pack")
-	if _, err := os.Stat(impactPackPath); os.IsNotExist(err) {
-		// Download ComfyUI-Impact-Pack repo
-		err := ghdownloader.DownloadAndExtractRepo("ltdrdata", "ComfyUI-Impact-Pack", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes"))
-		if err != nil {
-			return "", err
-		}
-
-		// Run a python command to install the Comfy requirements.txt
-		reqPath := fmt.Sprintf("%s/sd/ComfyUI-master/custom_nodes/ComfyUI-Impact-Pack-Main/requirements.txt", configPath)
-		cmdArgs := []string{
-			"install",
-			"-r", reqPath,
-		}
-
-		cmd := exec.Command("pip3", cmdArgs...)
-
-		// Set the standard output and error to the app's standard output and error
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			log.Fatalf("Failed to run pip command: %v", err)
-		}
-	}
-
-	return configPath, nil
 }
 
+// EnsureDataPath ensures that the data path exists.
+//
+// Parameters:
+// - config: The application configuration containing the data path.
+//
+// Returns:
+// - An error if the data path could not be created.
 func EnsureDataPath(config *AppConfig) error {
 	if _, err := os.Stat(config.DataPath); os.IsNotExist(err) {
-		return LocalFs.MkdirAll(config.DataPath, os.ModePerm)
+		return localFs.MkdirAll(config.DataPath, os.ModePerm)
 	}
 	return nil
 }
 
+// CopyFiles copies files from an embedded filesystem to a destination directory.
+//
+// Parameters:
+// - fsys: The embedded filesystem to copy files from.
+// - srcDir: The source directory in the embedded filesystem.
+// - destDir: The destination directory on the local filesystem.
+//
+// Returns:
+// - An error if the files could not be copied.
 func CopyFiles(fsys embed.FS, srcDir, destDir string) error {
 	fileEntries, err := fsys.ReadDir(srcDir)
 	if err != nil {
-		return fmt.Errorf("failed to read directory %s: %v", srcDir, err)
+		return fmt.Errorf("failed to read directory %s: %w", srcDir, err)
 	}
 
 	for _, entry := range fileEntries {
@@ -224,53 +161,42 @@ func CopyFiles(fsys embed.FS, srcDir, destDir string) error {
 		destPath := filepath.Join(destDir, entry.Name())
 
 		if entry.IsDir() {
-			// Create the directory and copy its contents
 			if err := os.MkdirAll(destPath, 0755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %v", destPath, err)
+				return fmt.Errorf("failed to create directory %s: %w", destPath, err)
 			}
 			if err := CopyFiles(fsys, srcPath, destPath); err != nil {
 				return err
 			}
 		} else {
-			// Copy the file
-			fileData, err := fsys.ReadFile(srcPath)
-			if err != nil {
-				log.Errorf("failed to read file %s: %v", srcPath, err)
-				continue // Skip to the next file
-			}
-			if err := os.WriteFile(destPath, fileData, 0755); err != nil {
-				return fmt.Errorf("failed to write file %s: %v", destPath, err)
+			if err := copyFile(fsys, srcPath, destPath); err != nil {
+				log.Errorf("Failed to copy file %s: %v", srcPath, err)
 			}
 		}
 	}
 	return nil
 }
 
-// Increments and returns a counter that gets appended to the id for frontend chat elements
-func IncrementTurn() int64 {
-	return atomic.AddInt64(&messageCounter, 1)
+// copyFile copies a single file from the embedded filesystem to the destination.
+//
+// Parameters:
+// - fsys: The embedded filesystem to copy the file from.
+// - srcPath: The source file path in the embedded filesystem.
+// - destPath: The destination file path on the local filesystem.
+//
+// Returns:
+// - An error if the file could not be copied.
+func copyFile(fsys embed.FS, srcPath, destPath string) error {
+	fileData, err := fsys.ReadFile(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", srcPath, err)
+	}
+	return os.WriteFile(destPath, fileData, 0755)
 }
 
-// findURLInText searches for a URL in a given text and returns it if found.
-// It returns nil if no valid URL is found.
-func URLParse(text string) *url.URL {
-	// Define a regular expression for finding URLs
-	// This is a simple regex for demonstration; it might not cover all URL cases
-	re := regexp.MustCompile(`https?://[^\s]+`)
-
-	// Find a URL using the regex
-	found := re.FindString(text)
-	if found == "" {
-		// No URL found
-		return nil
-	}
-
-	// Parse the URL to validate it and return *url.URL
-	parsedURL, err := url.Parse(found)
-	if err != nil {
-		// The URL is not valid
-		return nil
-	}
-
-	return parsedURL
+// IncrementTurn increments and returns a counter for frontend chat elements.
+//
+// Returns:
+// - The incremented counter value.
+func IncrementTurn() int64 {
+	return atomic.AddInt64(&messageCounter, 1)
 }
