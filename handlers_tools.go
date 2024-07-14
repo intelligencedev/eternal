@@ -625,7 +625,7 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	workflowPath := fmt.Sprintf("%s/web/basic_sdxl.json", config.DataPath) //Make this configurable later
+	workflowPath := fmt.Sprintf("%s/web/eternal_imggen_advanced.json", config.DataPath) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
 		fmt.Println("Error loading prompt text:", err)
@@ -643,6 +643,33 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	pterm.Info.Println("Generating image using seed:", seed)
 
+	// Iterate through the prompt map to find and update nodes with specific inputs
+	for _, value := range prompt {
+		node, ok := value.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		inputs, ok := node["inputs"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Update inputs based on the parameter names
+		if _, exists := inputs["seed"]; exists {
+			inputs["seed"] = seed
+		}
+		if _, exists := inputs["noise_seed"]; exists {
+			inputs["noise_seed"] = seed
+		}
+		if _, exists := inputs["text"]; exists {
+			inputs["text"] = chatMessage
+		}
+		if _, exists := inputs["filename_prefix"]; exists {
+			inputs["filename_prefix"] = chatId
+		}
+	}
+
 	// pixart workflow values
 	// prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
 	// prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
@@ -652,10 +679,15 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 	// prompt["287"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
 	// prompt["345"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
 
-	// basic workflow values
-	prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+	// basic_sdxl.json
+	// prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	// prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	// prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
+
+	// eternal_imggen_advanced.json
+	// prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
+	// prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
+	// prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
 
 	_, err = queuePrompt(prompt, chatId, serverAddress)
 	if err != nil {

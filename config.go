@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sync/atomic"
@@ -153,6 +154,51 @@ func InitServer(configPath string) (string, error) {
 		err := ghdownloader.DownloadAndExtractRepo("intelligencedev", "ComfyUI", "", imgGenPath)
 		if err != nil {
 			return "", err
+		}
+
+		// Run a python command to install the Comfy requirements.txt
+		reqPath := fmt.Sprintf("%s/sd/ComfyUI-master/requirements.txt", configPath)
+		cmdArgs := []string{
+			"install",
+			"-r", reqPath,
+		}
+
+		cmd := exec.Command("pip3", cmdArgs...)
+
+		// Set the standard output and error to the app's standard output and error
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("Failed to run pip command: %v", err)
+		}
+	}
+
+	// Bootstrap custom nodes
+	// Impact Pack
+	impactPackPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI-Impact-Pack")
+	if _, err := os.Stat(impactPackPath); os.IsNotExist(err) {
+		// Download ComfyUI-Impact-Pack repo
+		err := ghdownloader.DownloadAndExtractRepo("ltdrdata", "ComfyUI-Impact-Pack", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes"))
+		if err != nil {
+			return "", err
+		}
+
+		// Run a python command to install the Comfy requirements.txt
+		reqPath := fmt.Sprintf("%s/sd/ComfyUI-master/custom_nodes/ComfyUI-Impact-Pack-Main/requirements.txt", configPath)
+		cmdArgs := []string{
+			"install",
+			"-r", reqPath,
+		}
+
+		cmd := exec.Command("pip3", cmdArgs...)
+
+		// Set the standard output and error to the app's standard output and error
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("Failed to run pip command: %v", err)
 		}
 	}
 

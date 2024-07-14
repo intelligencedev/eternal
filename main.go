@@ -426,6 +426,8 @@ func startComfyUI(ctx context.Context, config *AppConfig) error {
 		"main.py",
 		"--listen",
 		"--port", comfyPort,
+		"--force-fp16",
+		"--use-split-cross-attention",
 	}
 
 	comfyUIPath := filepath.Join(config.DataPath, "sd/ComfyUI-master")
@@ -472,7 +474,7 @@ func startComfyUI(ctx context.Context, config *AppConfig) error {
 func waitForComfyUI(comfyPort string) error {
 	comfyUrl := fmt.Sprintf("http://localhost:%s", comfyPort)
 	client := &http.Client{Timeout: 1 * time.Second}
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 120; i++ {
 		resp, err := client.Get(comfyUrl)
 		if err == nil {
 			resp.Body.Close()
