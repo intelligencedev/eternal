@@ -639,7 +639,6 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	pterm.Error.Println(config.CurrentImgRoleName)
 	workflowPath := fmt.Sprintf("%s/web/%s.json", config.DataPath, config.CurrentImgRoleName) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
