@@ -620,12 +620,27 @@ func pollURL(url string, timeout time.Duration) ([]byte, error) {
 	}
 }
 
+// handleImgSetWorkflow sets the workflow for the image generation tool.
+func handleImgSetWorkflow(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		workflowName := c.Params("name")
+
+		// Set the config value for the image generation workflow
+		config.CurrentImgRoleName = workflowName
+
+		return c.JSON(fiber.Map{
+			"message": fmt.Sprintf("Image generation workflow set to %s", workflowName),
+		})
+	}
+}
+
 func performImageGen(chatId string, config *AppConfig, chatMessage string) string {
 	serverAddress := fmt.Sprintf("%s:%s", config.ServiceHosts["image"]["image_host_1"].Host, config.ServiceHosts["image"]["image_host_1"].Port)
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	workflowPath := fmt.Sprintf("%s/web/eternal_imggen_advanced.json", config.DataPath) //Make this configurable later
+	pterm.Error.Println(config.CurrentImgRoleName)
+	workflowPath := fmt.Sprintf("%s/web/%s.json", config.DataPath, config.CurrentImgRoleName) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
 		fmt.Println("Error loading prompt text:", err)

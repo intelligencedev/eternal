@@ -459,7 +459,7 @@ func startComfyUI(ctx context.Context, config *AppConfig) error {
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			log.Error("ComfyUI Error: ", scanner.Text())
+			pterm.Info.Println("ComfyUI: ", scanner.Text())
 		}
 	}()
 

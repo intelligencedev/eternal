@@ -1,6 +1,7 @@
 <div id="tools-container" class="row h-100 show">
   <div class="col h-100">
-    <div class="panel h-100 px-3 d-flex flex-column fade-it rounded-end-2 border-end border-secondary-subtle" style="background-color: var(--et-galactic-bg);">
+    <div class="panel h-100 px-3 d-flex flex-column fade-it rounded-end-2 border-end border-secondary-subtle"
+      style="background-color: var(--et-galactic-bg);">
       <h5 class="mb-3">Tools</h5>
       <div class="panel-body">
         <!-- Teams Workflow -->
@@ -19,6 +20,16 @@
         </div>
         <p class="mb-3 medium">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.
         </p>
+        <div class="mb-3">
+          <label for="workflow-select" class="form-label">Select Workflow:</label>
+          <select id="workflow-select" class="form-select" aria-label="Select Workflow"
+            onchange="updateImgWorkflow(this.value)">
+            <option selected disabled>Choose a workflow</option>
+            <!-- SDXL Basic and SDXL Advanced -->
+            <option value="sdxl-basic">sdxl-basic</option>
+            <option value="sdxl-advanced">sdxl-advanced</option>
+          </select>
+        </div>
 
         <hr>
 
@@ -74,6 +85,23 @@
 </div>
 
 <script>
+  function updateImgWorkflow(optionValue) {
+    fetch(`/tools/img/workflow/set/${optionValue}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    console.log("Selected workflow:", optionValue);
+  }
+
   // The JavaScript remains the same as in your original code
   function postToolValue(toolName, enabled, topN) {
     fetch(`/tool/${toolName}/${enabled}/${topN}`, {
