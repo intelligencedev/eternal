@@ -28,29 +28,30 @@ var (
 
 // AppConfig holds the application configuration.
 type AppConfig struct {
-	ServerID                string                            `yaml:"server_id"`
-	CurrentUser             string                            `yaml:"current_user"`
-	AssistantName           string                            `yaml:"assistant_name"`
-	ControlHost             string                            `yaml:"control_host"`
-	ControlPort             string                            `yaml:"control_port"`
-	DataPath                string                            `yaml:"data_path"`
-	ServiceHosts            map[string]map[string]BackendHost `yaml:"service_hosts"`
-	ChromedpKey             string                            `yaml:"chromedp_key"`
-	OAIKey                  string                            `yaml:"oai_key"`
-	AnthropicKey            string                            `yaml:"anthropic_key"`
-	GoogleKey               string                            `yaml:"google_key"`
-	LanguageModels          []llm.Model                       `yaml:"language_models"`
-	ImageModels             []sd.ImageModel                   `yaml:"image_models"`
-	CurrentRoleName         string                            `yaml:"current_role_name"`
-	CurrentImgRoleName      string                            `yaml:"current_img_role_name"`
-	CurrentRoleInstructions string                            `yaml:"current_role"`
+	ServerID        string                            `yaml:"server_id"`
+	CurrentUser     string                            `yaml:"current_user"`
+	AssistantName   string                            `yaml:"assistant_name"`
+	ControlHost     string                            `yaml:"control_host"`
+	ControlPort     string                            `yaml:"control_port"`
+	DataPath        string                            `yaml:"data_path"`
+	ServiceHosts    map[string]map[string]BackendHost `yaml:"service_hosts"`
+	ChromedpKey     string                            `yaml:"chromedp_key"`
+	OAIKey          string                            `yaml:"oai_key"`
+	AnthropicKey    string                            `yaml:"anthropic_key"`
+	GoogleKey       string                            `yaml:"google_key"`
+	LanguageModels  []llm.Model                       `yaml:"language_models"`
+	ImageModels     []sd.ImageModel                   `yaml:"image_models"`
+	CurrentRoleName string                            `yaml:"current_role_name"`
+	//CurrentImgRoleName      string                            `yaml:"current_img_role_name"`
+	CurrentRoleInstructions string `yaml:"current_role"`
 	AssistantRoles          []struct {
 		Name         string `yaml:"name"`
 		Instructions string `yaml:"instructions"`
 	} `yaml:"assistant_roles"`
-	Tools                Tools     `yaml:"tools"`
-	DefaultProjectConfig Project   `yaml:"default_project"`
-	Projects             []Project `yaml:"projects"`
+	Tools                Tools        `yaml:"tools"`
+	DefaultProjectConfig Project      `yaml:"default_project"`
+	Projects             []Project    `yaml:"projects"`
+	ImgGenConfig         ImgGenConfig `yaml:"img_gen_config"`
 }
 
 // BackendHost represents a local or remote backend host.
@@ -63,6 +64,14 @@ type BackendHost struct {
 	CreatedAt     time.Time      `yaml:"-"`
 	UpdatedAt     time.Time      `yaml:"-"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" yaml:"-"`
+}
+
+type ImgGenConfig struct {
+	CheckpointName string `json:"model_name"`
+	Workflow       string `json:"workflow"`
+	Seed           int    `json:"seed"`
+	Width          int    `json:"width"`
+	Height         int    `json:"height"`
 }
 
 // WebSocketMessage represents a message sent over WebSocket.

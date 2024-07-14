@@ -623,13 +623,42 @@ func pollURL(url string, timeout time.Duration) ([]byte, error) {
 // handleImgSetWorkflow sets the workflow for the image generation tool.
 func handleImgSetWorkflow(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		workflowName := c.Params("name")
+		var workflowData struct {
+			Workflow string `json:"workflow"`
+		}
 
-		// Set the config value for the image generation workflow
-		config.CurrentImgRoleName = workflowName
+		if err := c.BodyParser(&workflowData); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "Invalid request body",
+			})
+		}
+
+		config.ImgGenConfig.Workflow = workflowData.Workflow
 
 		return c.JSON(fiber.Map{
-			"message": fmt.Sprintf("Image generation workflow set to %s", workflowName),
+			"message": fmt.Sprintf("Image generation workflow set to %s", workflowData.Workflow),
+		})
+	}
+}
+
+func handleImgSetResolution(config *AppConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var resolutionData struct {
+			Width  int `json:"width"`
+			Height int `json:"height"`
+		}
+
+		if err := c.BodyParser(&resolutionData); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "Invalid request body",
+			})
+		}
+
+		config.ImgGenConfig.Width = resolutionData.Width
+		config.ImgGenConfig.Height = resolutionData.Height
+
+		return c.JSON(fiber.Map{
+			"message": fmt.Sprintf("Image generation resolution set to %dx%d", resolutionData.Width, resolutionData.Height),
 		})
 	}
 }
@@ -639,7 +668,7 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 
 	currentChatUid = chatId
 	var prompt map[string]interface{}
-	workflowPath := fmt.Sprintf("%s/web/%s.json", config.DataPath, config.CurrentImgRoleName) //Make this configurable later
+	workflowPath := fmt.Sprintf("%s/web/%s.json", config.DataPath, config.ImgGenConfig.Workflow) //Make this configurable later
 	promptText, err := loadPromptText(workflowPath)
 	if err != nil {
 		fmt.Println("Error loading prompt text:", err)
@@ -682,26 +711,14 @@ func performImageGen(chatId string, config *AppConfig, chatMessage string) strin
 		if _, exists := inputs["filename_prefix"]; exists {
 			inputs["filename_prefix"] = chatId
 		}
+		// Add these new checks for width and height
+		if _, exists := inputs["width"]; exists {
+			inputs["width"] = config.ImgGenConfig.Width
+		}
+		if _, exists := inputs["height"]; exists {
+			inputs["height"] = config.ImgGenConfig.Height
+		}
 	}
-
-	// pixart workflow values
-	// prompt["374"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
-	// prompt["196"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	// prompt["206"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	// prompt["239"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	// prompt["286"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	// prompt["287"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	// prompt["345"].(map[string]interface{})["inputs"].(map[string]interface{})["noise_seed"] = seed
-
-	// basic_sdxl.json
-	// prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	// prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	// prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
-
-	// eternal_imggen_advanced.json
-	// prompt["3"].(map[string]interface{})["inputs"].(map[string]interface{})["seed"] = seed
-	// prompt["6"].(map[string]interface{})["inputs"].(map[string]interface{})["text"] = chatMessage
-	// prompt["9"].(map[string]interface{})["inputs"].(map[string]interface{})["filename_prefix"] = chatId
 
 	_, err = queuePrompt(prompt, chatId, serverAddress)
 	if err != nil {
