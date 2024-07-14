@@ -58,21 +58,10 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Post("/tools/img/workflow/set/:name", handleImgSetWorkflow(config))
 
 	// Utility routes
-	// return the app config
 	app.Post("/config", func(c *fiber.Ctx) error {
 		return c.JSON(config)
 	})
 	app.Post("/upload", handleUpload(config))
 	app.Get("/sseupdates", handleSSEUpdates())
 	app.Get("/ws", websocket.New(handleWebSocket(config)))
-
-	// OpenAI routes
-	app.Get("/openai/models", handleOpenAIModels(config))
-	//app.Get("/wsoai", websocket.New(handleOpenAIWebSocket(config)))
-
-	// Anthropic routes
-	//app.Get("/wsanthropic", websocket.New(handleAnthropicWebSocket(config)))
-
-	// Google routes
-	// app.Get("/wsgoogle", websocket.New(handleGoogleWebSocket(config)))
 }
