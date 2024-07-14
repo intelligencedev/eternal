@@ -54,16 +54,3 @@ To run this program:
 3. Navigate to the directory containing the code.
 4. Run `go build` to compile the program.
 5. Execute the compiled program.
-
-## Contributing
-
-Contributions to this project are welcome. You can enhance it by:
-- Adding parameter customization through command-line arguments.
-- Improving error handling and logging.
-- Extending compatibility with other CLI commands or models.
-
-Please submit a pull request or open an issue if you have suggestions or improvements.
-
-## License
-
-Specify your license here or state that the project is unlicensed and available for free use.

@@ -1,5 +1,3 @@
-// eternal/main.go - Main entry point for the Eternal application
-
 package main
 
 import (
@@ -7,15 +5,16 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"eternal/internal/python"
 	"eternal/pkg/llm"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -30,21 +29,23 @@ import (
 	"github.com/spf13/afero"
 )
 
-// Embed static files and binaries
-//
 //go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
 var embedfs embed.FS
-var currentProject Project
-var comfyUICmd *exec.Cmd
 
-// WebSocketMessage represents the structure of a WebSocket message
+var (
+	currentProject Project
+	comfyUICmd     *exec.Cmd
+	//devMode        bool
+	//sqliteDB       *SQLiteDB
+	//searchIndex    bleve.Index
+)
+
 type WebSocketMessage struct {
 	ChatMessage string                 `json:"chat_message"`
 	Model       string                 `json:"model"`
 	Headers     map[string]interface{} `json:"HEADERS"`
 }
 
-// Tool represents a tool with its name and enabled status
 type Tool struct {
 	Name    string `json:"name"`
 	Enabled bool   `json:"enabled"`
@@ -56,148 +57,32 @@ func main() {
 
 	displayBanner()
 
-	// DISABLED due to bug in CUDA
-	// Print host information as pterm table
-	// hostInfo, err := GetHostInfo()
-	// if err != nil {
-	// 	pterm.Error.Println("Error getting host information:", err)
-	// } else {
-	// 	// Convert memory to GB
-	// 	hostInfo.Memory.Total = hostInfo.Memory.Total / 1024 / 1024 / 1024
-	// 	// Convert ints to strings for pterm table
-	// 	pterm.DefaultTable.WithData(pterm.TableData{
-	// 		{"OS", hostInfo.OS},
-	// 		{"Architecture", hostInfo.Arch},
-	// 		{"CPU Cores", fmt.Sprintf("%d", hostInfo.CPUs)},
-	// 		{"Memory (GB)", fmt.Sprintf("%d", hostInfo.Memory.Total)},
-	// 		{"GPU Model", hostInfo.GPUs[0].Model},
-	// 		{"GPU Cores", hostInfo.GPUs[0].TotalNumberOfCores},
-	// 		{"Metal Support", hostInfo.GPUs[0].MetalSupport},
-	// 	}).Render()
-	// }
-
-	// Load configuration
 	config, err := loadConfig()
 	if err != nil {
-		pterm.Error.Println("Error loading config:", err)
-		os.Exit(1)
+		logFatalError("Error loading config", err)
 	}
 
-	// Set defaults
-	// Set default assistant role
-	config.CurrentRoleInstructions = config.AssistantRoles[0].Instructions
+	initializeApplication(config)
 
-	// Initialize tools based on config
-	tools := initializeTools(config)
-
-	// If the tool is enabled, print the tool name
-	for _, tool := range tools {
-		if tool.Enabled {
-			pterm.Info.Println("Enabled tool:", tool.Name)
-		}
-	}
-
-	// Create data directory if it doesn't exist
-	if err := createDataDirectory(config.DataPath); err != nil {
-		pterm.Error.Println("Error creating data directory:", err)
-		os.Exit(1)
-	} else {
-		// Delete all of the files in the web/public/tmp directory
-		tmpDir := filepath.Join(config.DataPath, "web", "public", "tmp")
-		if err := os.RemoveAll(tmpDir); err != nil {
-			pterm.Error.Println("Error deleting tmp directory:", err)
-		}
-	}
-
-	// Initialize server
-	if err := initializeServer(config.DataPath); err != nil {
-		pterm.Error.Println("Error initializing server:", err)
-		os.Exit(1)
-	}
-
-	pterm.Warning.Println("Server initialized")
-
-	// Initialize database
-	if err := initializeDatabase(config); err != nil {
-		pterm.Error.Println("Failed to initialize database:", err)
-		os.Exit(1)
-	}
-
-	currentProject = config.DefaultProjectConfig
-
-	// Create the default project if it doesn't exist
-	err = sqliteDB.CreateProject(&currentProject)
-	if err != nil {
-		pterm.Warning.Println("Default project already exists")
-	}
-
-	// List all projects and print to terminal
-	projects, err := sqliteDB.ListProjects()
-	if err != nil {
-		pterm.Error.Println("Failed to list projects:", err)
-		os.Exit(1)
-	}
-
-	// Convert projects to [][]string
-	var projectData [][]string
-	for _, project := range projects {
-		projectData = append(projectData, []string{project.Name, project.Description})
-	}
-
-	// Print the projects as a pterm table
-	pterm.DefaultTable.WithData(projectData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
-
-	// Initialize search index
-	if err := initializeSearchIndex(config.DataPath); err != nil {
-		pterm.Error.Println("Failed to initialize search index:", err)
-		os.Exit(1)
-	}
-
-	// Load model parameters
-	modelParams, err := loadModelParams(config)
-	if err != nil {
-		pterm.Error.Println("Failed to load model data to database:", err)
-		os.Exit(1)
-	}
-
-	// Prepare data for the pterm table including headers
-	tableData := pterm.TableData{
-		{"Model Name", "Context Size", "Downloaded"},
-	}
-
-	// Loop through model parameters and add each to the table
-	for _, param := range modelParams {
-		tableData = append(tableData, []string{param.Name, fmt.Sprintf("%d", param.Options.CtxSize), fmt.Sprintf("%t", param.Downloaded)})
-	}
-
-	// Print the model parameters as a pterm table
-	pterm.DefaultTable.WithData(tableData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
-
-	// Load image models
-	err = DownloadDefaultImageModel(config)
-	if err != nil {
-		pterm.Error.Println("Failed to download default image model:", err)
-	}
-
-	// Setup context for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Start ComfyUI
 	if err := startComfyUI(ctx, config); err != nil {
-		pterm.Error.Println("Failed to start ComfyUI:", err)
-		os.Exit(1)
+		logFatalError("Failed to start ComfyUI", err)
 	}
 
 	pterm.Info.Printf("Serving frontend on: %s:%s\n", config.ControlHost, config.ControlPort)
 	pterm.Info.Println("Press Ctrl+C to stop")
 
-	// Run frontend server
+	modelParams, err := loadModelParams(config)
+	if err != nil {
+		logFatalError("Failed to load model parameters", err)
+	}
+
 	runFrontendServer(ctx, config, modelParams)
 
 	pterm.Warning.Println("Shutdown signal received")
 
-	// Stop ComfyUI
 	if err := stopComfyUI(ctx); err != nil {
 		pterm.Error.Println("Failed to stop ComfyUI:", err)
 	}
@@ -205,12 +90,10 @@ func main() {
 	os.Exit(0)
 }
 
-// displayBanner displays the application banner
 func displayBanner() {
 	_ = pterm.DefaultBigText.WithLetters(putils.LettersFromString("ETERNAL")).Render()
 }
 
-// loadConfig loads the application configuration from a file
 func loadConfig() (*AppConfig, error) {
 	currentPath, err := os.Getwd()
 	if err != nil {
@@ -223,38 +106,52 @@ func loadConfig() (*AppConfig, error) {
 	return LoadConfig(osFS, configPath)
 }
 
-// initializeTools initializes the tools based on the configuration
-func initializeTools(config *AppConfig) []Tool {
-	var tools []Tool
-	if config.Tools.WebGet.Enabled {
-		tools = append(tools, Tool{Name: "webget", Enabled: true})
-	}
-	if config.Tools.WebSearch.Enabled {
-		tools = append(tools, Tool{Name: "websearch", Enabled: true})
-	}
-	return tools
+func initializeApplication(config *AppConfig) {
+	initializeTools(config)
+	createDataDirectory(config.DataPath)
+	initializeServer(config.DataPath)
+	initializeDatabase(config)
+	initializeDefaultProject(config)
+	initializeSearchIndex(config.DataPath)
+	downloadDefaultImageModel(config)
 }
 
-// createDataDirectory creates the data directory if it doesn't exist
-func createDataDirectory(dataPath string) error {
-	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
-		return os.Mkdir(dataPath, 0755)
+func initializeTools(config *AppConfig) {
+	tools := []Tool{
+		{Name: "webget", Enabled: config.Tools.WebGet.Enabled},
+		{Name: "websearch", Enabled: config.Tools.WebSearch.Enabled},
 	}
-	return nil
+
+	for _, tool := range tools {
+		if tool.Enabled {
+			pterm.Info.Println("Enabled tool:", tool.Name)
+		}
+	}
 }
 
-// initializeServer initializes the server
-func initializeServer(dataPath string) error {
-	_, err := InitServer(dataPath)
-	return err
+func createDataDirectory(dataPath string) {
+	if err := os.MkdirAll(dataPath, 0755); err != nil {
+		logFatalError("Error creating data directory", err)
+	}
+
+	tmpDir := filepath.Join(dataPath, "web", "public", "tmp")
+	if err := os.RemoveAll(tmpDir); err != nil {
+		pterm.Error.Println("Error deleting tmp directory:", err)
+	}
 }
 
-// initializeDatabase initializes the SQLite database
-func initializeDatabase(config *AppConfig) error {
+func initializeServer(dataPath string) {
+	if _, err := InitServer(dataPath); err != nil {
+		logFatalError("Error initializing server", err)
+	}
+	pterm.Warning.Println("Server initialized")
+}
+
+func initializeDatabase(config *AppConfig) {
 	var err error
 	sqliteDB, err = NewSQLiteDB(config.DataPath)
 	if err != nil {
-		return err
+		logFatalError("Failed to initialize database", err)
 	}
 
 	err = sqliteDB.AutoMigrate(
@@ -267,150 +164,114 @@ func initializeDatabase(config *AppConfig) error {
 		&Assistant{},
 	)
 	if err != nil {
-		return err
+		logFatalError("Failed to auto-migrate database", err)
 	}
 
 	pterm.Warning.Println("Database initialized")
-
-	return nil
 }
 
-func setCurrentProject(projectName string) (Project, error) {
-	var project Project
-	if err := sqliteDB.First(projectName, &project); err != nil {
-		return Project{}, err
+func initializeDefaultProject(config *AppConfig) {
+	currentProject = config.DefaultProjectConfig
+	err := sqliteDB.CreateProject(&currentProject)
+	if err != nil {
+		pterm.Warning.Println("Default project already exists")
 	}
 
-	// Set the application context to the current project
-	currentProject = project
-	return project, nil
+	projects, err := sqliteDB.ListProjects()
+	if err != nil {
+		logFatalError("Failed to list projects", err)
+	}
+
+	displayProjects(projects)
 }
 
-// initializeSearchIndex initializes the search index
-func initializeSearchIndex(dataPath string) error {
-	searchDB := fmt.Sprintf("%s/search.bleve", dataPath)
+func displayProjects(projects []Project) {
+	var projectData [][]string
+	for _, project := range projects {
+		projectData = append(projectData, []string{project.Name, project.Description})
+	}
 
+	pterm.DefaultTable.WithData(projectData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
+}
+
+func initializeSearchIndex(dataPath string) {
+	searchDB := filepath.Join(dataPath, "search.bleve")
+
+	var err error
 	if _, err := os.Stat(searchDB); os.IsNotExist(err) {
 		mapping := bleve.NewIndexMapping()
 		searchIndex, err = bleve.New(searchDB, mapping)
-		if err != nil {
-			return err
-		}
 	} else {
 		searchIndex, err = bleve.Open(searchDB)
-		if err != nil {
-			return err
-		}
 	}
-	return nil
+
+	if err != nil {
+		logFatalError("Failed to initialize search index", err)
+	}
 }
 
-// loadModelParams loads the model parameters from the configuration
 func loadModelParams(config *AppConfig) ([]ModelParams, error) {
 	var modelParams []ModelParams
 	for _, model := range config.LanguageModels {
-		if model.Downloads != nil {
-			fileName := strings.Split(model.Downloads[0], "/")
-			model.LocalPath = fmt.Sprintf("%s/models/%s/%s", config.DataPath, model.Name, fileName[len(fileName)-1])
-		}
-
-		var downloaded bool
-		if _, err := os.Stat(model.LocalPath); err == nil {
-			downloaded = true
-		}
-
-		modelParams = append(modelParams, ModelParams{
-			Name:       model.Name,
-			Homepage:   model.Homepage,
-			GGUFInfo:   model.GGUF,
-			Downloaded: downloaded,
-			Options: &llm.GGUFOptions{
-				Model:         model.LocalPath,
-				Prompt:        model.Prompt,
-				CtxSize:       model.Ctx,
-				Temp:          0.7,
-				RepeatPenalty: 1.1,
-			},
-		})
+		modelParam := createModelParam(&model, config.DataPath)
+		modelParams = append(modelParams, modelParam)
 	}
 
 	if err := LoadModelDataToDB(sqliteDB, modelParams); err != nil {
 		return nil, err
 	}
+
+	displayModelParams(modelParams)
 	return modelParams, nil
 }
 
-// runFrontendServer runs the frontend server
+func createModelParam(model *llm.Model, dataPath string) ModelParams {
+	var localPath string
+	if model.Downloads != nil {
+		fileName := filepath.Base(model.Downloads[0])
+		localPath = filepath.Join(dataPath, "models", model.Name, fileName)
+	}
+
+	downloaded := fileExists(localPath)
+
+	return ModelParams{
+		Name:       model.Name,
+		Homepage:   model.Homepage,
+		GGUFInfo:   model.GGUF,
+		Downloaded: downloaded,
+		Options: &llm.GGUFOptions{
+			Model:         localPath,
+			Prompt:        model.Prompt,
+			CtxSize:       model.Ctx,
+			Temp:          0.7,
+			RepeatPenalty: 1.1,
+		},
+	}
+}
+
+func displayModelParams(modelParams []ModelParams) {
+	tableData := [][]string{{"Model Name", "Context Size", "Downloaded"}}
+	for _, param := range modelParams {
+		tableData = append(tableData, []string{
+			param.Name,
+			fmt.Sprintf("%d", param.Options.CtxSize),
+			fmt.Sprintf("%t", param.Downloaded),
+		})
+	}
+	pterm.DefaultTable.WithData(tableData).WithHasHeader().WithStyle(pterm.NewStyle(pterm.FgCyan)).Render()
+}
+
+func downloadDefaultImageModel(config *AppConfig) {
+	if err := DownloadDefaultImageModel(config); err != nil {
+		pterm.Error.Println("Failed to download default image model:", err)
+	}
+}
+
 func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []ModelParams) {
-	basePath := filepath.Join(config.DataPath, "web")
-	baseFs := afero.NewBasePathFs(afero.NewOsFs(), basePath)
-	httpFs := afero.NewHttpFs(baseFs)
-	engine := html.NewFileSystem(httpFs, ".html")
-
-	app := fiber.New(fiber.Config{
-		AppName:               "Eternal v0.1.0",
-		BodyLimit:             100 * 1024 * 1024, // 100MB, to allow for larger file uploads
-		DisableStartupMessage: true,
-		ServerHeader:          "Eternal",
-		PassLocalsToViews:     true,
-		Views:                 engine,
-		StrictRouting:         true,
-		StreamRequestBody:     true,
-	})
-
-	// Setup CORS middleware
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "*",
-	}))
-
-	// Serve static files
-	app.Use("/public", filesystem.New(filesystem.Config{
-		Root:   httpFs,
-		Index:  "index.html",
-		Browse: true,
-	}))
-
-	app.Static("/", "public")
-
-	// Setup routes
+	app := createFiberApp(config)
 	setupRoutes(app, config, modelParams)
 
-	// Handle graceful shutdown
-	go func() {
-		<-ctx.Done() // Wait for the context to be cancelled
-
-		if devMode {
-			// delete the search index and database
-			if err := os.RemoveAll(filepath.Join(config.DataPath, "search.bleve")); err != nil {
-				log.Fatalf("Failed to delete search index: %v", err)
-			}
-
-			if err := os.RemoveAll(filepath.Join(config.DataPath, "eternaldata.db")); err != nil {
-				log.Fatalf("Failed to delete database: %v", err)
-			}
-
-			// Loop through the config models and delete the cache
-			for _, model := range modelParams {
-				if model.Downloaded {
-					cachePath := filepath.Join(config.DataPath, "models", model.Name, "cache")
-
-					// First check if the cache file exists
-					if _, err := os.Stat(cachePath); err == nil {
-						pterm.Warning.Printf("Deleting cache: %s\n", cachePath)
-
-						if err := os.RemoveAll(cachePath); err != nil {
-							log.Fatalf("Failed to delete cache: %v", err)
-						}
-					}
-				}
-			}
-		}
-
-		if err := app.Shutdown(); err != nil {
-			log.Fatalf("Server shutdown failed: %v", err)
-		}
-	}()
+	go handleGracefulShutdown(ctx, app, config, modelParams)
 
 	addr := fmt.Sprintf("%s:%s", config.ControlHost, config.ControlPort)
 	if err := app.Listen(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -420,21 +281,103 @@ func runFrontendServer(ctx context.Context, config *AppConfig, modelParams []Mod
 	pterm.Info.Println("Server gracefully shutdown")
 }
 
+func createFiberApp(config *AppConfig) *fiber.App {
+	basePath := filepath.Join(config.DataPath, "web")
+	baseFs := afero.NewBasePathFs(afero.NewOsFs(), basePath)
+	httpFs := afero.NewHttpFs(baseFs)
+	engine := html.NewFileSystem(httpFs, ".html")
+
+	app := fiber.New(fiber.Config{
+		AppName:               "Eternal v0.1.0",
+		BodyLimit:             100 * 1024 * 1024,
+		DisableStartupMessage: true,
+		ServerHeader:          "Eternal",
+		PassLocalsToViews:     true,
+		Views:                 engine,
+		StrictRouting:         true,
+		StreamRequestBody:     true,
+	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "*",
+	}))
+
+	app.Use("/public", filesystem.New(filesystem.Config{
+		Root:   httpFs,
+		Index:  "index.html",
+		Browse: true,
+	}))
+
+	app.Static("/", "public")
+
+	return app
+}
+
+func handleGracefulShutdown(ctx context.Context, app *fiber.App, config *AppConfig, modelParams []ModelParams) {
+	<-ctx.Done()
+
+	if devMode {
+		cleanupDevMode(config, modelParams)
+	}
+
+	if err := app.Shutdown(); err != nil {
+		log.Fatalf("Server shutdown failed: %v", err)
+	}
+}
+
+func cleanupDevMode(config *AppConfig, modelParams []ModelParams) {
+	deleteFile(filepath.Join(config.DataPath, "search.bleve"))
+	deleteFile(filepath.Join(config.DataPath, "eternaldata.db"))
+
+	for _, model := range modelParams {
+		if model.Downloaded {
+			cachePath := filepath.Join(config.DataPath, "models", model.Name, "cache")
+			if fileExists(cachePath) {
+				pterm.Warning.Printf("Deleting cache: %s\n", cachePath)
+				deleteFile(cachePath)
+			}
+		}
+	}
+}
+
 func startComfyUI(ctx context.Context, config *AppConfig) error {
 	comfyPort := config.ServiceHosts["image"]["image_host_1"].Port
+	comfyUIPath := filepath.Join(config.DataPath, "sd/ComfyUI-master")
+
+	if err := installComfyUIRequirements(comfyUIPath); err != nil {
+		return err
+	}
+
+	if err := runComfyUI(ctx, comfyUIPath, comfyPort); err != nil {
+		return err
+	}
+
+	return waitForComfyUI(comfyPort)
+}
+
+func installComfyUIRequirements(comfyUIPath string) error {
+	requirementsPath := filepath.Join(comfyUIPath, "requirements.txt")
+	output, err := python.ExecuteScript("-m", "pip", "install", "-r", requirementsPath)
+	if err != nil {
+		return fmt.Errorf("failed to install ComfyUI requirements: %v\nOutput: %s", err, output)
+	}
+	pterm.Info.Println("ComfyUI requirements installed")
+	return nil
+}
+
+func runComfyUI(ctx context.Context, comfyUIPath, comfyPort string) error {
 	cmdArgs := []string{
-		"main.py",
+		filepath.Join(comfyUIPath, "main.py"),
 		"--listen",
 		"--port", comfyPort,
 		"--force-fp16",
 		"--use-split-cross-attention",
 	}
 
-	comfyUIPath := filepath.Join(config.DataPath, "sd/ComfyUI-master")
 	comfyUICmd = exec.CommandContext(ctx, "python", cmdArgs...)
 	comfyUICmd.Dir = comfyUIPath
 
-	// Set up pipes for stdout and stderr
 	stdout, err := comfyUICmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %v", err)
@@ -444,39 +387,32 @@ func startComfyUI(ctx context.Context, config *AppConfig) error {
 		return fmt.Errorf("failed to create stderr pipe: %v", err)
 	}
 
-	// Start ComfyUI
 	if err := comfyUICmd.Start(); err != nil {
 		return fmt.Errorf("failed to start ComfyUI: %v", err)
 	}
 
-	// Monitor ComfyUI output
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			log.Info("ComfyUI: ", scanner.Text())
-		}
-	}()
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			pterm.Info.Println("ComfyUI: ", scanner.Text())
-		}
-	}()
-
-	// Wait for ComfyUI to be ready
-	if err := waitForComfyUI(comfyPort); err != nil {
-		return fmt.Errorf("ComfyUI failed to start: %v", err)
-	}
+	go monitorComfyUIOutput(stdout, stderr)
 
 	return nil
+}
+
+func monitorComfyUIOutput(stdout, stderr io.Reader) {
+	go scanAndLog(stdout, "ComfyUI: ", log.Info)
+	go scanAndLog(stderr, "ComfyUI: ", log.Error)
+}
+
+func scanAndLog(r io.Reader, prefix string, logFunc func(...interface{})) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		logFunc(prefix, scanner.Text())
+	}
 }
 
 func waitForComfyUI(comfyPort string) error {
 	comfyUrl := fmt.Sprintf("http://localhost:%s", comfyPort)
 	client := &http.Client{Timeout: 1 * time.Second}
 	for i := 0; i < 120; i++ {
-		resp, err := client.Get(comfyUrl)
-		if err == nil {
+		if resp, err := client.Get(comfyUrl); err == nil {
 			resp.Body.Close()
 			return nil
 		}
@@ -490,12 +426,10 @@ func stopComfyUI(ctx context.Context) error {
 		return nil
 	}
 
-	// Send SIGTERM
 	if err := comfyUICmd.Process.Signal(syscall.SIGTERM); err != nil {
 		return fmt.Errorf("failed to send SIGTERM to ComfyUI: %v", err)
 	}
 
-	// Wait for the process to exit with a timeout
 	done := make(chan error, 1)
 	go func() {
 		done <- comfyUICmd.Wait()
@@ -503,15 +437,30 @@ func stopComfyUI(ctx context.Context) error {
 
 	select {
 	case <-time.After(10 * time.Second):
-		// Force kill if it doesn't exit within the timeout
 		if err := comfyUICmd.Process.Kill(); err != nil {
 			return fmt.Errorf("failed to kill ComfyUI process: %v", err)
 		}
 		return errors.New("ComfyUI did not exit gracefully, forcefully terminated")
 	case err := <-done:
 		if err != nil {
-			return fmt.Errorf("ComfyUI exited with error: %v", err)
+			return fmt.Errorf("failed to wait for ComfyUI process: %v", err)
 		}
 		return nil
 	}
+}
+
+func logFatalError(msg string, err error) {
+	pterm.Error.Println(msg, err)
+	os.Exit(1)
+}
+
+func deleteFile(path string) {
+	if err := os.RemoveAll(path); err != nil {
+		pterm.Error.Printf("Error deleting file: %s\n", path)
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
