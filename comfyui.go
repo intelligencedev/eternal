@@ -56,7 +56,7 @@ func runComfyUI(ctx context.Context, comfyUIPath, comfyPort string) error {
 		"--port", comfyPort,
 		"--disable-auto-launch",
 		"--preview-method", "none",
-		"--highvram",
+		//"--highvram",
 		"--dont-print-server",
 		//"--force-fp16",
 		//"--use-split-cross-attention",
