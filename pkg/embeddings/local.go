@@ -14,7 +14,16 @@ import (
 	"github.com/pterm/pterm"
 )
 
-const limit = 128
+const (
+	MAX_EMBEDDING_DIM = 1024
+	MAX_TOKENS        = 512
+)
+
+type Embedding struct {
+	Word       string
+	Vector     [MAX_EMBEDDING_DIM]float64
+	Similarity float64
+}
 
 var INSTRUCTIONS = map[string]struct {
 	Query string
@@ -32,13 +41,6 @@ var INSTRUCTIONS = map[string]struct {
 		Query: "Transform this user request for fetching helpful tool descriptions: ",
 		Key:   "Transform this tool description for retrieval: ",
 	},
-}
-
-// Embedding represents a word embedding.
-type Embedding struct {
-	Word       string
-	Vector     []float64
-	Similarity float64
 }
 
 func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string, modelName string) error {
@@ -106,7 +108,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	pterm.Info.Println("Generating embeddings...")
 	pterm.Info.Println("Saving embeddings to ...", dataPath)
 	for _, chunk := range uniqueChunks {
-		var vec []float64
+		var vec [MAX_EMBEDDING_DIM]float64
 
 		encoder := func(text string) error {
 			result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
@@ -114,12 +116,12 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 				return err
 			}
 
-			vec = result.Vector.Data().F64()[:limit]
-			fmt.Println(result.Vector.Data().F64()[:limit])
+			// Copy the result into the fixed-size array
+			copy(vec[:], result.Vector.Data().F64())
 			return nil
 		}
 
-		err = encoder(chunk) // Actually invoke the encoder function with the chunk
+		err = encoder(chunk)
 		if err != nil {
 			pterm.Error.Println("Error encoding text...")
 			return err
@@ -127,7 +129,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 
 		embedding := estore.Embedding{
 			Word:       chunk,
-			Vector:     vec,
+			Vector:     vec[:],
 			Similarity: 0.0,
 		}
 
@@ -196,6 +198,20 @@ func Search(modelName string, dataPath string, dbName string, prompt string, top
 
 func GenerateEmbeddingsForChat(text string, modelPath string, modelName string) ([]float64, error) {
 	// Initialize the model
+	// type Config struct {
+	// 	// ModelsDir is the directory where the models are stored.
+	// 	ModelsDir string
+	// 	// ModelName is the name of the model (format: <org>/<model>).
+	// 	ModelName string
+	// 	// HubAccessToken is the access token for the Hugging Face Hub.
+	// 	HubAccessToken string
+	// 	// DownloadPolicy is the policy for downloading the model (default missing)
+	// 	DownloadPolicy DownloadPolicy
+	// 	// ConversionPolicy is the policy for converting the model (default missing)
+	// 	ConversionPolicy ConversionPolicy
+	// 	// ConversionPrecision is the floating-point precision of the converted model (default 32)
+	// 	ConversionPrecision FloatPrecision
+	// }
 	tasksConfig := &tasks.Config{
 		ModelsDir:        modelPath,
 		ModelName:        modelName,
@@ -211,11 +227,12 @@ func GenerateEmbeddingsForChat(text string, modelPath string, modelName string) 
 	// Generate embedding
 	result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
 	if err != nil {
-		return nil, fmt.Errorf("error encoding text: %v", err)
+		return make([]float64, MAX_EMBEDDING_DIM), fmt.Errorf("error encoding text: %v", err)
 	}
 
 	// Extract the vector data
-	vec := result.Vector.Data().F64()
+	var vec [MAX_EMBEDDING_DIM]float64
+	copy(vec[:], result.Vector.Data().F64())
 
-	return vec, nil
+	return vec[:], nil
 }

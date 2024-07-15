@@ -57,9 +57,9 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		docType := "memory"
 
 		// Store the chatMessage
-		err := storeChat(chatMessage, docType)
+		err := handleTextSplitAndIndex(docType, chatMessage, 500, config.EmbeddingModel)
 		if err != nil {
-			log.Errorf(err.Error())
+			log.Errorf("Error handling text split and index: %v", err)
 		}
 
 		pterm.Info.Println("Fetching memory...")
