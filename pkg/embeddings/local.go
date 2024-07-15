@@ -24,25 +24,13 @@ var INSTRUCTIONS = map[string]struct {
 		Query: "Represent this query for retrieving relevant documents: ",
 		Key:   "Represent this document for retrieval: ",
 	},
-	"icl": {
-		Query: "Convert this example into vector to look for useful examples: ",
-		Key:   "Convert this example into vector for retrieval: ",
-	},
 	"chat": {
 		Query: "Embed this dialogue to find useful historical dialogues: ",
 		Key:   "Embed this historical dialogue for retrieval: ",
 	},
-	"lrlm": {
-		Query: "Embed this text chunk for finding useful historical chunks: ",
-		Key:   "Embed this historical text chunk for retrieval: ",
-	},
 	"tool": {
 		Query: "Transform this user request for fetching helpful tool descriptions: ",
 		Key:   "Transform this tool description for retrieval: ",
-	},
-	"convsearch": {
-		Query: "Encode this query and context for searching relevant passages: ",
-		Key:   "Encode this passage for retrieval: ",
 	},
 }
 
