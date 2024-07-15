@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"eternal/pkg/documents"
 	"eternal/pkg/embeddings"
@@ -26,9 +25,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/websocket/v2"
-	"github.com/nlpodyssey/cybertron/pkg/models/bert"
-	"github.com/nlpodyssey/cybertron/pkg/tasks"
-	"github.com/nlpodyssey/cybertron/pkg/tasks/textencoding"
 	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
 )
@@ -45,7 +41,6 @@ func handleChatSubmit(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userPrompt := c.FormValue("userprompt")
 		var wsroute string
-
 		var model ModelParams
 
 		if config.Tools.Team.Enabled {
@@ -357,6 +352,10 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		// Get the model params from the database
 		model := ModelParams{}
 		err = sqliteDB.First(wsMessage.Model, &model)
+		if err != nil {
+			log.Errorf("Error getting model %s: %v", wsMessage.Model, err)
+			return
+		}
 
 		assistant := Assistant{
 			Name: wsMessage.Model,
@@ -364,8 +363,11 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 		}
 		err = handleAssistantTurn(c, config, wsMessage, chatMessage, &responseBuffer, assistant)
 		if err != nil {
-			log.Errorf("Error processing model: %v", err)
-			// return
+			if err.Error() == "EOF" {
+				log.Info("Response finished: %v", err)
+			} else {
+				log.Errorf("Error processing model: %v", err)
+			}
 		}
 	}
 
@@ -454,10 +456,6 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 
 // handleError handles errors that occur during message processing.
 func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err error) {
-	//chatTurn++
-
-	log.Errorf("Chat turn finished: %v", err)
-
 	// Store the chat turn in the sqlite db.
 	if _, err := CreateChat(sqliteDB.db, message.ChatMessage, err.Error(), message.Model); err != nil {
 		pterm.Error.Println("Error storing chat in database:", err)
@@ -508,12 +506,14 @@ func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err err
 		// if err != nil {
 		// 	log.Errorf("Error storing chat message in Bleve: %v", err)
 		// }
+
+		log.Errorf("Chat turn finished: %v", err)
 	}
 }
 
 // handleChatMemory retrieves and returns chat memory.
-func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
-	var document string
+func handleChatMemory(config *AppConfig, chatMessage string, docType string) (string, error) {
+	// var document string
 
 	topN := config.Tools.Memory.TopN
 
@@ -533,8 +533,8 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	chatMessage = reg.ReplaceAllString(chatMessage, " ")
 
 	// Print the chat message
-	pterm.Info.Println("Chat message:")
-	pterm.Info.Println(chatMessage)
+	// pterm.Info.Println("Chat message:")
+	// pterm.Info.Println(chatMessage)
 
 	// Create a search query
 	query := bleve.NewQueryStringQuery(chatMessage)
@@ -546,8 +546,16 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 	searchResults, err := searchIndex.Search(searchRequest)
 	if err != nil {
 		log.Errorf("Error searching index: %v", err)
-		// return "", err
 	}
+
+	modelPath := fmt.Sprintf("%s/models", config.DataPath)
+	promptVec, err := embeddings.GenerateEmbeddingsForChat(chatMessage, modelPath, config.EmbeddingModel)
+	if err != nil {
+		log.Errorf("Error generating embedding for chat: %v", err)
+	}
+
+	// Will contain the chunks with the highest similarity
+	var resDocument string
 
 	// Print the search results
 	for _, hit := range searchResults.Hits {
@@ -558,48 +566,85 @@ func handleChatMemory(config *AppConfig, chatMessage string) (string, error) {
 		}
 
 		doc.VisitFields(func(field index.Field) {
-			//fmt.Printf("%s: %s\n", field.Name(), field.Value())
+			// fmt.Printf("%s: %s\n", field.Name(), field.Value())
 
 			// Append the response field to the document and store it for later use
+			if field.Name() == "prompt" {
+				chunk := fmt.Sprintf("%s", field.Value())
+
+				// Print the chunk
+				pterm.Info.Println("Chunk:")
+
+				// Generate embeddings and calculate similarity
+				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
+				if err != nil {
+					log.Errorf("Error generating embedding for chat: %v", err)
+				}
+
+				// Compute similarity
+				similarity := vecstore.CosineSimilarity(promptVec, vec)
+
+				// Print the similarity score
+				pterm.Info.Println("Similarity:", similarity)
+
+				// If the similarity is above a certain threshold, add to our document
+				if similarity > 0.6 {
+					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
+				}
+			}
 			if field.Name() == "response" {
-				document = fmt.Sprintf("%s\n%s", document, field.Value())
+				chunk := fmt.Sprintf("%s", field.Value())
+
+				// Print the chunk
+				pterm.Info.Println("Chunk:")
+
+				// Generate embeddings and calculate similarity
+				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
+				if err != nil {
+					log.Errorf("Error generating embedding for chat: %v", err)
+				}
+
+				// Compute similarity
+				similarity := vecstore.CosineSimilarity(promptVec, vec)
+
+				// Print the similarity score
+				pterm.Info.Println("Similarity:", similarity)
+
+				// If the similarity is above a certain threshold, add to our document
+				if similarity > 0.5 {
+					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
+				}
 			}
 		})
 	}
 
-	modelPath := filepath.Join(config.DataPath, "models/HF/avsolatorio/GIST-small-Embedding-v0/avsolatorio/GIST-small-Embedding-v0")
-	embeddings.GenerateEmbeddingForTask("chat", document, "txt", 4096, 1024, modelPath)
-
-	searchRes := searchSimilarEmbeddings(config, "GIST-small-Embedding-v0", modelPath, chatMessage, topN)
-
-	// Retrieve the most similar chunks of text from the chat embeddings
-	for _, res := range searchRes {
-
-		similarity := res.Similarity
-		if similarity > 0.8 {
-			//pterm.Info.Println("Most similar chunk of text:")
-			//pterm.Info.Println(res.Word)
-			document = fmt.Sprintf("%s\n%s", document, res.Word)
-		}
-	}
-
-	return document, nil
+	return resDocument, nil
 }
 
-// storeChat stores a chat in the database and generates embeddings for it.
-// func storeChat(config *AppConfig, prompt string, response string) error {
-// 	// Generate embeddings for the chat.
-// 	pterm.Warning.Println("Generating embeddings for chat...")
+// storePromptInBleve stores the user's prompt in the Bleve index.
+func storeChat(text string, doctype string) error {
+	// Generate a unique ID for the document
+	docID := fmt.Sprintf("prompt_%d", time.Now().UnixNano())
 
-// 	chatText := fmt.Sprintf("QUESTION: %s\n RESPONSE: %s", prompt, response)
-// 	err := embeddings.GenerateEmbeddingForTask("chat", chatText, "txt", 500, 100, config.DataPath)
-// 	if err != nil {
-// 		pterm.Error.Println("Error generating embeddings:", err)
-// 		return err
-// 	}
+	// Create a document to store in the index
+	doc := struct {
+		ID      string `json:"id"`
+		Content string `json:"content"`
+		Type    string `json:"type"`
+	}{
+		ID:      docID,
+		Content: text,
+		Type:    doctype,
+	}
 
-// 	return nil
-// }
+	// Index the document
+	err := searchIndex.Index(docID, doc)
+	if err != nil {
+		return fmt.Errorf("error storing prompt in Bleve: %v", err)
+	}
+
+	return nil
+}
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
 func handleTextSplitAndIndex(inputTags string, inputText string, chunkSize int, modelName string) error {
@@ -638,45 +683,62 @@ func handleTextSplitAndIndex(inputTags string, inputText string, chunkSize int, 
 	return nil
 }
 
+// We need to recode the function so it does not store embeddings at all
+// We can compute the cosine similarity for each chunk Bleve returns to the Prompt
+// Then we can return the top N chunks with the highest similarity
+
 // searchSimilarEmbeddings searches for similar embeddings in the database.
-func searchSimilarEmbeddings(config *AppConfig, modelName string, modelPath string, prompt string, topN int) []vecstore.Embedding {
-	db := vecstore.NewEmbeddingDB()
-	dbPath := fmt.Sprintf("%s/embeddings.db", config.DataPath)
-	embeddings, err := db.LoadEmbeddings(dbPath)
-	if err != nil {
-		fmt.Println("Error loading embeddings:", err)
-		return nil
-	}
+// func searchSimilarEmbeddings(config *AppConfig, prompt string, topN int) []vecstore.Embedding {
+// 	// db := vecstore.NewEmbeddingDB()
+// 	// dbPath := fmt.Sprintf("%s/embeddings.json", config.DataPath)
+// 	// embeddings, err := db.LoadEmbeddings(dbPath)
+// 	// if err != nil {
+// 	// 	fmt.Println("Error loading embeddings:", err)
+// 	// 	return nil
+// 	// }
 
-	model, err := tasks.Load[textencoding.Interface](&tasks.Config{ModelsDir: modelPath, ModelName: modelName})
-	if err != nil {
-		fmt.Println("Error loading model:", err)
-		return nil
-	}
+// 	modelsDir := fmt.Sprintf("%s/models", config.DataPath)
 
-	var vec []float64
-	result, err := model.Encode(context.Background(), prompt, int(bert.MeanPooling))
-	if err != nil {
-		fmt.Println("Error encoding text:", err)
-		return nil
-	}
-	vec = result.Vector.Data().F64()[:128]
+// 	tasksConfig := &tasks.Config{
+// 		ModelsDir:        modelsDir,
+// 		ModelName:        config.EmbeddingModel,
+// 		DownloadPolicy:   tasks.DownloadMissing,
+// 		ConversionPolicy: tasks.ConvertMissing,
+// 	}
 
-	embeddingForPrompt := vecstore.Embedding{
-		Word:       prompt,
-		Vector:     vec,
-		Similarity: 0.0,
-	}
+// 	model, err := tasks.Load[textencoding.Interface](tasksConfig)
+// 	if err != nil {
 
-	// Retrieve the top N similar embeddings
-	topEmbeddings := vecstore.FindTopNSimilarEmbeddings(embeddingForPrompt, embeddings, topN)
-	if len(topEmbeddings) == 0 {
-		fmt.Println("Error finding similar embeddings.")
-		return nil
-	}
+// 		pterm.Error.Println("Error loading model while searching most similar chunks: ", err)
+// 		return nil
+// 	}
 
-	return topEmbeddings
-}
+// 	var vec []float64
+// 	result, err := model.Encode(context.Background(), prompt, int(bert.MeanPooling))
+// 	if err != nil {
+// 		fmt.Println("Error encoding text:", err)
+// 		return nil
+// 	}
+// 	vec = result.Vector.Data().F64()[:128]
+
+// 	// Compute similarity
+// 	similarity := vecstore.CosineSimilarity(vec, vec)
+
+// 	embeddingForPrompt := vecstore.Embedding{
+// 		Word:       prompt,
+// 		Vector:     vec,
+// 		Similarity: 0.0,
+// 	}
+
+// 	// Retrieve the top N similar embeddings
+// 	topEmbeddings := vecstore.FindTopNSimilarEmbeddings(embeddingForPrompt, embeddings, topN)
+// 	if len(topEmbeddings) == 0 {
+// 		fmt.Println("Error finding similar embeddings.")
+// 		return nil
+// 	}
+
+// 	return topEmbeddings
+// }
 
 // ToolState represents the state of a tool.
 type ToolState struct {

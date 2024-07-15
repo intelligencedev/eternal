@@ -54,7 +54,20 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 	}
 
 	if config.Tools.Memory.Enabled {
-		document, _ = handleChatMemory(config, chatMessage)
+		docType := "memory"
+
+		// Store the chatMessage
+		err := storeChat(chatMessage, docType)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+
+		pterm.Info.Println("Fetching memory...")
+		document, _ = handleChatMemory(config, chatMessage, docType)
+
+		// Print the document to the console
+		pterm.Info.Println("Memory Documents:")
+		pterm.Info.Println(document)
 	}
 
 	if config.Tools.WebGet.Enabled {
@@ -198,7 +211,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			// Remove any '403 Forbidden' text from the documentTags
 			documentTags = strings.ReplaceAll(documentTags, "403 Forbidden", "")
 
-			err := handleTextSplitAndIndex(documentTags, page, 1024, "avsolatorio/GIST-small-Embedding-v0")
+			err := handleTextSplitAndIndex(documentTags, page, 1024, config.EmbeddingModel)
 			if err != nil {
 				log.Errorf("Error handling text split and index: %v", err)
 			}
@@ -206,7 +219,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}
 
 		pterm.Error.Printf("Fetching web search chunks from memory...")
-		document, _ = handleChatMemory(config, chatMessage)
+		document, _ = handleChatMemory(config, chatMessage, "web")
 		//pterm.Error.Printf("Web Search Document: %s\n", document)
 		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
 

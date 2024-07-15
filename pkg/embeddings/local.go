@@ -14,9 +14,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// var modelName = "BAAI/bge-large-en-v1.5"
-var modelName = "avsolatorio/GIST-small-Embedding-v0"
-
 const limit = 128
 
 var INSTRUCTIONS = map[string]struct {
@@ -56,7 +53,7 @@ type Embedding struct {
 	Similarity float64
 }
 
-func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string) error {
+func GenerateEmbeddingForTask(task string, content string, doctype string, chunkSize int, overlapSize int, dataPath string, modelName string) error {
 
 	_, ok := INSTRUCTIONS[task]
 	if !ok {
@@ -102,7 +99,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 		}
 	}
 
-	modelsDir := fmt.Sprintf("%s/data/models/HF/%s/", dataPath, modelName)
+	modelsDir := fmt.Sprintf("%s/models", dataPath)
 
 	tasksConfig := &tasks.Config{
 		ModelsDir:        modelsDir,
@@ -119,6 +116,7 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 
 	// 3. Embedding Generation
 	pterm.Info.Println("Generating embeddings...")
+	pterm.Info.Println("Saving embeddings to ...", dataPath)
 	for _, chunk := range uniqueChunks {
 		var vec []float64
 
@@ -151,14 +149,16 @@ func GenerateEmbeddingForTask(task string, content string, doctype string, chunk
 	// Save the database to a file
 	pterm.Info.Println("Saving embeddings...")
 
-	dbPath := fmt.Sprintf("%s/embeddings.db", dataPath)
+	dbPath := fmt.Sprintf("%s/embeddings.json", dataPath)
+
+	// Save the database to a file
 
 	db.SaveEmbeddings(dbPath)
 
 	return nil
 }
 
-func Search(dataPath string, dbName string, prompt string, topN int) []estore.Embedding {
+func Search(modelName string, dataPath string, dbName string, prompt string, topN int) []estore.Embedding {
 	db := estore.NewEmbeddingDB()
 	dbPath := fmt.Sprintf("%s/%s", dataPath, dbName)
 	embeddings, err := db.LoadEmbeddings(dbPath)
@@ -204,4 +204,30 @@ func Search(dataPath string, dbName string, prompt string, topN int) []estore.Em
 	}
 
 	return topEmbeddings
+}
+
+func GenerateEmbeddingsForChat(text string, modelPath string, modelName string) ([]float64, error) {
+	// Initialize the model
+	tasksConfig := &tasks.Config{
+		ModelsDir:        modelPath,
+		ModelName:        modelName,
+		DownloadPolicy:   tasks.DownloadMissing,
+		ConversionPolicy: tasks.ConvertMissing,
+	}
+
+	model, err := tasks.Load[textencoding.Interface](tasksConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error loading model: %v", err)
+	}
+
+	// Generate embedding
+	result, err := model.Encode(context.Background(), text, int(bert.MeanPooling))
+	if err != nil {
+		return nil, fmt.Errorf("error encoding text: %v", err)
+	}
+
+	// Extract the vector data
+	vec := result.Vector.Data().F64()
+
+	return vec, nil
 }

@@ -25,9 +25,9 @@ config.yml
 # Misc
 reference
 cache
-embeddings.db
+embeddings.json
 examples/embeddings/cloudbox_api_schema.json
-examples/embeddings/embeddings.db
+examples/embeddings/embeddings.json
 examples/embeddings/*
 venv
 scripts/repoconcat/output.txt

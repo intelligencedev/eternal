@@ -19,8 +19,9 @@ import (
 // Chunk size should be less than the max tokens for the model used: https://huggingface.co/spaces/mteb/leaderboard
 
 var (
+	defaultModel  = "BAAI/bge-large-en-v1.5"
 	modelPathFlag = flag.String("model-path", ".eternal/models/HF/", "The path to the model directory")
-	modelNameFlag = flag.String("model-name", "avsolatorio/GIST-small-Embedding-v0", "The name of the model")
+	modelNameFlag = flag.String("model-name", defaultModel, "The name of the model")
 	limitFlag     = flag.Int("limit", 128, "The limit for the number of dimensions in the embedding vector")
 
 	generateCommand = flag.NewFlagSet("generate", flag.ExitOnError)
@@ -84,7 +85,7 @@ func main() {
 				document += string(buf[:n])
 			}
 
-			embeddings.GenerateEmbeddingForTask("qa", document, "txt", *chunkSize, *overlapSize, ".")
+			embeddings.GenerateEmbeddingForTask("qa", document, "txt", *chunkSize, *overlapSize, ".", *modelNameFlag)
 		}
 	case "retrieve":
 		retrieveCommand.Parse(flag.Args()[1:])
@@ -106,7 +107,7 @@ func main() {
 
 func Search(modelPath string, prompt string, topN int) []store.Embedding {
 	db := store.NewEmbeddingDB()
-	embeddings, err := db.LoadEmbeddings("./embeddings.db")
+	embeddings, err := db.LoadEmbeddings("./embeddings.json")
 	if err != nil {
 		fmt.Println("Error loading embeddings:", err)
 		return nil

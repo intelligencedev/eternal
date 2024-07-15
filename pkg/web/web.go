@@ -76,7 +76,9 @@ func checkRobotsTxt(ctx context.Context, u string) bool {
 	// Check if the status code is 200
 	if resp.StatusCode != 200 {
 		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
-		return false
+
+		// We assume its allowed if not found
+		return true
 	}
 
 	// Parse the robots.txt content if needed

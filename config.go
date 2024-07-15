@@ -41,6 +41,7 @@ type AppConfig struct {
 	GoogleKey       string                            `yaml:"google_key"`
 	LanguageModels  []llm.Model                       `yaml:"language_models"`
 	ImageModels     []sd.ImageModel                   `yaml:"image_models"`
+	EmbeddingModel  string                            `yaml:"embedding_model"`
 	CurrentRoleName string                            `yaml:"current_role_name"`
 	//CurrentImgRoleName      string                            `yaml:"current_img_role_name"`
 	CurrentRoleInstructions string `yaml:"current_role"`
