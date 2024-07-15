@@ -28,6 +28,22 @@
             <!-- SDXL Basic and SDXL Advanced -->
             <option value="sdxl-basic">sdxl-basic</option>
             <option value="sdxl-advanced">sdxl-advanced</option>
+            <option value="sdxl-advanced">sdxl-advanced-4x</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="resolution-select" class="form-label">Select Resolution:</label>
+          <select id="resolution-select" class="form-select" aria-label="Select Resolution"
+            onchange="updateImgResolution(this.value)">
+            <option selected disabled>Choose a resolution</option>
+            <option value="1024x1024">1:1 (square) - 1024x1024</option>
+            <option value="768x768">1:1 (square) - 768x768</option>
+            <option value="1152x768">3:2 (landscape) - 1152x768</option>
+            <option value="768x1152">2:3 (portrait) - 768x1152</option>
+            <option value="1152x864">4:3 (landscape) - 1152x864</option>
+            <option value="864x1152">3:4 (portrait) - 864x1152</option>
+            <option value="1360x768">16:9 (widescreen) - 1360x768</option>
+            <option value="768x1360">9:16 (tall) - 768x1360</option>
           </select>
         </div>
 
@@ -85,24 +101,6 @@
 </div>
 
 <script>
-  function updateImgWorkflow(optionValue) {
-    fetch(`/tools/img/workflow/set/${optionValue}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log(data.message);
-      })
-      .catch(error => {
-        console.error('Error:', error);
-      });
-    console.log("Selected workflow:", optionValue);
-  }
-
-  // The JavaScript remains the same as in your original code
   function postToolValue(toolName, enabled, topN) {
     fetch(`/tool/${toolName}/${enabled}/${topN}`, {
       method: 'POST',
@@ -163,5 +161,42 @@
   function updateImgTool() {
     const enabled = document.getElementById('img-switch').checked;
     postToolValue('imggen', enabled, 1);
+  }
+
+  function updateImgWorkflow(optionValue) {
+    fetch(`/tools/img/workflow/set`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ workflow: optionValue })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    console.log("Selected workflow:", optionValue);
+  }
+
+  function updateImgResolution(resolution) {
+    const [width, height] = resolution.split('x').map(Number);
+    fetch('/tools/img/resolution/set', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ width, height })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    console.log("Selected resolution:", resolution);
   }
 </script>

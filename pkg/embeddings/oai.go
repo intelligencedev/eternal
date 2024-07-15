@@ -173,7 +173,7 @@ func GenerateEmbeddingOAI() {
 
 	// Save the database to a file
 	pterm.Info.Println("Saving embeddings...")
-	db.SaveEmbeddings("./db/embeddings.db")
+	db.SaveEmbeddings("./db/embeddings.json")
 
 	if len(chunks) > 0 {
 		embedding, ok := db.RetrieveEmbedding(chunks[0])

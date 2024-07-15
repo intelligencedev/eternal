@@ -11,15 +11,16 @@ Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./public/img/chat_s.jpg">
-    <img alt="logo" src="./public/img/chat_s.jpg" style="width:50%; height:50%"
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/chat_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/chat_s.jpg">
   </picture>
 </div>
-
+<br>
+<br>
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./public/img/teams_s.jpg">
-    <img alt="logo" src="./public/img/teams_s.jpg" style="width:50%; height:50%"
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/teams_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/teams_s.jpg">
   </picture>
 </div>
 
@@ -59,8 +60,8 @@ _Requires Chrome browser installation._
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/web_s.jpg">
-    <img alt="logo" height="400px" src="./public/img/web_s.jpg" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/web_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/web_s.jpg">
   </picture>
 </div>
 
@@ -70,8 +71,8 @@ Execute and edit LLM generated code in the chat view in a secure sandbox. For no
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/code_s.jpg">
-    <img alt="logo" height="400px" src="./public/img/code_s.jpg" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/code_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/code_s.jpg">
   </picture>
 </div>
 
@@ -81,13 +82,13 @@ Eternal can generate images using powerful custom ComfyUI workflows that are aut
 <div align="center">
   <h5>Basic image prompt</h5>
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen1_s.jpg">
-    <img alt="logo" height="400px" src="./public/img/imggen1_s.jpg" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/imggen1_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/imggen1_s.jpg">
   </picture>
   <h5>Large language model enhanced prompt</h5>
   <picture>
-    <source media="(prefers-color-scheme: dark)" height="400px" srcset="./public/img/imggen2_s.jpg">
-    <img alt="logo" height="400px" src="./public/img/imggen2_s.jpg" style="width:50%; height:50%">
+    <source media="(prefers-color-scheme: dark)" style="width: 100%; height: auto;" srcset="./public/img/imggen2_s.jpg">
+    <img alt="logo" style="width: 100%; height: auto;" src="./public/img/imggen2_s.jpg">
   </picture>
 </div>
 
@@ -100,36 +101,3 @@ Rename the provided `.config.yml` file to `config.yml` and place it in the same 
 Eternal currently supports building on Linux or Windows WSL using CUDA (nVidia GPU required) or MacOS/Metal (M-series Mac required).
 
 To build the application:
-
-```
-$ git clone https://github.com/intelligencedev/eternal.git
-$ cd eternal
-$ git submodule update --init --recursive
-$ make all
-```
-
-Please submit an issue if you encounter any issues with the build process.
-
-## Troubleshooting
-
-It is recommended that a new Python 3.10 conda environment and virtual environment be created prior to initial application launch. This will avoid error messages related to required package installations such as `error: externally-managed-environment`.
-
-If Eternal fails to launch, run the following commands to configure a new Conda environment and Python venv:
-```
-$ conda create -n eternal python=3.10
-$ conda activate eternal
-$ python python-m venv .
-$ source bin/activate
-
-# Apply execute permissions
-$ sudo chmod +x ./eternal
-
-# Run the Eternal binary
-$ ./eternal
-```
-
-NOTE: Remember to rename the included `.config.yml` to `config.yml`, modify the settings for your environment, and save the file in the same path as the Eternal binary.
-
-## Disclaimer
-
-This README is a high-level overview of the Eternal application. Detailed setup instructions and a complete list of features, dependencies, and configurations should be consulted in the actual application documentation.

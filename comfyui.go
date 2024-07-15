@@ -54,8 +54,12 @@ func runComfyUI(ctx context.Context, comfyUIPath, comfyPort string) error {
 		filepath.Join(comfyUIPath, "main.py"),
 		"--listen",
 		"--port", comfyPort,
-		"--force-fp16",
-		"--use-split-cross-attention",
+		"--disable-auto-launch",
+		"--preview-method", "none",
+		//"--highvram",
+		"--dont-print-server",
+		//"--force-fp16",
+		//"--use-split-cross-attention",
 	}
 
 	comfyUICmd = exec.CommandContext(ctx, "python", cmdArgs...)

@@ -1,14 +1,14 @@
 {
     "3": {
       "inputs": {
-        "seed": 331501540784923,
+        "seed": 627364002283462,
         "steps": 4,
         "cfg": 2,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
         "denoise": 1,
         "model": [
-          "56",
+          "26",
           0
         ],
         "positive": [
@@ -51,7 +51,7 @@
     },
     "6": {
       "inputs": {
-        "text": "19th century hospital, ((crazy 70 yo doctor \"X\")) repairs a ((steampunk android with human head)), that is lying on the metal operating table, natural light, RAW photo, detailed photo, hyper-realism, professional photography, bokeh, steampunknoireai, 19th century hospital, ((crazy 70 yo doctor \"X\")) repairs a ((steampunk android with human head)), that is lying on the metal operating table, natural light, RAW photo, detailed photo, hyper-realism, professional photography, bokeh, steampunknoireai, directed, full color, intricate, extremely beautiful, glowing, striking, rich deep",
+        "text": "by Tony DiTerlizzi, by Alesya Osadchaya, (by Mark Lovett:1.30), character",
         "clip": [
           "4",
           1
@@ -75,14 +75,60 @@
         "title": "CLIP Text Encode (Prompt)"
       }
     },
+    "8": {
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "13": {
+      "inputs": {
+        "pixels": [
+          "14",
+          0
+        ],
+        "vae": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "VAE Encode"
+      }
+    },
+    "14": {
+      "inputs": {
+        "upscale_method": "nearest-exact",
+        "scale_by": 0.5,
+        "image": [
+          "36",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
     "15": {
       "inputs": {
-        "seed": 581562604062504,
-        "steps": 8,
+        "seed": 627364002283462,
+        "steps": 4,
         "cfg": 2,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.5,
+        "denoise": 0.3,
         "model": [
           "27",
           0
@@ -96,7 +142,7 @@
           0
         ],
         "latent_image": [
-          "53",
+          "13",
           0
         ]
       },
@@ -126,7 +172,7 @@
         "block_number": 2,
         "downscale_factor": 1.6,
         "start_percent": 0,
-        "end_percent": 0.35000000000000003,
+        "end_percent": 0.35,
         "downscale_after_skip": true,
         "downscale_method": "nearest-exact",
         "upscale_method": "nearest-exact",
@@ -142,7 +188,7 @@
     },
     "27": {
       "inputs": {
-        "scale": 1,
+        "scale": 1.2,
         "model": [
           "4",
           0
@@ -162,17 +208,33 @@
         "title": "Load Upscale Model"
       }
     },
+    "36": {
+      "inputs": {
+        "upscale_model": [
+          "34",
+          0
+        ],
+        "image": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "ImageUpscaleWithModel",
+      "_meta": {
+        "title": "Upscale Image (using Model)"
+      }
+    },
     "42": {
       "inputs": {
         "guide_size": 896,
         "guide_size_for": true,
         "max_size": 896,
-        "seed": 272467643319395,
-        "steps": 8,
+        "seed": 627364002283462,
+        "steps": 4,
         "cfg": 2,
         "sampler_name": "dpmpp_sde",
         "scheduler": "karras",
-        "denoise": 0.3,
+        "denoise": 0.5,
         "feather": 5,
         "noise_mask": true,
         "force_inpaint": true,
@@ -183,7 +245,7 @@
         "sam_dilation": 0,
         "sam_threshold": 0.93,
         "sam_bbox_expansion": 0,
-        "sam_mask_hint_threshold": 0.7000000000000001,
+        "sam_mask_hint_threshold": 0.7,
         "sam_mask_hint_use_negative": "False",
         "drop_size": 10,
         "wildcard": "",
@@ -244,90 +306,6 @@
       "class_type": "SaveImage",
       "_meta": {
         "title": "Save Image"
-      }
-    },
-    "50": {
-      "inputs": {
-        "samples": [
-          "3",
-          0
-        ],
-        "vae": [
-          "4",
-          2
-        ]
-      },
-      "class_type": "VAEDecode",
-      "_meta": {
-        "title": "VAE Decode"
-      }
-    },
-    "51": {
-      "inputs": {
-        "upscale_model": [
-          "52",
-          0
-        ],
-        "image": [
-          "50",
-          0
-        ]
-      },
-      "class_type": "ImageUpscaleWithModel",
-      "_meta": {
-        "title": "Upscale Image (using Model)"
-      }
-    },
-    "52": {
-      "inputs": {
-        "model_name": "4x-UltraSharp.pth"
-      },
-      "class_type": "UpscaleModelLoader",
-      "_meta": {
-        "title": "Load Upscale Model"
-      }
-    },
-    "53": {
-      "inputs": {
-        "pixels": [
-          "54",
-          0
-        ],
-        "vae": [
-          "4",
-          2
-        ]
-      },
-      "class_type": "VAEEncode",
-      "_meta": {
-        "title": "VAE Encode"
-      }
-    },
-    "54": {
-      "inputs": {
-        "upscale_method": "nearest-exact",
-        "scale_by": 0.3,
-        "image": [
-          "51",
-          0
-        ]
-      },
-      "class_type": "ImageScaleBy",
-      "_meta": {
-        "title": "Upscale Image By"
-      }
-    },
-    "56": {
-      "inputs": {
-        "scale": 1.5,
-        "model": [
-          "26",
-          0
-        ]
-      },
-      "class_type": "PerturbedAttentionGuidance",
-      "_meta": {
-        "title": "PerturbedAttentionGuidance"
       }
     }
   }

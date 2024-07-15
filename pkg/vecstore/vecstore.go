@@ -3,11 +3,14 @@ package vecstore
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Vector represents a vector of floats.
@@ -143,59 +146,62 @@ func (db *EmbeddingDB) RecreateDocument(embeddings []Embedding) string {
 }
 
 // CosineSimilarity calculates the cosine similarity between two vectors.
-// func CosineSimilarity(a, b []float64) float64 {
-// 	if len(a) != len(b) {
-// 		log.Fatal("Vectors must be of the same length")
-// 	}
-
-// 	var dotProduct, magnitudeA, magnitudeB float64
-// 	var wg sync.WaitGroup
-
-// 	// Adjust the number of partitions based on the number of CPU cores.
-// 	partitions := runtime.NumCPU()
-// 	partSize := len(a) / partitions
-
-// 	results := make([]struct {
-// 		dotProduct, magnitudeA, magnitudeB float64
-// 	}, partitions)
-
-// 	for i := 0; i < partitions; i++ {
-// 		wg.Add(1)
-// 		go func(partition int) {
-// 			defer wg.Done()
-// 			start := partition * partSize
-// 			end := start + partSize
-// 			if partition == partitions-1 {
-// 				end = len(a)
-// 			}
-// 			for j := start; j < end; j++ {
-// 				results[partition].dotProduct += a[j] * b[j]
-// 				results[partition].magnitudeA += a[j] * a[j]
-// 				results[partition].magnitudeB += b[j] * b[j]
-// 			}
-// 		}(i)
-// 	}
-
-// 	wg.Wait()
-
-// 	for _, result := range results {
-// 		dotProduct += result.dotProduct
-// 		magnitudeA += result.magnitudeA
-// 		magnitudeB += result.magnitudeB
-// 	}
-
-// 	return dotProduct / (math.Sqrt(magnitudeA) * math.Sqrt(magnitudeB))
-// }
-
-func CosineSimilarity(vecA, vecB []float64) float64 {
-	var dotProduct, normA, normB float64
-	for i, v := range vecA {
-		dotProduct += v * vecB[i]
-		normA += v * v
-		normB += vecB[i] * vecB[i]
+func CosineSimilarity(a, b []float64) float64 {
+	if len(a) != len(b) {
+		log.Fatal("Vectors must be of the same length")
 	}
-	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+
+	a = NormalizeL2(a)
+	b = NormalizeL2(b)
+
+	var dotProduct, magnitudeA, magnitudeB float64
+	var wg sync.WaitGroup
+
+	// Adjust the number of partitions based on the number of CPU cores.
+	partitions := runtime.NumCPU()
+	partSize := len(a) / partitions
+
+	results := make([]struct {
+		dotProduct, magnitudeA, magnitudeB float64
+	}, partitions)
+
+	for i := 0; i < partitions; i++ {
+		wg.Add(1)
+		go func(partition int) {
+			defer wg.Done()
+			start := partition * partSize
+			end := start + partSize
+			if partition == partitions-1 {
+				end = len(a)
+			}
+			for j := start; j < end; j++ {
+				results[partition].dotProduct += a[j] * b[j]
+				results[partition].magnitudeA += a[j] * a[j]
+				results[partition].magnitudeB += b[j] * b[j]
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	for _, result := range results {
+		dotProduct += result.dotProduct
+		magnitudeA += result.magnitudeA
+		magnitudeB += result.magnitudeB
+	}
+
+	return dotProduct / (math.Sqrt(magnitudeA) * math.Sqrt(magnitudeB))
 }
+
+// func CosineSimilarity(vecA, vecB []float64) float64 {
+// 	var dotProduct, normA, normB float64
+// 	for i, v := range vecA {
+// 		dotProduct += v * vecB[i]
+// 		normA += v * v
+// 		normB += vecB[i] * vecB[i]
+// 	}
+// 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+// }
 
 // MostSimilarWord returns the word with the highest similarity value.
 func (db *EmbeddingDB) MostSimilarWord(embeddings map[string]Embedding, targetWord string) (string, float64) {

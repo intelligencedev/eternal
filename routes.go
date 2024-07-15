@@ -55,7 +55,8 @@ func setupRoutes(app *fiber.App, config *AppConfig, modelParams []ModelParams) {
 	app.Get("/tools/list", handleToolList(config))
 	app.Post("/tool/:toolName/:enabled/:topN", handleToolToggle(config))
 	app.Get("/dpsearch", handleDPSearch())
-	app.Post("/tools/img/workflow/set/:name", handleImgSetWorkflow(config))
+	app.Post("/tools/img/workflow/set", handleImgSetWorkflow(config))
+	app.Post("/tools/img/resolution/set", handleImgSetResolution(config))
 
 	// Utility routes
 	app.Post("/config", func(c *fiber.Ctx) error {

@@ -48,7 +48,7 @@ def main(model_name, revision, texts, chunk_size, chunk_overlap):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sentence Embedding Script")
 
-    parser.add_argument("--model_name", type=str, default="avsolatorio/GIST-small-Embedding-v0", help="Name of the model to use")
+    parser.add_argument("--model_name", type=str, default="BAAI/bge-large-en-v1.5", help="Name of the model to use")
     parser.add_argument("--revision", type=str, default=None, help="Model revision to use")
     parser.add_argument("--texts", nargs='+', default=[
         "Illustration of the REaLTabFormer model. The left block shows the non-relational tabular data model using GPT-2 with a causal LM head. In contrast, the right block shows how a relational dataset's child table is modeled using a sequence-to-sequence (Seq2Seq) model. The Seq2Seq model uses the observations in the parent table to condition the generation of the observations in the child table. The trained GPT-2 model on the parent table, with weights frozen, is also used as the encoder in the Seq2Seq model.",

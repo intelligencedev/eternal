@@ -14,7 +14,7 @@ import (
 
 // embedFS embeds the necessary files for the application.
 //
-//go:embed public/* pkg/llm/local/bin/* pkg/sd/sdcpp/build/bin/*
+//go:embed public/* pkg/llm/local/bin/*
 var embedFS embed.FS
 
 // initializeApplication initializes the application with the given configuration.
@@ -153,10 +153,6 @@ func initServer(configPath string) (string, error) {
 	}
 
 	if err := setupDirectory(configPath, "gguf", "pkg/llm/local/bin"); err != nil {
-		return "", err
-	}
-
-	if err := setupDirectory(configPath, "sd", "pkg/sd/sdcpp/build/bin"); err != nil {
 		return "", err
 	}
 
