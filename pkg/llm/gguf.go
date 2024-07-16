@@ -174,7 +174,7 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 		//"--no-mmap",
 		"--simple-io",
 		"--keep", "-1",
-		//"--prompt-cache", cache,
+		"--prompt-cache", cache,
 		//"--prompt-cache-all",
 		//"-ctk", "q4_0",
 		//"-ctv", "q4_0",

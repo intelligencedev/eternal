@@ -60,6 +60,7 @@
             oninput="updateMemoryTool()">
           <span id="memory-topn-value" class="medium">1</span>
         </div>
+        <p class="mb-2 medium">Higher number increases accuracy at the cost of slower response time.</p>
 
         <hr>
 
@@ -69,7 +70,7 @@
           <input class="form-check-input" type="checkbox" role="switch" id="webget-switch" onclick="updateWebgetTool()">
         </div>
         <p class="mb-3 medium">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as
-          reference for an LLM response.</p>
+          reference for an LLM response. Ensure the model being used can handle large context.</p>
 
         <hr>
 
