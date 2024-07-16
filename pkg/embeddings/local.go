@@ -178,7 +178,7 @@ func Search(modelName string, dataPath string, dbName string, prompt string, top
 		fmt.Println("Error encoding text:", err)
 		return nil
 	}
-	vec = result.Vector.Data().F64()[:limit]
+	vec = result.Vector.Data().F64()[:MAX_EMBEDDING_DIM]
 
 	embeddingForPrompt := estore.Embedding{
 		Word:       prompt,
