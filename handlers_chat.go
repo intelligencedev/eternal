@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"eternal/pkg/documents"
 	"eternal/pkg/embeddings"
@@ -15,19 +16,28 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/blevesearch/bleve/v2"
+	"github.com/blevesearch/bleve/v2/search"
 	index "github.com/blevesearch/bleve_index_api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/websocket/v2"
 	"github.com/pterm/pterm"
 	"github.com/valyala/fasthttp"
+	"golang.org/x/sync/semaphore"
 )
+
+const (
+// maxConcurrentJobs = 4 // Adjust this based on your system's capabilities
+)
+
+var maxConcurrentJobs = runtime.NumCPU()
 
 type ChatTurnMessage struct {
 	ID       string `json:"id"`
@@ -513,138 +523,353 @@ func handleChatTurnFinished(config *AppConfig, message WebSocketMessage, err err
 
 // handleChatMemory retrieves and returns chat memory.
 func handleChatMemory(config *AppConfig, chatMessage string, docType string) (string, error) {
-	// var document string
-
 	topN := config.Tools.Memory.TopN
 
-	// Remove any leading or trailing whitespace from the chat message.
 	chatMessage = strings.TrimSpace(chatMessage)
-
-	// Remove line breaks from the chat message.
 	chatMessage = strings.ReplaceAll(chatMessage, "\n", "")
 
-	// Create a regular expression to remove special characters (keeping alphanumeric and spaces)
 	reg, err := regexp.Compile("[^a-zA-Z0-9 ]+")
 	if err != nil {
 		return "", err
 	}
-
-	// Apply the regex to sanitize the chat message
 	chatMessage = reg.ReplaceAllString(chatMessage, " ")
 
-	// Print the chat message
-	// pterm.Info.Println("Chat message:")
-	// pterm.Info.Println(chatMessage)
-
-	// Create a search query
 	query := bleve.NewQueryStringQuery(chatMessage)
-
-	// Create a search request with the query and limit the results
 	searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
-
-	// Execute the search
 	searchResults, err := searchIndex.Search(searchRequest)
 	if err != nil {
 		log.Errorf("Error searching index: %v", err)
 	}
 
 	modelPath := fmt.Sprintf("%s/models", config.DataPath)
-	promptVec, err := embeddings.GenerateEmbeddingsForChat(chatMessage, modelPath, config.EmbeddingModel)
-	if err != nil {
-		log.Errorf("Error generating embedding for chat: %v", err)
-	}
 
-	// Will contain the chunks with the highest similarity
-	var resDocument string
+	pterm.Info.Println("Splitting prompt into chunks...")
+	chunks := documents.SplitTextByCount(chatMessage, 500)
 
-	// Print the search results
-	for _, hit := range searchResults.Hits {
-		doc, err := searchIndex.Document(hit.ID)
-		if err != nil {
-			log.Errorf("Error retrieving document: %v", err)
-			continue
+	pterm.Info.Println("Calculating total weight...")
+	totalWeight := 0.0
+	for i := 0; i < len(chunks); i++ {
+		if i == 0 || i == len(chunks)-1 {
+			totalWeight += 1
+		} else {
+			totalWeight += 0.1
 		}
-
-		doc.VisitFields(func(field index.Field) {
-			// fmt.Printf("%s: %s\n", field.Name(), field.Value())
-
-			// Append the response field to the document and store it for later use
-			if field.Name() == "prompt" {
-				chunk := fmt.Sprintf("%s", field.Value())
-
-				// Print the chunk
-				pterm.Info.Println("Chunk:")
-
-				// Generate embeddings and calculate similarity
-				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
-				if err != nil {
-					log.Errorf("Error generating embedding for chat: %v", err)
-				}
-
-				// Compute similarity
-				similarity := vecstore.CosineSimilarity(promptVec, vec)
-
-				// Print the similarity score
-				pterm.Info.Println("Similarity:", similarity)
-
-				// If the similarity is above a certain threshold, add to our document
-				if similarity > 0.6 {
-					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
-				}
-			}
-			if field.Name() == "response" {
-				chunk := fmt.Sprintf("%s", field.Value())
-
-				// Print the chunk
-				pterm.Info.Println("Chunk:")
-
-				// Generate embeddings and calculate similarity
-				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
-				if err != nil {
-					log.Errorf("Error generating embedding for chat: %v", err)
-				}
-
-				// Compute similarity
-				similarity := vecstore.CosineSimilarity(promptVec, vec)
-
-				// Print the similarity score
-				pterm.Info.Println("Similarity:", similarity)
-
-				// If the similarity is above a certain threshold, add to our document
-				if similarity > 0.5 {
-					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
-				}
-			}
-		})
 	}
+
+	pterm.Info.Println("Calculating weighted average...")
+	sem := semaphore.NewWeighted(int64(maxConcurrentJobs))
+	ctx := context.Background()
+
+	promptVec, err := calculateWeightedAverage(chunks, modelPath, config.EmbeddingModel, totalWeight, sem, ctx)
+	if err != nil {
+		return "", err
+	}
+
+	pterm.Info.Println("Prompt vector:", promptVec)
+
+	resDocument := processSearchResults(searchResults, promptVec, modelPath, config.EmbeddingModel, sem, ctx)
 
 	return resDocument, nil
 }
 
-// storePromptInBleve stores the user's prompt in the Bleve index.
-func storeChat(text string, doctype string) error {
-	// Generate a unique ID for the document
-	docID := fmt.Sprintf("prompt_%d", time.Now().UnixNano())
-
-	// Create a document to store in the index
-	doc := struct {
-		ID      string `json:"id"`
-		Content string `json:"content"`
-		Type    string `json:"type"`
-	}{
-		ID:      docID,
-		Content: text,
-		Type:    doctype,
+func calculateWeightedAverage(chunks []string, modelPath, embeddingModel string, totalWeight float64, sem *semaphore.Weighted, ctx context.Context) ([]float64, error) {
+	if len(chunks) == 0 {
+		return nil, fmt.Errorf("no chunks to process")
 	}
 
-	// Index the document
-	err := searchIndex.Index(docID, doc)
+	firstVec, err := embeddings.GenerateEmbeddingsForChat(chunks[0], modelPath, embeddingModel)
 	if err != nil {
-		return fmt.Errorf("error storing prompt in Bleve: %v", err)
+		return nil, fmt.Errorf("error generating embedding for first chunk: %v", err)
 	}
 
-	return nil
+	promptVec := make([]float64, len(firstVec))
+	var wg sync.WaitGroup
+	chunkChan := make(chan struct {
+		index int
+		vec   []float64
+	}, len(chunks))
+
+	for i, chunk := range chunks {
+		wg.Add(1)
+		go func(i int, chunk string) {
+			defer wg.Done()
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Errorf("Failed to acquire semaphore: %v", err)
+				return
+			}
+			defer sem.Release(1)
+
+			vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, embeddingModel)
+			if err != nil {
+				log.Errorf("Error generating embedding for chat: %v", err)
+				return
+			}
+			chunkChan <- struct {
+				index int
+				vec   []float64
+			}{i, vec}
+		}(i, chunk)
+	}
+
+	go func() {
+		wg.Wait()
+		close(chunkChan)
+	}()
+
+	for chunk := range chunkChan {
+		weight := 0.1
+		if chunk.index == 0 || chunk.index == len(chunks)-1 {
+			weight = 1
+		}
+		for j := 0; j < len(chunk.vec); j++ {
+			promptVec[j] += chunk.vec[j] * weight / totalWeight
+		}
+	}
+
+	return promptVec, nil
 }
+
+func processSearchResults(searchResults *bleve.SearchResult, promptVec []float64, modelPath, embeddingModel string, sem *semaphore.Weighted, ctx context.Context) string {
+	var resDocument string
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, hit := range searchResults.Hits {
+		wg.Add(1)
+		go func(hit *search.DocumentMatch) {
+			defer wg.Done()
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Errorf("Failed to acquire semaphore: %v", err)
+				return
+			}
+			defer sem.Release(1)
+
+			doc, err := searchIndex.Document(hit.ID)
+			if err != nil {
+				log.Errorf("Error retrieving document: %v", err)
+				return
+			}
+
+			doc.VisitFields(func(field index.Field) {
+				if field.Name() == "prompt" || field.Name() == "response" {
+					chunk := fmt.Sprintf("%s", field.Value())
+					pterm.Info.Println("Chunk:", chunk)
+
+					vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, embeddingModel)
+					if err != nil {
+						log.Errorf("Error generating embedding for chat: %v", err)
+						return
+					}
+
+					similarity := vecstore.CosineSimilarity(promptVec, vec)
+					pterm.Info.Println("Similarity:", similarity)
+
+					threshold := 0.5
+					if field.Name() == "prompt" {
+						threshold = 0.6
+					}
+
+					if similarity > threshold {
+						mu.Lock()
+						resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
+						mu.Unlock()
+					}
+				}
+			})
+		}(hit)
+	}
+
+	wg.Wait()
+	return resDocument
+}
+
+// func handleChatMemory(config *AppConfig, chatMessage string, docType string) (string, error) {
+// 	// var document string
+
+// 	topN := config.Tools.Memory.TopN
+
+// 	// Remove any leading or trailing whitespace from the chat message.
+// 	chatMessage = strings.TrimSpace(chatMessage)
+
+// 	// Remove line breaks from the chat message.
+// 	chatMessage = strings.ReplaceAll(chatMessage, "\n", "")
+
+// 	// Create a regular expression to remove special characters (keeping alphanumeric and spaces)
+// 	reg, err := regexp.Compile("[^a-zA-Z0-9 ]+")
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	// Apply the regex to sanitize the chat message
+// 	chatMessage = reg.ReplaceAllString(chatMessage, " ")
+
+// 	// Print the chat message
+// 	// pterm.Info.Println("Chat message:")
+// 	// pterm.Info.Println(chatMessage)
+
+// 	// Create a search query
+// 	query := bleve.NewQueryStringQuery(chatMessage)
+
+// 	// Create a search request with the query and limit the results
+// 	searchRequest := bleve.NewSearchRequestOptions(query, topN, 0, false)
+
+// 	// Execute the search
+// 	searchResults, err := searchIndex.Search(searchRequest)
+// 	if err != nil {
+// 		log.Errorf("Error searching index: %v", err)
+// 	}
+
+// 	modelPath := fmt.Sprintf("%s/models", config.DataPath)
+
+// 	// Chunk the chat message and generate embeddings
+// 	pterm.Info.Println("Splitting prompt into chunks...")
+// 	chunks := documents.SplitTextByCount(chatMessage, 500)
+
+// 	// Use Weighted averaging: Assign weights to chunks based on importance (e.g., position in document) and compute a weighted average.
+// 	// The first and last chunks are assigned a weight of 1, and the rest are assigned a weight of 0.1.
+
+// 	// Calculate the total weight
+// 	pterm.Info.Println("Calculating total weight...")
+// 	totalWeight := 0.0
+// 	for i := 0; i < len(chunks); i++ {
+// 		if i == 0 || i == len(chunks)-1 {
+// 			totalWeight += 1
+// 		} else {
+// 			totalWeight += 0.1
+// 		}
+// 	}
+
+// 	// Calculate the weighted average
+// 	pterm.Info.Println("Calculating weighted average...")
+// 	// Initialize promptVec with the correct length
+// 	var promptVec []float64
+// 	if len(chunks) > 0 {
+// 		// Generate embeddings for the first chunk to get the vector length
+// 		firstVec, err := embeddings.GenerateEmbeddingsForChat(chunks[0], modelPath, config.EmbeddingModel)
+// 		if err != nil {
+// 			log.Errorf("Error generating embedding for first chunk: %v", err)
+// 			return "", err
+// 		}
+// 		promptVec = make([]float64, len(firstVec))
+// 	}
+
+// 	for i, chunk := range chunks {
+// 		// Generate embeddings for the chunk
+// 		vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
+// 		if err != nil {
+// 			log.Errorf("Error generating embedding for chat: %v", err)
+// 			continue
+// 		}
+
+// 		// Calculate the weight for the chunk
+// 		var weight float64
+// 		if i == 0 || i == len(chunks)-1 {
+// 			weight = 1
+// 		} else {
+// 			weight = 0.1
+// 		}
+
+// 		// Calculate the weighted average
+// 		for j := 0; j < len(vec); j++ {
+// 			promptVec[j] += vec[j] * weight / totalWeight
+// 		}
+// 	}
+
+// 	// Print the prompt vector
+// 	pterm.Info.Println("Prompt vector:")
+// 	pterm.Info.Println(promptVec)
+
+// 	// Will contain the chunks with the highest similarity
+// 	var resDocument string
+
+// 	// Print the search results
+// 	for _, hit := range searchResults.Hits {
+// 		doc, err := searchIndex.Document(hit.ID)
+// 		if err != nil {
+// 			log.Errorf("Error retrieving document: %v", err)
+// 			continue
+// 		}
+
+// 		doc.VisitFields(func(field index.Field) {
+// 			// fmt.Printf("%s: %s\n", field.Name(), field.Value())
+
+// 			// Append the response field to the document and store it for later use
+// 			if field.Name() == "prompt" {
+// 				chunk := fmt.Sprintf("%s", field.Value())
+
+// 				// Print the chunk
+// 				pterm.Info.Println("Chunk:")
+
+// 				// Generate embeddings and calculate similarity
+// 				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
+// 				if err != nil {
+// 					log.Errorf("Error generating embedding for chat: %v", err)
+// 				}
+
+// 				// Compute similarity
+// 				similarity := vecstore.CosineSimilarity(promptVec, vec)
+
+// 				// Print the similarity score
+// 				pterm.Info.Println("Similarity:", similarity)
+
+// 				// If the similarity is above a certain threshold, add to our document
+// 				if similarity > 0.6 {
+// 					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
+// 				}
+// 			}
+// 			if field.Name() == "response" {
+// 				chunk := fmt.Sprintf("%s", field.Value())
+
+// 				// Print the chunk
+// 				pterm.Info.Println("Chunk:")
+
+// 				// Generate embeddings and calculate similarity
+// 				vec, err := embeddings.GenerateEmbeddingsForChat(chunk, modelPath, config.EmbeddingModel)
+// 				if err != nil {
+// 					log.Errorf("Error generating embedding for chat: %v", err)
+// 				}
+
+// 				// Compute similarity
+// 				similarity := vecstore.CosineSimilarity(promptVec, vec)
+
+// 				// Print the similarity score
+// 				pterm.Info.Println("Similarity:", similarity)
+
+// 				// If the similarity is above a certain threshold, add to our document
+// 				if similarity > 0.5 {
+// 					resDocument = fmt.Sprintf("%s\n%s", resDocument, chunk)
+// 				}
+// 			}
+// 		})
+// 	}
+
+// 	return resDocument, nil
+// }
+
+// storePromptInBleve stores the user's prompt in the Bleve index.
+// func storeChat(text string, doctype string) error {
+// 	// Generate a unique ID for the document
+// 	docID := fmt.Sprintf("prompt_%d", time.Now().UnixNano())
+
+// 	// Create a document to store in the index
+// 	doc := struct {
+// 		ID      string `json:"id"`
+// 		Content string `json:"content"`
+// 		Type    string `json:"type"`
+// 	}{
+// 		ID:      docID,
+// 		Content: text,
+// 		Type:    doctype,
+// 	}
+
+// 	// Index the document
+// 	err := searchIndex.Index(docID, doc)
+// 	if err != nil {
+// 		return fmt.Errorf("error storing prompt in Bleve: %v", err)
+// 	}
+
+// 	return nil
+// }
 
 // handleTextSplitAndIndex handles the splitting and indexing of text.
 func handleTextSplitAndIndex(inputTags string, inputText string, chunkSize int, modelName string) error {
