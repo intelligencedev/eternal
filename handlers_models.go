@@ -391,7 +391,65 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	} else {
 		pterm.Warning.Printf("Upscale model not found: %s\n", modelPath)
 
-		pterm.Warning.Println("Downloading default image model, please wait...")
+		pterm.Warning.Println("Downloading upscale model, please wait...")
+		dm := hfutils.ConcurrentDownloadManager{
+			FileName:    fileName,
+			URL:         downloadURL,
+			Destination: modelPath,
+			NumParts:    1,
+			TempDir:     tmpPath,
+		}
+
+		go dm.PrintProgress()
+
+		if err := dm.Download(); err != nil {
+			fmt.Println("Download failed:", err)
+		} else {
+			fmt.Println("Download successful!")
+		}
+	}
+
+	// Needs work, implement in future commit
+	// Check if the Kolors models exist and if not, download them
+	// fileName = "diffusion_pytorch_model.fp16.safetensors"
+	// downloadURL = "https://huggingface.co/Kwai-Kolors/Kolors/blob/main/unet/diffusion_pytorch_model.fp16.safetensors"
+	// modelPath = fmt.Sprintf("%s/sd/ComfyUI-master/models/unet/%s", config.DataPath, fileName)
+	// if _, err := os.Stat(modelPath); err == nil {
+	// 	pterm.Info.Printf("Kolors model found: %s\n", modelPath)
+	// } else {
+	// 	pterm.Warning.Println("Downloading Kolors image model, please wait...")
+	// 	dm := hfutils.ConcurrentDownloadManager{
+	// 		FileName:    fileName,
+	// 		URL:         downloadURL,
+	// 		Destination: modelPath,
+	// 		NumParts:    1,
+	// 		TempDir:     tmpPath,
+	// 	}
+
+	// 	go dm.PrintProgress()
+
+	// 	if err := dm.Download(); err != nil {
+	// 		fmt.Println("Download failed:", err)
+	// 	} else {
+	// 		fmt.Println("Download successful!")
+	// 	}
+	// }
+
+	fileName = "sdxl_vae.safetensors"
+	downloadURL = "https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors"
+	modelPath = fmt.Sprintf("%s/sd/ComfyUI-master/models/vae/%s", config.DataPath, fileName)
+	if _, err := os.Stat(modelPath); err == nil {
+		pterm.Info.Printf("VAE model found: %s\n", modelPath)
+	} else {
+		// check if the llm folder exists
+		llmPath := fmt.Sprintf("%s/sd/ComfyUI-master/models/vae", config.DataPath)
+		if _, err := os.Stat(llmPath); err != nil {
+			if err := os.MkdirAll(llmPath, 0755); err != nil {
+				log.Errorf("Error creating llm directory: %v", err)
+			}
+		}
+
+		pterm.Warning.Println("Downloading sdxk VAE, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
