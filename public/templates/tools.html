@@ -2,98 +2,154 @@
   <div class="col h-100">
     <div class="panel h-100 px-3 d-flex flex-column fade-it rounded-end-2 border-end border-secondary-subtle"
       style="background-color: var(--et-galactic-bg);">
-      <h5 class="mb-3">Tools</h5>
+      <h3 class="mb-3 text-center">Tools</h3>
       <div class="panel-body">
-        <!-- Teams Workflow -->
-        <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
-          <label class="form-check-label" for="team-switch">Teams Workflow</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="team-switch" onclick="updateTeamTool()">
-        </div>
-        <p class="mb-3 medium">Enable multi assistant workflow. Teams are configured in config.yml.</p>
+        <div class="accordion  accordion-flush" id="toolsAccordion">
+          <!-- Teams Workflow -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#teamsCollapse"
+                aria-expanded="true">
+                Teams Workflow
+              </button>
+            </h2>
+            <div id="teamsCollapse" class="accordion-collapse collapse show">
+              <div class="accordion-body">
+                <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-check-label" for="team-switch">Enable</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="team-switch"
+                    onclick="updateTeamTool()">
+                </div>
+                <p class="mb-3 medium">Enable multi assistant workflow. Teams are configured in config.yml.</p>
+              </div>
+            </div>
+          </div>
 
-        <hr>
+          <!-- Image Generation -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                data-bs-target="#imageGenCollapse" aria-expanded="true">
+                Image Generation
+              </button>
+            </h2>
+            <div id="imageGenCollapse" class="accordion-collapse collapse show">
+              <div class="accordion-body">
+                <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-check-label" for="img-switch">Enable</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="img-switch"
+                    onclick="updateImgTool()">
+                </div>
+                <p class="mb-3 medium">Image Generation uses ComfyUI as a backend to generate images based on the user's
+                  prompt.</p>
+                <div class="mb-3">
+                  <label for="workflow-select" class="form-label">Select Workflow:</label>
+                  <select id="workflow-select" class="form-select" aria-label="Select Workflow"
+                    onchange="updateImgWorkflow(this.value)">
+                    <option selected disabled>Choose a workflow</option>
+                    <option value="sdxl-basic">sdxl-basic</option>
+                    <option value="sdxl-advanced">sdxl-advanced</option>
+                    <option value="sdxl-advanced">sdxl-advanced-4x</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="resolution-select" class="form-label">Select Resolution:</label>
+                  <select id="resolution-select" class="form-select" aria-label="Select Resolution"
+                    onchange="updateImgResolution(this.value)">
+                    <option selected disabled>Choose a resolution</option>
+                    <option value="1024x1024">1:1 (square) - 1024x1024</option>
+                    <option value="768x768">1:1 (square) - 768x768</option>
+                    <option value="1152x768">3:2 (landscape) - 1152x768</option>
+                    <option value="768x1152">2:3 (portrait) - 768x1152</option>
+                    <option value="1152x864">4:3 (landscape) - 1152x864</option>
+                    <option value="864x1152">3:4 (portrait) - 864x1152</option>
+                    <option value="1360x768">16:9 (widescreen) - 1360x768</option>
+                    <option value="768x1360">9:16 (tall) - 768x1360</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Image Generation -->
-        <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
-          <label class="form-check-label" for="img-switch">Image Generation</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="img-switch" onclick="updateImgTool()">
-        </div>
-        <p class="mb-3 medium">Image Generation uses ComfyUI as a backend to generate images based on the user's prompt.
-        </p>
-        <div class="mb-3">
-          <label for="workflow-select" class="form-label">Select Workflow:</label>
-          <select id="workflow-select" class="form-select" aria-label="Select Workflow"
-            onchange="updateImgWorkflow(this.value)">
-            <option selected disabled>Choose a workflow</option>
-            <!-- SDXL Basic and SDXL Advanced -->
-            <option value="sdxl-basic">sdxl-basic</option>
-            <option value="sdxl-advanced">sdxl-advanced</option>
-            <option value="sdxl-advanced">sdxl-advanced-4x</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="resolution-select" class="form-label">Select Resolution:</label>
-          <select id="resolution-select" class="form-select" aria-label="Select Resolution"
-            onchange="updateImgResolution(this.value)">
-            <option selected disabled>Choose a resolution</option>
-            <option value="1024x1024">1:1 (square) - 1024x1024</option>
-            <option value="768x768">1:1 (square) - 768x768</option>
-            <option value="1152x768">3:2 (landscape) - 1152x768</option>
-            <option value="768x1152">2:3 (portrait) - 768x1152</option>
-            <option value="1152x864">4:3 (landscape) - 1152x864</option>
-            <option value="864x1152">3:4 (portrait) - 864x1152</option>
-            <option value="1360x768">16:9 (widescreen) - 1360x768</option>
-            <option value="768x1360">9:16 (tall) - 768x1360</option>
-          </select>
-        </div>
+          <!-- Chat Memory -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#chatMemoryCollapse">
+                Chat Memory
+              </button>
+            </h2>
+            <div id="chatMemoryCollapse" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+              <div class="accordion-body">
+                <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-check-label" for="memory-switch">Enable</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="memory-switch"
+                    onclick="updateMemoryTool()">
+                </div>
+                <p class="mb-2 medium"><strong>TopN:</strong></p>
+                <div class="d-flex align-items-center">
+                  <input type="range" class="form-range me-2" min="1" max="25" step="2" value="1" id="memory-slider"
+                    oninput="updateMemoryTool()">
+                  <span id="memory-topn-value" class="medium">1</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <hr>
+          <!-- Web Retrieval -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#webRetrievalCollapse">
+                Web Retrieval
+              </button>
+            </h2>
+            <div id="webRetrievalCollapse" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+              <div class="accordion-body">
+                <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-check-label" for="webget-switch">Enable</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="webget-switch"
+                    onclick="updateWebgetTool()">
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Chat Memory -->
-        <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
-          <label class="form-check-label" for="memory-switch">Chat Memory</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="memory-switch" onclick="updateMemoryTool()">
-        </div>
-        <p class="mb-2 medium"><strong>TopN:</strong></p>
-        <div class="d-flex align-items-center">
-          <input type="range" class="form-range me-2" min="1" max="25" step="2" value="1" id="memory-slider"
-            oninput="updateMemoryTool()">
-          <span id="memory-topn-value" class="medium">1</span>
-        </div>
-
-        <hr>
-
-        <!-- Web Retrieval -->
-        <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
-          <label class="form-check-label" for="webget-switch">Web Retrieval</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="webget-switch" onclick="updateWebgetTool()">
-        </div>
-        <p class="mb-3 medium">Web Retrieval attempts to fetch the contents of a URL in the user's prompt to use as
-          reference for an LLM response.</p>
-
-        <hr>
-
-        <!-- Web Search -->
-        <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
-          <label class="form-check-label" for="websearch-switch">Web Search</label>
-          <input class="form-check-input" type="checkbox" role="switch" id="websearch-switch"
-            onclick="updateSearchTool()">
-        </div>
-        <p class="mb-2 medium">Web Search fetches search results as reference for LLM response.</p>
-        <label class="form-label medium">Search Backend</label>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" value="backend" name="radio-group-search" id="ddg-radio">
-          <label class="form-check-label medium" for="ddg-radio">DDG</label>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="radio" value="frontend" name="radio-group-search" id="sxng-radio">
-          <label class="form-check-label medium" for="sxng-radio">SXNG</label>
-        </div>
-        <p class="mb-2 medium"><strong>TopN - Number of web search results to retrieve:</strong></p>
-        <div class="d-flex align-items-center">
-          <input type="range" class="form-range me-2" min="1" max="6" step="1" value="1" id="websearch-slider"
-            oninput="updateSearchTool()">
-          <span id="websearch-topn-value" class="medium">1</span>
+          <!-- Web Search -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#webSearchCollapse">
+                Web Search
+              </button>
+            </h2>
+            <div id="webSearchCollapse" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+              <div class="accordion-body">
+                <div class="form-check-reverse form-switch d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-check-label" for="websearch-switch">Enable</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="websearch-switch"
+                    onclick="updateSearchTool()">
+                </div>
+                <p class="mb-2 medium">Web Search fetches search results as reference for LLM response.</p>
+                <label class="form-label medium">Search Backend</label>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" value="backend" name="radio-group-search" id="ddg-radio">
+                  <label class="form-check-label medium" for="ddg-radio">DDG</label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" value="frontend" name="radio-group-search"
+                    id="sxng-radio">
+                  <label class="form-check-label medium" for="sxng-radio">SXNG</label>
+                </div>
+                <p class="mb-2 medium"><strong>TopN - Number of web search results to retrieve:</strong></p>
+                <div class="d-flex align-items-center">
+                  <input type="range" class="form-range me-2" min="1" max="6" step="1" value="1" id="websearch-slider"
+                    oninput="updateSearchTool()">
+                  <span id="websearch-topn-value" class="medium">1</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -101,6 +157,7 @@
 </div>
 
 <script>
+  // The JavaScript functions remain unchanged
   function postToolValue(toolName, enabled, topN) {
     fetch(`/tool/${toolName}/${enabled}/${topN}`, {
       method: 'POST',

@@ -348,22 +348,22 @@
         });
     }
 
-    function setRole(role) {
-      fetch(`/chat/role/${role}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Success:', data);
-          Alpine.store('dataStore').selectedRole = role; // Update the store
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
-    }
+    // function setRole(role) {
+    //   fetch(`/chat/role/${role}`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     }
+    //   })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //       console.log('Success:', data);
+    //       Alpine.store('dataStore').selectedRole = role; // Update the store
+    //     })
+    //     .catch((error) => {
+    //       console.error('Error:', error);
+    //     });
+    // }
 
     function getSelectedRole() {
       return Alpine.store('dataStore').selectedRole;

@@ -164,6 +164,11 @@ func initServer(configPath string) (string, error) {
 		return "", err
 	}
 
+	// Needs work, finish in future commit
+	// if err := setupKolors(configPath); err != nil {
+	// 	return "", err
+	// }
+
 	return configPath, nil
 }
 

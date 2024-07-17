@@ -182,3 +182,24 @@ func setupImpactPack(configPath string) error {
 	}
 	return nil
 }
+
+// setupKolors sets up the Kolors library for ComfyUI.
+func setupKolors(configPath string) error {
+	kolorsPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI-KwaiKolorsWrapper-main")
+	if _, err := os.Stat(kolorsPath); os.IsNotExist(err) {
+		if err := ghdownloader.DownloadAndExtractRepo("kijai", "ComfyUI-KwaiKolorsWrapper", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes")); err != nil {
+			return fmt.Errorf("failed to download Kolors: %w", err)
+		}
+
+		if err := installPythonRequirements(filepath.Join(kolorsPath, "requirements.txt")); err != nil {
+			return fmt.Errorf("failed to install Kolors requirements: %w", err)
+		}
+	}
+
+	output, err := python.ExecuteScript("-m", "pip", "install", "sentencepiece")
+	if err != nil {
+		return fmt.Errorf("failed to install ComfyUI requirements: %v\nOutput: %s", err, output)
+	}
+
+	return nil
+}

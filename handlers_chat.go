@@ -424,17 +424,17 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 	// invoke the correct handler based on the model name
 	if strings.HasPrefix(model.Name, "openai-") {
 		// Get the system template for the chat message.
-		cpt := llm.GetSystemTemplate(chatMessage)
+		cpt := llm.GetSystemTemplate(fullPrompt)
 		return openai.StreamCompletionToWebSocket(*c, chatTurn, "gpt-4o", cpt.Messages, 0.3, config.OAIKey, responseBuffer)
 	} else if strings.HasPrefix(model.Name, "google-") {
 		apiKey := config.GoogleKey
-		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, chatMessage, apiKey, responseBuffer)
+		return google.StreamGeminiResponseToWebSocket(*c, chatTurn, fullPrompt, apiKey, responseBuffer)
 	} else if strings.HasPrefix(model.Name, "anthropic-") {
 		apiKey := config.AnthropicKey
 
 		// Prepare the messages for the completion request.
 		messages := []anthropic.Message{
-			{Role: "user", Content: chatMessage},
+			{Role: "user", Content: fullPrompt},
 		}
 
 		// Stream the completion response from Anthropic to the WebSocket.
@@ -442,8 +442,6 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 	} else {
 		return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 	}
-
-	return nil
 }
 
 // readAndUnmarshalMessage reads and unmarshals a WebSocket message.
