@@ -168,6 +168,21 @@ func setupComfyUI(configPath string) error {
 	return nil
 }
 
+// setupComfyUIEssentials sets up the ComfyUI essentials.
+func setupComfyUIEssentials(configPath string) error {
+	essentialsPackPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI_essentials-main")
+	if _, err := os.Stat(essentialsPackPath); os.IsNotExist(err) {
+		if err := ghdownloader.DownloadAndExtractRepo("cubiq", "ComfyUI_essentials", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes")); err != nil {
+			return fmt.Errorf("failed to download Essentials Pack: %w", err)
+		}
+
+		if err := installPythonRequirements(filepath.Join(essentialsPackPath, "requirements.txt")); err != nil {
+			return fmt.Errorf("failed to install Essentials Pack requirements: %w", err)
+		}
+	}
+	return nil
+}
+
 // setupImpactPack sets up the Impact Pack for ComfyUI.
 func setupImpactPack(configPath string) error {
 	impactPackPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI-Impact-Pack-Main")
@@ -183,23 +198,17 @@ func setupImpactPack(configPath string) error {
 	return nil
 }
 
-// setupKolors sets up the Kolors library for ComfyUI.
-func setupKolors(configPath string) error {
-	kolorsPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/ComfyUI-KwaiKolorsWrapper-main")
-	if _, err := os.Stat(kolorsPath); os.IsNotExist(err) {
-		if err := ghdownloader.DownloadAndExtractRepo("kijai", "ComfyUI-KwaiKolorsWrapper", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes")); err != nil {
-			return fmt.Errorf("failed to download Kolors: %w", err)
+// setupComfyUIMtb sets up the ComfyUI essentials.
+func setupComfyUImtb(configPath string) error {
+	essentialsPackPath := filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes/comfy_mtb-main")
+	if _, err := os.Stat(essentialsPackPath); os.IsNotExist(err) {
+		if err := ghdownloader.DownloadAndExtractRepo("melMass", "comfy_mtb", "", filepath.Join(configPath, "sd/ComfyUI-master/custom_nodes")); err != nil {
+			return fmt.Errorf("failed to download MTB Pack: %w", err)
 		}
 
-		if err := installPythonRequirements(filepath.Join(kolorsPath, "requirements.txt")); err != nil {
-			return fmt.Errorf("failed to install Kolors requirements: %w", err)
+		if err := installPythonRequirements(filepath.Join(essentialsPackPath, "requirements.txt")); err != nil {
+			return fmt.Errorf("failed to install MTB Pack requirements: %w", err)
 		}
 	}
-
-	output, err := python.ExecuteScript("-m", "pip", "install", "sentencepiece")
-	if err != nil {
-		return fmt.Errorf("failed to install ComfyUI requirements: %v\nOutput: %s", err, output)
-	}
-
 	return nil
 }
