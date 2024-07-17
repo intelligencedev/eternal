@@ -160,7 +160,15 @@ func initServer(configPath string) (string, error) {
 		return "", err
 	}
 
+	if err := setupComfyUIEssentials(configPath); err != nil {
+		return "", err
+	}
+
 	if err := setupImpactPack(configPath); err != nil {
+		return "", err
+	}
+
+	if err := setupComfyUImtb(configPath); err != nil {
 		return "", err
 	}
 
