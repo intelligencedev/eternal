@@ -82,7 +82,7 @@
           {{template "templates/tools" .}}
         </div>
 
-        <div id="chat-view" class="col-6">
+        <div id="chat-view" class="col-6" hx-ext="ws" ws-connect="/ws">
           <div id="chat" class="row chat-container fs-5"></div>
         </div>
 
@@ -175,7 +175,7 @@
   <script src="js/workflows.js"></script>
   <script src="https://unpkg.com/@antonz/runno@0.6.1/dist/runno.js"></script>
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/engine/wasi.js"></script>
-  <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/snippet.js"></script>
+  <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/snippet.js"></script> -->
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/settings.js"></script>
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>

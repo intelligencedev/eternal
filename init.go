@@ -44,7 +44,7 @@ func initializeServer(dataPath string) {
 	if _, err := initServer(dataPath); err != nil {
 		logFatalError("Error initializing server", err)
 	}
-	pterm.Warning.Println("Server initialized")
+	pterm.Info.Println("Server initialized")
 }
 
 // initializeDatabase initializes the SQLite database and performs auto-migration.
@@ -68,7 +68,7 @@ func initializeDatabase(config *AppConfig) {
 		logFatalError("Failed to auto-migrate database", err)
 	}
 
-	pterm.Warning.Println("Database initialized")
+	pterm.Info.Println("Database initialized")
 }
 
 // initializeDefaultProject initializes the default project based on the configuration.
@@ -76,7 +76,7 @@ func initializeDefaultProject(config *AppConfig) {
 	currentProject = config.DefaultProjectConfig
 	err := sqliteDB.CreateProject(&currentProject)
 	if err != nil {
-		pterm.Warning.Println("Default project already exists")
+		pterm.Info.Println("Default project already exists")
 	}
 
 	projects, err := sqliteDB.ListProjects()

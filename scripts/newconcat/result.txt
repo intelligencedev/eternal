@@ -623,7 +623,7 @@ func handleListProjects() fiber.Handler {
 // handleUpload handles file uploads and saves them to the specified directory.
 func handleUpload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pterm.Warning.Println("Uploads route hit")
+		pterm.Info.Println("Uploads route hit")
 
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -633,7 +633,7 @@ func handleUpload(config *AppConfig) fiber.Handler {
 		files := form.File["file"]
 		for _, file := range files {
 			filename := filepath.Join(config.DataPath, "web", "uploads", file.Filename)
-			pterm.Warning.Printf("Uploading file: %s\n", filename)
+			pterm.Info.Printf("Uploading file: %s\n", filename)
 			if err := c.SaveFile(file, filename); err != nil {
 				return err
 			}
@@ -1485,7 +1485,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
 		}
 
-		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+		//pterm.Info.Printf("URLs to fetch: %v\n", urls)
 
 		ignoredURLs, err := sqliteDB.ListURLTrackings()
 		if err != nil {
@@ -1498,7 +1498,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 				if strings.Contains(url, ignoredURL.URL) {
 					urls = append(urls[:i], urls[i+1:]...)
 
-					pterm.Warning.Printf("Ignoring URL: %s\n", ignoredURL.URL)
+					pterm.Info.Printf("Ignoring URL: %s\n", ignoredURL.URL)
 				}
 			}
 		}
@@ -1522,7 +1522,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 					page, err := web.WebGetHandler(u)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
-							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+							pterm.Info.Printf("Timeout exceeded for URL: %s\n", u)
 
 							// Add the URL to the channel to be processed later
 							failedURLsChan <- []string{u}
@@ -1588,7 +1588,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		// Print the failed URLs
 		for _, trackedURL := range trackedURLs {
-			pterm.Warning.Printf("New failed URL: %s\n", trackedURL.URL)
+			pterm.Info.Printf("New failed URL: %s\n", trackedURL.URL)
 		}
 
 		// Process pages
@@ -1652,14 +1652,14 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 
 		switch toolName {
 		case "memory":
-			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
+			log.Info.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
 			config.Tools.Memory.Enabled = enabledBool
 			config.Tools.Memory.TopN = topNInt
 		case "webget":
-			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
+			log.Info.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
 			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
 		case "websearch":
-			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
+			log.Info.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
 			config.Tools.WebSearch.Enabled = enabledBool
 			config.Tools.WebSearch.TopN = topNInt
 		case "imggen":
@@ -1945,7 +1945,7 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 		}
 
 		if foundRole == nil {
-			pterm.Warning.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
+			pterm.Info.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
 			for i := range config.AssistantRoles {
 				if config.AssistantRoles[i].Name == "chat" {
 					foundRole = &config.AssistantRoles[i]
@@ -3010,7 +3010,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 		// 	log.Fatalf("Failed to run pip command: %v", err)
 		// }
 
-		pterm.Warning.Println("Downloading default image model, please wait...")
+		pterm.Info.Println("Downloading default image model, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
@@ -3035,9 +3035,9 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	if _, err := os.Stat(modelPath); err == nil {
 		pterm.Info.Printf("Upscale model found: %s\n", modelPath)
 	} else {
-		pterm.Warning.Printf("Upscale model not found: %s\n", modelPath)
+		pterm.Info.Printf("Upscale model not found: %s\n", modelPath)
 
-		pterm.Warning.Println("Downloading upscale model, please wait...")
+		pterm.Info.Println("Downloading upscale model, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
@@ -3063,7 +3063,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	// if _, err := os.Stat(modelPath); err == nil {
 	// 	pterm.Info.Printf("Kolors model found: %s\n", modelPath)
 	// } else {
-	// 	pterm.Warning.Println("Downloading Kolors image model, please wait...")
+	// 	pterm.Info.Println("Downloading Kolors image model, please wait...")
 	// 	dm := hfutils.ConcurrentDownloadManager{
 	// 		FileName:    fileName,
 	// 		URL:         downloadURL,
@@ -3095,7 +3095,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 			}
 		}
 
-		pterm.Warning.Println("Downloading SDXL VAE, please wait...")
+		pterm.Info.Println("Downloading SDXL VAE, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
@@ -3274,7 +3274,7 @@ func initializeServer(dataPath string) {
 	if _, err := initServer(dataPath); err != nil {
 		logFatalError("Error initializing server", err)
 	}
-	pterm.Warning.Println("Server initialized")
+	pterm.Info.Println("Server initialized")
 }
 
 // initializeDatabase initializes the SQLite database and performs auto-migration.
@@ -3298,7 +3298,7 @@ func initializeDatabase(config *AppConfig) {
 		logFatalError("Failed to auto-migrate database", err)
 	}
 
-	pterm.Warning.Println("Database initialized")
+	pterm.Info.Println("Database initialized")
 }
 
 // initializeDefaultProject initializes the default project based on the configuration.
@@ -3306,7 +3306,7 @@ func initializeDefaultProject(config *AppConfig) {
 	currentProject = config.DefaultProjectConfig
 	err := sqliteDB.CreateProject(&currentProject)
 	if err != nil {
-		pterm.Warning.Println("Default project already exists")
+		pterm.Info.Println("Default project already exists")
 	}
 
 	projects, err := sqliteDB.ListProjects()
@@ -5094,7 +5094,7 @@ func main() {
 
 	runFrontendServer(ctx, config, modelParams)
 
-	pterm.Warning.Println("Shutdown signal received")
+	pterm.Info.Println("Shutdown signal received")
 
 	if err := stopComfyUI(ctx); err != nil {
 		pterm.Error.Println("Failed to stop ComfyUI:", err)
@@ -5174,7 +5174,7 @@ func cleanupDevMode(config *AppConfig, modelParams []ModelParams) {
 		if model.Downloaded {
 			cachePath := filepath.Join(config.DataPath, "models", model.Name, "cache")
 			if fileExists(cachePath) {
-				pterm.Warning.Printf("Deleting cache: %s\n", cachePath)
+				pterm.Info.Printf("Deleting cache: %s\n", cachePath)
 				deleteFile(cachePath)
 			}
 		}

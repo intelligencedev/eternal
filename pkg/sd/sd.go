@@ -116,7 +116,7 @@ func Text2Image(cmdPath string, params *SDParams) error {
 		return err
 	}
 
-	pterm.Warning.Println("Output:", string(out))
+	pterm.Info.Println("Output:", string(out))
 
 	// return the output
 	return nil

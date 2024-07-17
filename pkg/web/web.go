@@ -258,7 +258,7 @@ func SearchDDG(query string) []string {
 
 	resultURLs = RemoveUnwantedURLs(resultURLs)
 
-	pterm.Warning.Println("Search results:", resultURLs)
+	pterm.Info.Println("Search results:", resultURLs)
 
 	return resultURLs
 }
@@ -289,7 +289,7 @@ func RemoveUnwantedURLs(urls []string) []string {
 		unwanted := false
 		for _, unwantedURL := range unwantedURLs {
 			if strings.Contains(u, unwantedURL) {
-				pterm.Warning.Printf("URL %s contains unwanted URL %s", u, unwantedURL)
+				pterm.Info.Printf("URL %s contains unwanted URL %s", u, unwantedURL)
 				unwanted = true
 				break
 			}
