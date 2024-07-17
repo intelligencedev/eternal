@@ -327,7 +327,10 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 
 	// Only perform the tool workflow if any of the tools are enabled
 	if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
-		chatMessage = performToolWorkflow(c, config, chatMessage)
+		_, endTurn := performToolWorkflow(c, config, chatMessage)
+		if endTurn {
+			return
+		}
 	}
 
 	if config.Tools.Team.Enabled {

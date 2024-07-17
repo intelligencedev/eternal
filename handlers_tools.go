@@ -39,7 +39,7 @@ func handleRenderTools(config *AppConfig) fiber.Handler {
 }
 
 // performToolWorkflow performs the tool workflow on a chat message.
-func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
+func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) (string, bool) {
 
 	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
 	var document string
@@ -50,7 +50,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		res := performImageGen(chatId, config, chatMessage)
 		c.WriteMessage(socket.TextMessage, []byte(res))
 		chatTurn = chatTurn + 1
-		return chatMessage
+		return "", true
 	}
 
 	if config.Tools.Memory.Enabled {
@@ -225,14 +225,14 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		pterm.Info.Println("Tool workflow complete")
 
-		return chatMessage
+		return chatMessage, false
 	}
 
 	chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
 
 	pterm.Info.Println("Tool workflow complete")
 
-	return chatMessage
+	return chatMessage, false
 }
 
 // handleToolToggle toggles the state of various tools based on the provided tool name.
