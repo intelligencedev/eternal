@@ -39,7 +39,7 @@ func handleRenderTools(config *AppConfig) fiber.Handler {
 }
 
 // performToolWorkflow performs the tool workflow on a chat message.
-func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) string {
+func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage string) (string, bool) {
 
 	// Begin tool workflow. Tools will add context to the submitted message for the model to use.
 	var document string
@@ -50,7 +50,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		res := performImageGen(chatId, config, chatMessage)
 		c.WriteMessage(socket.TextMessage, []byte(res))
 		chatTurn = chatTurn + 1
-		return chatMessage
+		return "", true
 	}
 
 	if config.Tools.Memory.Enabled {
@@ -95,7 +95,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			urls = web.GetSearXNGResults(config.Tools.WebSearch.Endpoint, chatMessage)
 		}
 
-		//pterm.Warning.Printf("URLs to fetch: %v\n", urls)
+		//pterm.Info.Printf("URLs to fetch: %v\n", urls)
 
 		ignoredURLs, err := sqliteDB.ListURLTrackings()
 		if err != nil {
@@ -108,7 +108,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 				if strings.Contains(url, ignoredURL.URL) {
 					urls = append(urls[:i], urls[i+1:]...)
 
-					pterm.Warning.Printf("Ignoring URL: %s\n", ignoredURL.URL)
+					pterm.Info.Printf("Ignoring URL: %s\n", ignoredURL.URL)
 				}
 			}
 		}
@@ -132,7 +132,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 					page, err := web.WebGetHandler(u)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
-							pterm.Warning.Printf("Timeout exceeded for URL: %s\n", u)
+							pterm.Info.Printf("Timeout exceeded for URL: %s\n", u)
 
 							// Add the URL to the channel to be processed later
 							failedURLsChan <- []string{u}
@@ -198,7 +198,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		// Print the failed URLs
 		for _, trackedURL := range trackedURLs {
-			pterm.Warning.Printf("New failed URL: %s\n", trackedURL.URL)
+			pterm.Info.Printf("New failed URL: %s\n", trackedURL.URL)
 		}
 
 		// Process pages
@@ -225,14 +225,14 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 		pterm.Info.Println("Tool workflow complete")
 
-		return chatMessage
+		return chatMessage, false
 	}
 
 	chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
 
 	pterm.Info.Println("Tool workflow complete")
 
-	return chatMessage
+	return chatMessage, false
 }
 
 // handleToolToggle toggles the state of various tools based on the provided tool name.
@@ -262,14 +262,14 @@ func handleToolToggle(config *AppConfig) fiber.Handler {
 
 		switch toolName {
 		case "memory":
-			pterm.Warning.Sprintf("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
+			log.Info("Memory tool toggled: %t\n", config.Tools.Memory.Enabled)
 			config.Tools.Memory.Enabled = enabledBool
 			config.Tools.Memory.TopN = topNInt
 		case "webget":
-			pterm.Warning.Sprintf("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
+			log.Info("WebGet tool toggled: %t\n", config.Tools.WebGet.Enabled)
 			config.Tools.WebGet.Enabled = !config.Tools.WebGet.Enabled
 		case "websearch":
-			pterm.Warning.Sprintf("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
+			log.Info("WebSearch tool toggled: %t\n", config.Tools.WebSearch.Enabled)
 			config.Tools.WebSearch.Enabled = enabledBool
 			config.Tools.WebSearch.TopN = topNInt
 		case "imggen":
@@ -555,7 +555,7 @@ func handleRoleSelection(config *AppConfig) fiber.Handler {
 		}
 
 		if foundRole == nil {
-			pterm.Warning.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
+			pterm.Info.Printf("Role %s not found. Defaulting to 'chat'.\n", roleName)
 			for i := range config.AssistantRoles {
 				if config.AssistantRoles[i].Name == "chat" {
 					foundRole = &config.AssistantRoles[i]

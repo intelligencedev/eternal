@@ -1,4 +1,4 @@
-<div name="chat-{{.turnID}}" id="chat-{{.turnID}}" hx-ext="ws" ws-connect="{{.wsRoute}}">
+<div name="chat-{{.turnID}}" id="chat-{{.turnID}}">
   <div class="row">
     <div id="prompt-{{.turnID}}" class="user-prompt rounded-2 mt-3 pb-3" style="background-color: var(--et-card-bg);">
       <div>
@@ -59,7 +59,6 @@
   </div>
 </div>
 
-<script src="js/node_modules/@antonz/codapi/dist/snippet.js"></script>
 <script>
   document.getElementById("chat-view").addEventListener("scroll", function () {
     const chatView = document.getElementById("chat-view");
@@ -106,8 +105,22 @@
     }
   });
 
+  // onerror event handler
+  htmx.on("htmx:wsOnError", function (evt) {
+    console.log("WebSocket error");
+    // Print the event to the console
+    console.log(evt);
+    highlight();
+    const box = document.querySelector(".box");
+    const newRotation = getRandomRotation();
+    box.style.transition = "transform 0.5s ease";
+    box.style.transform = newRotation;
+  });
+
   htmx.on("htmx:wsOnClose", function (evt) {
     console.log("WebSocket closed");
+    // Print the event to the console
+    console.log(evt);
     highlight();
     const box = document.querySelector(".box");
     const newRotation = getRandomRotation();

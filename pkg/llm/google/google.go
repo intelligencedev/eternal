@@ -23,7 +23,7 @@ const (
 
 // StreamGeminiResponseToWebSocket streams the response from the Gemini API to a WebSocket connection.
 func StreamGeminiResponseToWebSocket(c websocket.Conn, chatID int, prompt string, apiKey string, msgBuffer *bytes.Buffer) error {
-	pterm.Warning.Printfln("Using model: %s", model)
+	pterm.Info.Printfln("Using model: %s", model)
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
@@ -32,7 +32,7 @@ func StreamGeminiResponseToWebSocket(c websocket.Conn, chatID int, prompt string
 	}
 	defer client.Close()
 
-	pterm.Warning.Printfln("Sending prompt to api...")
+	pterm.Info.Printfln("Sending prompt to api...")
 	generativeModel := client.GenerativeModel(model)
 
 	// Configure model parameters by invoking Set* methods on the model.
@@ -40,7 +40,7 @@ func StreamGeminiResponseToWebSocket(c websocket.Conn, chatID int, prompt string
 	generativeModel.SetTopK(1)
 	generativeModel.SetTopP(1)
 
-	pterm.Warning.Printfln("Generating content stream...")
+	pterm.Info.Printfln("Generating content stream...")
 	iter := generativeModel.GenerateContentStream(ctx, genai.Text(prompt))
 
 	for {

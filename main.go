@@ -59,7 +59,7 @@ func main() {
 
 	runFrontendServer(ctx, config, modelParams)
 
-	pterm.Warning.Println("Shutdown signal received")
+	pterm.Info.Println("Shutdown signal received")
 
 	if err := stopComfyUI(ctx); err != nil {
 		pterm.Error.Println("Failed to stop ComfyUI:", err)

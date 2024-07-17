@@ -144,8 +144,6 @@ func BuildCommand(cmdPath string, options GGUFOptions) *exec.Cmd {
 	// Create the cache in the model path
 	cache := fmt.Sprintf("%s/cache", modelPath)
 
-	pterm.Warning.Printfln("Cache path: %s", cache)
-
 	ctxSize := fmt.Sprintf("%d", options.CtxSize)
 	temp := fmt.Sprintf("%f", options.Temp)
 	repeatPenalty := fmt.Sprintf("%f", options.RepeatPenalty)

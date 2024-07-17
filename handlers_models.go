@@ -364,7 +364,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 		// 	log.Fatalf("Failed to run pip command: %v", err)
 		// }
 
-		pterm.Warning.Println("Downloading default image model, please wait...")
+		pterm.Info.Println("Downloading default image model, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
@@ -389,9 +389,9 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	if _, err := os.Stat(modelPath); err == nil {
 		pterm.Info.Printf("Upscale model found: %s\n", modelPath)
 	} else {
-		pterm.Warning.Printf("Upscale model not found: %s\n", modelPath)
+		pterm.Info.Printf("Upscale model not found: %s\n", modelPath)
 
-		pterm.Warning.Println("Downloading upscale model, please wait...")
+		pterm.Info.Println("Downloading upscale model, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
@@ -417,7 +417,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 	// if _, err := os.Stat(modelPath); err == nil {
 	// 	pterm.Info.Printf("Kolors model found: %s\n", modelPath)
 	// } else {
-	// 	pterm.Warning.Println("Downloading Kolors image model, please wait...")
+	// 	pterm.Info.Println("Downloading Kolors image model, please wait...")
 	// 	dm := hfutils.ConcurrentDownloadManager{
 	// 		FileName:    fileName,
 	// 		URL:         downloadURL,
@@ -449,7 +449,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 			}
 		}
 
-		pterm.Warning.Println("Downloading sdxk VAE, please wait...")
+		pterm.Info.Println("Downloading SDXL VAE, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,

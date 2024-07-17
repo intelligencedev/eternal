@@ -35,7 +35,7 @@ The Eternal frontend is rendered with the legendary `HTMX` framework.
 
 IMPORTANT:
 
-Configure the quant level of the models in your `config.yml` appropriately for your system specs. If a local fails to run, investigate the reason by viewing the generated `main.log` file. The most common reason is insufficient RAM or incorrect prompt template. We will implement more robust error handling and logging in a future commit.
+Configure the quant level of the models in your `config.yml` appropriately for your system specs. If a local model fails to run, investigate the reason by viewing the generated `main.log` file. The most common reason is insufficient RAM or incorrect prompt template. We will implement more robust error handling and logging in a future commit.
 
 ## Features
 

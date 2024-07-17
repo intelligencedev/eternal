@@ -209,7 +209,7 @@ func handleListProjects() fiber.Handler {
 // handleUpload handles file uploads and saves them to the specified directory.
 func handleUpload(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pterm.Warning.Println("Uploads route hit")
+		pterm.Info.Println("Uploads route hit")
 
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -219,7 +219,7 @@ func handleUpload(config *AppConfig) fiber.Handler {
 		files := form.File["file"]
 		for _, file := range files {
 			filename := filepath.Join(config.DataPath, "web", "uploads", file.Filename)
-			pterm.Warning.Printf("Uploading file: %s\n", filename)
+			pterm.Info.Printf("Uploading file: %s\n", filename)
 			if err := c.SaveFile(file, filename); err != nil {
 				return err
 			}
@@ -303,6 +303,7 @@ func handleSSEUpdates() fiber.Handler {
 // handleWebSocket handles WebSocket connections for general use.
 func handleWebSocket(config *AppConfig) func(*websocket.Conn) {
 	return func(c *websocket.Conn) {
+		defer c.Close()
 		handleWebSocketConnection(c, config, func(wsMessage WebSocketMessage, chatMessage string) error {
 			return nil
 		})
@@ -317,17 +318,20 @@ func handleWebSocketConnection(c *websocket.Conn, config *AppConfig, processMess
 	// Generate uid for the chat turn
 
 	// Read and unmarshal the initial WebSocket message
-	wsMessage, err = readAndUnmarshalMessage(c)
-	if err != nil {
-		log.Errorf("Error reading or unmarshalling message: %v", err)
-		return
-	}
+	wsMessage, _ = readAndUnmarshalMessage(c)
+	// if err != nil {
+	// 	log.Errorf("Error reading or unmarshalling message: %v", err)
+	// 	//return
+	// }
 
 	chatMessage := wsMessage.ChatMessage
 
 	// Only perform the tool workflow if any of the tools are enabled
 	if config.Tools.ImgGen.Enabled || config.Tools.Memory.Enabled || config.Tools.WebGet.Enabled || config.Tools.WebSearch.Enabled {
-		chatMessage = performToolWorkflow(c, config, chatMessage)
+		_, endTurn := performToolWorkflow(c, config, chatMessage)
+		if endTurn {
+			return
+		}
 	}
 
 	if config.Tools.Team.Enabled {
@@ -440,8 +444,10 @@ func handleAssistantTurn(c *websocket.Conn, config *AppConfig, wsMessage WebSock
 		// Stream the completion response from Anthropic to the WebSocket.
 		return anthropic.StreamCompletionToWebSocket(*c, chatTurn, "claude-3-5-sonnet-20240620", messages, 0.3, apiKey, responseBuffer)
 	} else {
-		return llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
+		llm.MakeCompletionWebSocket(*c, chatTurn, modelOpts, config.DataPath, responseBuffer)
 	}
+
+	return nil
 }
 
 // readAndUnmarshalMessage reads and unmarshals a WebSocket message.
@@ -449,14 +455,14 @@ func readAndUnmarshalMessage(c *websocket.Conn) (WebSocketMessage, error) {
 	// Read the message from the WebSocket.
 	_, messageBytes, err := c.ReadMessage()
 	if err != nil {
-		return WebSocketMessage{}, err
+		//return WebSocketMessage{}, err
 	}
 
 	// Unmarshal the JSON message.
 	var wsMessage WebSocketMessage
 	err = json.Unmarshal(messageBytes, &wsMessage)
 	if err != nil {
-		return WebSocketMessage{}, err
+		//return WebSocketMessage{}, err
 	}
 
 	return wsMessage, nil
