@@ -449,7 +449,7 @@ func DownloadDefaultImageModel(config *AppConfig) error {
 			}
 		}
 
-		pterm.Warning.Println("Downloading sdxk VAE, please wait...")
+		pterm.Warning.Println("Downloading SDXL VAE, please wait...")
 		dm := hfutils.ConcurrentDownloadManager{
 			FileName:    fileName,
 			URL:         downloadURL,
