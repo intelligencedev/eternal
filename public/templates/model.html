@@ -6,7 +6,7 @@
         <div class="col-12 h-100">
           <div class="panel h-100 d-flex flex-column fade-it" style="background-color: var(--et-galactic-bg);">
             <div class="panel-header px-4 py-3 border-bottom">
-              <h3 class="mb-3 text-center">Assistants</h3>
+              <h4 class="mb-3 text-center">Assistants</h4>
               <!-- Avatar -->
               <div class="text-center mb-3">
                 <img id="assistant-avatar" src="/public/img/et_female.jpg" alt="Assistant Avatar" class="rounded-circle" style="width: 100px; height: 100px;">
@@ -100,8 +100,8 @@
           `;
         } else {
           modelInfoContainer.innerHTML = `
-            <div class="mb-4">
-              <a href="${modelData.GGUFInfo}" target="_blank" class="btn btn-secondary btn-block bg-gradient">Model Homepage</a>
+            <div class="text-center mb-4">
+              <a href="${modelData.GGUFInfo}" target="_blank" >Model Homepage</a>
             </div>
             <div class="form-group">
               <label for="ctx-size-slider" class="form-label">Context Size: <span id="ctx-size-value">${modelData.Options.ctx_size}</span></label>
@@ -123,11 +123,7 @@
               <label for="repeat-penalty-slider" class="form-label">Repetition Penalty: <span id="repeat-penalty-value">${modelData.Options.repeat_penalty}</span></label>
               <input type="range" class="form-range custom-range" min="0.0" max="50.0" step="0.1" value="${modelData.Options.repeat_penalty}" id="repeat-penalty-slider">
             </div>
-            <div class="form-group">
-              <label for="promptTemplate" class="form-label">Prompt Template</label>
-              <textarea id="promptTemplate" class="form-control" rows="5" readonly>${modelData.Options.prompt}</textarea>
-            </div>
-            <button id="saveModelParamsBtn" class="btn btn-secondary btn-block bg-gradient mt-3">Save</button>
+            <button id="saveModelParamsBtn" class="btn btn-secondary btn-block bg-gradient mt-3 w-100">Save</button>
           `;
 
           // Add event listeners to update the displayed value as the slider is moved
