@@ -233,6 +233,17 @@ language_models:
       - 'all'
     tags:
       - '7B'
+  - name: 'mistral-nemo-instruct'
+    homepage: 'https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF'
+    gguf: 'https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF'
+    downloads:
+      - 'https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/Mistral-Nemo-Instruct-2407-Q8_0.gguf'
+    prompt: "{prompt}"
+    ctx: 128000
+    roles:
+      - 'instruct'
+    tags:
+      - '12B'
 
 assistant_roles:
   - name: 'default'
