@@ -69,8 +69,7 @@ func checkRobotsTxt(ctx context.Context, u string) bool {
 	resp, err := http.Get(robotsUrl.String())
 	if err != nil {
 		log.Printf("Failed to fetch robots.txt for %s: %v", baseURL.String(), err)
-		//return false
-		return true // test
+		return false
 	}
 	defer resp.Body.Close()
 
