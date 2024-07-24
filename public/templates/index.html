@@ -97,7 +97,7 @@
     <div class="row">
       <div class="w-25"></div>
       <div class="w-50 mt-2 pb-2 bottom-bar shadow-lg rounded-top-2" style="background-color: var(--et-card-bg);"
-        hx-post="/modelcards" hx-trigger="load" hx-target="#info">
+        hx-post="/v1/views/models" hx-trigger="load" hx-target="#info">
         <form>
           <div class="py-1" id="prompt-view">
             <div class="row">
@@ -139,7 +139,7 @@
                 <!-- Clear textarea after submit -->
 
                 <button id="send" class="btn btn-secondary btn-prompt-send bg-gradient" type="button"
-                  hx-post="/chatsubmit" hx-target="#chat" hx-swap="beforeend"
+                  hx-post="/v1/chat/submit" hx-target="#chat" hx-swap="beforeend"
                   hx-on::after-request="document.getElementById('message').value=''; textarea.style.height = 'auto'; textarea.style.height = `${Math.min(this.scrollHeight, this.clientHeight * 1)}px`;">
                   <div id="send-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
@@ -175,7 +175,7 @@
   <script src="js/workflows.js"></script>
   <script src="https://unpkg.com/@antonz/runno@0.6.1/dist/runno.js"></script>
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/engine/wasi.js"></script>
-  <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/snippet.js"></script> -->
+  <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/snippet.js"></script>
   <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/settings.js"></script>
   <!-- <script src="https://unpkg.com/@antonz/codapi@0.17.0/dist/status.js"></script> -->
   <script>
@@ -193,7 +193,7 @@
         async fetchData() {
           try {
             //await getTools()
-            let response = await fetch('/config');
+            let response = await fetch('/v1/config');
             this.data = await response.json();
 
             for (let role of this.data.AssistantRoles) {
@@ -203,7 +203,7 @@
             console.log('Projects:', projects);
             console.log('Roles:', roles);
 
-            response = await fetch('/model/selected');
+            response = await fetch('/v1/models/selected');
             let modelName = await response.json();
             console.log('Selected model:', modelName);
 
@@ -281,11 +281,6 @@
       }
     });
 
-    document.getElementById('imgGenBtn').addEventListener('click', () => {
-      toggleButtonState('imgGenBtn');
-      downloadImageModel('dreamshaper-8-turbo-sdxl'); // Keep existing functionality
-    });
-
     const tooltipTriggerList = document.querySelectorAll(
       "[data-bs-toggle='tooltip']"
     );
@@ -308,7 +303,7 @@
       imgGenBtn.style.border = imgGenBtn.style.border ? '' : '2px solid purple';
 
       // Fetch the download route
-      fetch(`/imgmodel/download?model=${modelName}`, {
+      fetch(`/v1/models/img/download?model=${modelName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

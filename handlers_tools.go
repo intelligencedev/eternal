@@ -32,7 +32,7 @@ var currentChatUid string
 // handleGetTools returns a handler function that retrieves all tools
 func handleRenderTools(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return c.Render("templates/tools", fiber.Map{
+		return c.Render("templates/v1/tools", fiber.Map{
 			"Tools": config.Tools,
 		})
 	}
@@ -77,8 +77,13 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 			document, _ = web.WebGetHandler(url[0])
 
-			// Add the page content to the chat message.
+			pterm.Warning.Println(document)
 
+			// Add the page content to the chat message.
+			chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
+
+			pterm.Info.Println("Tool workflow complete")
+			return chatMessage, false
 		}
 	}
 
@@ -132,6 +137,7 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 					page, err := web.WebGetHandler(u)
 					if err != nil {
 						if errors.Is(err, context.DeadlineExceeded) {
+							pterm.Error.Printf(err.Error())
 							pterm.Info.Printf("Timeout exceeded for URL: %s\n", u)
 
 							// Add the URL to the channel to be processed later
@@ -211,6 +217,8 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 			// Remove any '403 Forbidden' text from the documentTags
 			documentTags = strings.ReplaceAll(documentTags, "403 Forbidden", "")
 
+			pterm.Info.Println(page)
+
 			err := handleTextSplitAndIndex(documentTags, page, 1024, config.EmbeddingModel)
 			if err != nil {
 				log.Errorf("Error handling text split and index: %v", err)
@@ -219,8 +227,6 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 		}
 
 		pterm.Error.Printf("Fetching web search chunks from memory...")
-		document, _ = handleChatMemory(config, chatMessage, "web")
-		//pterm.Error.Printf("Web Search Document: %s\n", document)
 		chatMessage = fmt.Sprintf("%s Reference the previous information if it is relevant to the next query only. Do not provide any additional information other than what is necessary to answer the next question or respond to the query. Be concise. Do not deviate from the topic of the query.\nQUERY:\n%s", document, chatMessage)
 
 		pterm.Info.Println("Tool workflow complete")

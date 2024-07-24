@@ -1,8 +1,9 @@
+<!-- tools.html -->
 <div id="tools-container" class="row h-100 show">
   <div class="col h-100">
     <div class="panel h-100 px-3 d-flex flex-column fade-it rounded-end-2 border-end border-secondary-subtle"
       style="background-color: var(--et-galactic-bg);">
-      <h3 class="mb-3 text-center">Tools</h3>
+      <h4 class="mb-3 text-center">Tools</h4>
       <div class="panel-body">
         <div class="accordion  accordion-flush" id="toolsAccordion">
           <!-- Teams Workflow -->
@@ -159,7 +160,7 @@
 <script>
   // The JavaScript functions remain unchanged
   function postToolValue(toolName, enabled, topN) {
-    fetch(`/tool/${toolName}/${enabled}/${topN}`, {
+    fetch(`/v1/tools/${toolName}/${enabled}/${topN}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -176,7 +177,7 @@
 
   async function getTools() {
     try {
-      const response = await fetch('/tools/list');
+      const response = await fetch('/v1/tools/list');
       const tools = await response.json();
       const toolView = document.getElementById('tool-view');
       toolView.innerHTML = '';
@@ -221,7 +222,7 @@
   }
 
   function updateImgWorkflow(optionValue) {
-    fetch(`/tools/img/workflow/set`, {
+    fetch(`/v1/tools/img/workflow/set`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -240,7 +241,7 @@
 
   function updateImgResolution(resolution) {
     const [width, height] = resolution.split('x').map(Number);
-    fetch('/tools/img/resolution/set', {
+    fetch('/v1/tools/img/resolution/set', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

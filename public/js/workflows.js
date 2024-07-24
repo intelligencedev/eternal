@@ -81,7 +81,7 @@ async function uploadFile(file) {
 }
 
 async function createChat(prompt, msg, model) {
-  const chatUrl = 'http://localhost:8080/chats';
+  const chatUrl = 'http://localhost:8080/v1/chats';
 
   try {
     chatData = {
