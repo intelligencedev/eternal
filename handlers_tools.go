@@ -77,8 +77,13 @@ func performToolWorkflow(c *websocket.Conn, config *AppConfig, chatMessage strin
 
 			document, _ = web.WebGetHandler(url[0])
 
-			// Add the page content to the chat message.
+			pterm.Warning.Println(document)
 
+			// Add the page content to the chat message.
+			chatMessage = fmt.Sprintf("REFERENCE DOCUMENT:\n%s\n\nQUERY:\n%s", document, chatMessage)
+
+			pterm.Info.Println("Tool workflow complete")
+			return chatMessage, false
 		}
 	}
 
