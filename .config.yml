@@ -361,4 +361,4 @@ image_models:
     downloads:
       - 'https://huggingface.co/Lykon/dreamshaper-xl-v2-turbo/resolve/main/DreamShaperXL_Turbo_V2-SFW.safetensors'
 
-embedding_model: "BAAI/bge-large-en-v1.5"
+embedding_model: "Alibaba-NLP/gte-large-en-v1.5"

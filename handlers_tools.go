@@ -32,7 +32,7 @@ var currentChatUid string
 // handleGetTools returns a handler function that retrieves all tools
 func handleRenderTools(config *AppConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return c.Render("templates/tools", fiber.Map{
+		return c.Render("templates/v1/tools", fiber.Map{
 			"Tools": config.Tools,
 		})
 	}

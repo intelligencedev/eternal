@@ -19,7 +19,7 @@ import (
 // Chunk size should be less than the max tokens for the model used: https://huggingface.co/spaces/mteb/leaderboard
 
 var (
-	defaultModel  = "BAAI/bge-large-en-v1.5"
+	defaultModel  = "Alibaba-NLP/gte-large-en-v1.5"
 	modelPathFlag = flag.String("model-path", ".eternal/models/HF/", "The path to the model directory")
 	modelNameFlag = flag.String("model-name", defaultModel, "The name of the model")
 	limitFlag     = flag.Int("limit", 128, "The limit for the number of dimensions in the embedding vector")

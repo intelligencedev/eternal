@@ -67,14 +67,14 @@
   async function selectModel(modelName) {
     try {
       // Set the selected model in the database
-      await fetch(`/model/select/${modelName}/add`, {
+      await fetch(`/v1/models/select/${modelName}/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
       });
 
-      const response = await fetch(`/modeldata/${modelName}`, {
+      const response = await fetch(`/v1/modeldata/${modelName}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -164,7 +164,7 @@
         },
       };
 
-      const response = await fetch('/model/set/params', {
+      const response = await fetch('/v1/models/set', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -192,7 +192,7 @@
 
     console.log("Downloading model: ", modelName);
 
-    fetch(`/model/download?model=${modelName}`, {
+    fetch(`/v1/models/download?model=${modelName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -212,7 +212,7 @@
   }
 
   function setRole(role) {
-    fetch(`/chat/role/${role}`, {
+    fetch(`/v1/chat/role/${role}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
