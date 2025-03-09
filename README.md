@@ -6,7 +6,12 @@
 </div>
 
 # Eternal
+********
+NOTE: This project is no longer actively developed. We have shifted focus to the Manifold platform. Please refer to that repository instead:
 
+https://github.com/intelligencedev/manifold
+
+********
 Eternal is an experimental platform for machine learning workflows.
 
 <div align="center">
